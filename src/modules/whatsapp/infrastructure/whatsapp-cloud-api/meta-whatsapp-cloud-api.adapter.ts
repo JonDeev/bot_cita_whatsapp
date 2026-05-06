@@ -1,0 +1,164 @@
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { WhatsappConfigService } from '../../application/services/whatsapp-config.service';
+import type { WhatsappMessageSenderPort } from '../../domain/ports/whatsapp-message-sender.port';
+import {
+  OutboundWhatsappInteractiveButtonsMessage,
+  OutboundWhatsappInteractiveListMessage,
+  OutboundWhatsappSendResult,
+  OutboundWhatsappTextMessage,
+} from '../../domain/value-objects/outbound-whatsapp-message';
+
+interface MetaSendMessageResponse {
+  messages?: Array<{
+    id?: string;
+  }>;
+  error?: {
+    message?: string;
+    code?: number;
+    type?: string;
+    error_data?: {
+      details?: string;
+    };
+    error_subcode?: number;
+    fbtrace_id?: string;
+  };
+}
+
+@Injectable()
+export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
+  constructor(private readonly configService: WhatsappConfigService) {}
+
+  async sendTextMessage(
+    message: OutboundWhatsappTextMessage,
+  ): Promise<OutboundWhatsappSendResult> {
+    return this.send({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: message.to,
+      type: 'text',
+      text: {
+        body: message.body,
+        preview_url: false,
+      },
+    });
+  }
+
+  async sendInteractiveListMessage(
+    message: OutboundWhatsappInteractiveListMessage,
+  ): Promise<OutboundWhatsappSendResult> {
+    const response = await this.send({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: message.to,
+      type: 'interactive',
+      interactive: {
+        type: 'list',
+        body: {
+          text: message.body,
+        },
+        action: {
+          button: message.buttonText,
+          sections: message.sections.map((section) => ({
+            title: section.title,
+            rows: section.rows.map((row) => ({
+              id: row.id,
+              title: row.title,
+              description: row.description,
+            })),
+          })),
+        },
+      },
+    });
+
+    return response;
+  }
+
+  async sendInteractiveButtonsMessage(
+    message: OutboundWhatsappInteractiveButtonsMessage,
+  ): Promise<OutboundWhatsappSendResult> {
+    const response = await this.send({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: message.to,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: {
+          text: message.body,
+        },
+        action: {
+          buttons: message.buttons.map((button) => ({
+            type: 'reply',
+            reply: {
+              id: button.id,
+              title: button.title,
+            },
+          })),
+        },
+      },
+    });
+
+    return response;
+  }
+
+  private async send(payload: Record<string, unknown>): Promise<OutboundWhatsappSendResult> {
+    const accessToken = this.configService.getAccessToken();
+    const phoneNumberId = this.configService.getPhoneNumberId();
+    const apiBaseUrl = this.configService.getApiBaseUrl();
+    const apiVersion = this.configService.getApiVersion();
+
+    if (!accessToken || !phoneNumberId) {
+      throw new InternalServerErrorException('Missing WhatsApp API credentials.');
+    }
+
+    const endpoint = `${apiBaseUrl}/${apiVersion}/${phoneNumberId}/messages`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await this.parseResponseJson(response);
+
+    if (!response.ok) {
+      const details = this.buildApiErrorDetails(response.status, json.error);
+      if (response.status === 401) {
+        throw new UnauthorizedException(details);
+      }
+
+      throw new InternalServerErrorException(details);
+    }
+
+    const messageId = json.messages?.[0]?.id;
+    if (!messageId) {
+      throw new InternalServerErrorException('WhatsApp API response does not include message id.');
+    }
+
+    return { messageId };
+  }
+
+  private async parseResponseJson(response: Response): Promise<MetaSendMessageResponse> {
+    try {
+      return (await response.json()) as MetaSendMessageResponse;
+    } catch {
+      return {};
+    }
+  }
+
+  private buildApiErrorDetails(
+    status: number,
+    error: MetaSendMessageResponse['error'],
+  ): string {
+    const message = error?.message ?? 'Unknown error.';
+    const details = error?.error_data?.details ? ` details=${error.error_data.details}` : '';
+    const code = error?.code ? ` code=${error.code}` : '';
+    const subcode = error?.error_subcode ? ` subcode=${error.error_subcode}` : '';
+    const type = error?.type ? ` type=${error.type}` : '';
+    const trace = error?.fbtrace_id ? ` trace=${error.fbtrace_id}` : '';
+
+    return `WhatsApp API request failed with status ${status}. ${message}${details}${code}${subcode}${type}${trace}`;
+  }
+}

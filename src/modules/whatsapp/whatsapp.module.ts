@@ -1,0 +1,55 @@
+import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
+import { ConversationsModule } from '../conversations/conversations.module';
+import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
+import { ProcessWhatsappWebhookUseCase } from './application/use-cases/process-whatsapp-webhook.use-case';
+import { VerifyWebhookChallengeUseCase } from './application/use-cases/verify-webhook-challenge.use-case';
+import { ConversationOrchestratorService } from './application/services/conversation-orchestrator.service';
+import { WhatsappConfigService } from './application/services/whatsapp-config.service';
+import {
+  WHATSAPP_MESSAGE_SENDER,
+  WHATSAPP_PAYLOAD_PARSER,
+  WHATSAPP_SIGNATURE_VERIFIER,
+  WHATSAPP_WEBHOOK_IDEMPOTENCY_STORE,
+} from './domain/whatsapp.tokens';
+import { WebhookIdempotencyKeyFactory } from './application/services/idempotency/webhook-idempotency-key.factory';
+import { SendWhatsappInteractiveButtonsMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-buttons-message.use-case';
+import { SendWhatsappInteractiveListMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-list-message.use-case';
+import { SendWhatsappTextMessageUseCase } from './application/use-cases/outbound/send-whatsapp-text-message.use-case';
+import { MetaWhatsappPayloadParser } from './infrastructure/parsers/meta-whatsapp-payload.parser';
+import { MetaSignatureVerifierService } from './infrastructure/security/meta-signature-verifier.service';
+import { RedisWebhookIdempotencyStoreAdapter } from './infrastructure/idempotency/redis-webhook-idempotency-store.adapter';
+import { MetaWhatsappCloudApiAdapter } from './infrastructure/whatsapp-cloud-api/meta-whatsapp-cloud-api.adapter';
+import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.controller';
+
+@Module({
+  imports: [AuditModule, ConversationsModule, RedisModule],
+  controllers: [WhatsappWebhookController],
+  providers: [
+    WhatsappConfigService,
+    VerifyWebhookChallengeUseCase,
+    ProcessWhatsappWebhookUseCase,
+    SendWhatsappInteractiveButtonsMessageUseCase,
+    SendWhatsappInteractiveListMessageUseCase,
+    SendWhatsappTextMessageUseCase,
+    WebhookIdempotencyKeyFactory,
+    ConversationOrchestratorService,
+    {
+      provide: WHATSAPP_SIGNATURE_VERIFIER,
+      useClass: MetaSignatureVerifierService,
+    },
+    {
+      provide: WHATSAPP_PAYLOAD_PARSER,
+      useClass: MetaWhatsappPayloadParser,
+    },
+    {
+      provide: WHATSAPP_WEBHOOK_IDEMPOTENCY_STORE,
+      useClass: RedisWebhookIdempotencyStoreAdapter,
+    },
+    {
+      provide: WHATSAPP_MESSAGE_SENDER,
+      useClass: MetaWhatsappCloudApiAdapter,
+    },
+  ],
+})
+export class WhatsappModule {}

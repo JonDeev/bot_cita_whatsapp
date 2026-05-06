@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@whatsapp-bot/prisma-client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum BotMessageDirection {
+  INBOUND
+  OUTBOUND
+  SYSTEM
+}
+
+enum BotOutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum BotSexRule {
+  ANY
+  H
+  M
+}
+
+model BotConversation {
+  id               Int                @id @default(autoincrement())
+  conversationKey  String             @unique(map: "uq_bot_conversations_conversation_key") @map("conversation_key") @db.VarChar(191)
+  channel          String             @db.VarChar(32)
+  participantPhone String             @map("participant_phone") @db.VarChar(32)
+  phoneNumberId    String?            @map("phone_number_id") @db.VarChar(64)
+  state            String             @db.VarChar(64)
+  status           String             @db.VarChar(32)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  messages         BotMessage[]
+  auditEvents      BotAuditEvent[]
+  handoffs         BotHandoff[]
+  outboxMessages   BotOutboxMessage[]
+
+  @@index([participantPhone], map: "idx_bot_conversations_participant_phone")
+  @@index([updatedAt], map: "idx_bot_conversations_updated_at")
+  @@map("bot_conversations")
+}
+
+model BotMessage {
+  id                Int                 @id @default(autoincrement())
+  conversationId    Int                 @map("conversation_id")
+  direction         BotMessageDirection
+  whatsappMessageId String?             @unique(map: "uq_bot_messages_whatsapp_message_id") @map("whatsapp_message_id") @db.VarChar(191)
+  messageType       String              @map("message_type") @db.VarChar(64)
+  body              String?             @db.Text
+  payload           Json?               @db.Json
+  occurredAt        DateTime            @map("occurred_at") @db.DateTime(3)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+  conversation      BotConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, occurredAt], map: "idx_bot_messages_conversation_occurred_at")
+  @@index([direction, occurredAt], map: "idx_bot_messages_direction_occurred_at")
+  @@map("bot_messages")
+}
+
+model BotAuditEvent {
+  id              Int              @id @default(autoincrement())
+  action          String           @db.VarChar(128)
+  conversationKey String?          @map("conversation_key") @db.VarChar(191)
+  conversationId  Int?             @map("conversation_id")
+  metadata        Json?            @db.Json
+  occurredAt      DateTime         @map("occurred_at") @db.DateTime(3)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  conversation    BotConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([action, occurredAt], map: "idx_bot_audit_events_action_occurred_at")
+  @@index([conversationKey], map: "idx_bot_audit_events_conversation_key")
+  @@index([conversationId], map: "idx_bot_audit_events_conversation_id")
+  @@map("bot_audit_events")
+}
+
+model BotHandoff {
+  id             Int             @id @default(autoincrement())
+  conversationId Int             @map("conversation_id")
+  isActive       Boolean         @default(true) @map("is_active")
+  assignedTo     String?         @map("assigned_to") @db.VarChar(64)
+  note           String?         @db.Text
+  startedAt      DateTime        @default(now()) @map("started_at") @db.DateTime(3)
+  endedAt        DateTime?       @map("ended_at") @db.DateTime(3)
+  conversation   BotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, isActive], map: "idx_bot_handoffs_conversation_is_active")
+  @@map("bot_handoffs")
+}
+
+model BotOutboxMessage {
+  id               Int              @id @default(autoincrement())
+  conversationId   Int?             @map("conversation_id")
+  channel          String           @db.VarChar(32)
+  recipientPhone   String           @map("recipient_phone") @db.VarChar(32)
+  payload          Json             @db.Json
+  deduplicationKey String?          @unique(map: "uq_bot_outbox_deduplication_key") @map("deduplication_key") @db.VarChar(191)
+  status           BotOutboxStatus  @default(PENDING)
+  attempts         Int              @default(0)
+  nextAttemptAt    DateTime?        @map("next_attempt_at") @db.DateTime(3)
+  sentAt           DateTime?        @map("sent_at") @db.DateTime(3)
+  failedAt         DateTime?        @map("failed_at") @db.DateTime(3)
+  errorCode        String?          @map("error_code") @db.VarChar(64)
+  errorMessage     String?          @map("error_message") @db.Text
+  createdAt        DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  conversation     BotConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextAttemptAt], map: "idx_bot_outbox_status_next_attempt_at")
+  @@index([conversationId], map: "idx_bot_outbox_conversation_id")
+  @@map("bot_outbox_messages")
+}
+
+model BotAllowedEps {
+  id             Int                   @id @default(autoincrement())
+  code           String                @unique(map: "uq_bot_allowed_eps_code") @db.VarChar(30)
+  name           String?               @db.VarChar(120)
+  isActive       Boolean               @default(true) @map("is_active")
+  createdAt      DateTime              @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.DateTime(3)
+  specialtyRules BotEpsSpecialtyRule[]
+
+  @@index([isActive], map: "idx_bot_allowed_eps_is_active")
+  @@map("bot_allowed_eps")
+}
+
+model BotUserType {
+  code           String                @id @db.VarChar(2)
+  name           String                @db.VarChar(120)
+  isActive       Boolean               @default(true) @map("is_active")
+  createdAt      DateTime              @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.DateTime(3)
+  specialtyRules BotEpsSpecialtyRule[]
+
+  @@index([isActive], map: "idx_bot_user_types_is_active")
+  @@map("bot_user_types")
+}
+
+model BotEpsSpecialtyRule {
+  id            Int           @id @default(autoincrement())
+  epsCode       String        @map("eps_code") @db.VarChar(30)
+  userTypeCode  String        @map("user_type_code") @db.VarChar(2)
+  sexRule       BotSexRule    @default(ANY) @map("sex_rule")
+  specialtyCode String        @map("specialty_code") @db.VarChar(20)
+  isActive      Boolean       @default(true) @map("is_active")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  eps           BotAllowedEps @relation(fields: [epsCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+  userType      BotUserType   @relation(fields: [userTypeCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([epsCode, userTypeCode, sexRule, specialtyCode], map: "uq_bot_eps_specialty_rules_business")
+  @@index([epsCode, isActive], map: "idx_bot_eps_specialty_rules_eps_active")
+  @@index([userTypeCode, isActive], map: "idx_bot_eps_specialty_rules_user_type_active")
+  @@index([sexRule, isActive], map: "idx_bot_eps_specialty_rules_sex_active")
+  @@index([specialtyCode], map: "idx_bot_eps_specialty_rules_specialty_code")
+  @@map("bot_eps_specialty_rules")
+}

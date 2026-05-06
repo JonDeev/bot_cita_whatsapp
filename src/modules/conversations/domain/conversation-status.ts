@@ -1,0 +1,9 @@
+export const CONVERSATION_STATUSES = {
+  BOT_ACTIVE: 'BOT_ACTIVE',
+  HUMAN_HANDOFF: 'HUMAN_HANDOFF',
+  CLOSED: 'CLOSED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export type ConversationStatus =
+  (typeof CONVERSATION_STATUSES)[keyof typeof CONVERSATION_STATUSES];
