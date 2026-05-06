@@ -17,6 +17,7 @@ export interface AssignAppointmentSlotAfterTimeSelectionInput {
   appointmentDateIso?: string | null;
   appointmentTimeHHmm?: string | null;
   preferredSlotRef?: string | null;
+  doctorEmployeeCode?: string | null;
   now?: Date;
 }
 
@@ -112,6 +113,10 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
         );
       }
 
+      if (normalizedInput.doctorEmployeeCode) {
+        return { status: 'TIME_NO_LONGER_AVAILABLE' };
+      }
+
       const fallbackSlot = await this.appointmentAssignmentRepository.findFallbackAvailableSlot({
         specialtyCups: normalizedInput.specialtyCups,
         appointmentDateIso: normalizedInput.appointmentDateIso,
@@ -196,6 +201,7 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
         appointmentDateIso: string;
         appointmentTimeHHmm: string;
         preferredSlotRef: string;
+        doctorEmployeeCode?: string;
       }
     | null {
     const patientId = input.patientId ?? null;
@@ -204,6 +210,7 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
     const appointmentDateIso = input.appointmentDateIso?.trim() ?? '';
     const appointmentTimeHHmm = input.appointmentTimeHHmm?.trim() ?? '';
     const preferredSlotRef = input.preferredSlotRef?.trim() ?? '';
+    const doctorEmployeeCode = input.doctorEmployeeCode?.trim() || undefined;
 
     if (
       typeof patientId !== 'number' ||
@@ -225,6 +232,7 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
       appointmentDateIso,
       appointmentTimeHHmm,
       preferredSlotRef,
+      doctorEmployeeCode,
     };
   }
 

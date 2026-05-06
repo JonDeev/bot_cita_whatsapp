@@ -1,4 +1,6 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { AppointmentDoctorListFactory } from '../services/appointment-doctor-list.factory';
+import { AppointmentDoctorListPresenterService } from '../services/appointment-doctor-list-presenter.service';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
 import { ConversationConfigService } from '../services/conversation-config.service';
@@ -31,6 +33,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       new ConversationStatePromptService(
         new MainMenuListFactory(),
         new SpecialtyListFactory(),
+        new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
         new AppointmentDateListFactory(),
         new AppointmentTimeListFactory(),
       ),
@@ -273,6 +276,8 @@ describe('HandleIncomingConversationMessageUseCase', () => {
             offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
           },
           appointmentDateSelection: {
+            scope: 'SPECIALTY',
+            specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
             offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
           },
         },
@@ -310,7 +315,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       timestamp: '1711111118',
       messageType: 'interactive',
       interactiveReplyId: 'nav_back',
-      interactiveReplyTitle: '↩ Volver',
+      interactiveReplyTitle: 'Volver',
       phoneNumberId: '123',
     });
 

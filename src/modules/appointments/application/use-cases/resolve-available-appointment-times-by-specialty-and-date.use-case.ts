@@ -11,6 +11,7 @@ export interface ResolveAvailableAppointmentTimesBySpecialtyAndDateInput {
   specialtyCups?: string | null;
   appointmentDateIso?: string | null;
   afterTimeHHmmExclusive?: string | null;
+  doctorEmployeeCode?: string | null;
   now?: Date;
 }
 
@@ -91,12 +92,14 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
         ? cutoff.cutoffTimeHHmm
         : ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.DAY_START_TIME;
     const paginationCursorTime = this.normalizeTimeHHmm(input.afterTimeHHmmExclusive);
+    const doctorEmployeeCode = input.doctorEmployeeCode?.trim() || undefined;
 
     const candidates = await this.appointmentAvailabilityRepository.findAvailableTimesByDate({
       specialtyCups,
       dateIso: appointmentDateIso,
       minimumTimeHHmm,
       afterTimeHHmmExclusive: paginationCursorTime ?? undefined,
+      doctorEmployeeCode,
       maxResults: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.QUERY_LIMIT,
     });
 

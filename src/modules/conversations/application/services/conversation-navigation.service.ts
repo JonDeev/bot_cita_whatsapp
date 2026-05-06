@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CONVERSATION_STATES, type ConversationState } from '../../domain/conversation-state';
+import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
+import type { ConversationSessionContext } from '../../domain/entities/conversation-session-context.entity';
 import type {
   ConversationOutboundInteractiveButtonReply,
   ConversationOutboundInteractiveButtonsMessage,
@@ -29,6 +31,7 @@ const BACK_TARGET_BY_STATE: Partial<Record<ConversationState, ConversationState>
   [CONVERSATION_STATES.WAITING_BIRTH_DATE]: CONVERSATION_STATES.WAITING_DOCUMENT,
   [CONVERSATION_STATES.SELECTING_SPECIALTY]: CONVERSATION_STATES.WAITING_BIRTH_DATE,
   [CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE]: CONVERSATION_STATES.SELECTING_SPECIALTY,
+  [CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR]: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
   [CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME]: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
 };
 
@@ -59,8 +62,59 @@ export class ConversationNavigationService {
     };
   }
 
-  resolveBackTargetState(state: ConversationState): ConversationState {
-    return BACK_TARGET_BY_STATE[state] ?? CONVERSATION_STATES.MAIN_MENU;
+  resolveBackNavigation(session: ConversationSession): {
+    targetState: ConversationState;
+    nextContext?: ConversationSessionContext;
+  } {
+    if (
+      session.state === CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR &&
+      session.context?.appointmentDateSelection
+    ) {
+      const specialtyOfferedDates =
+        session.context.appointmentDateSelection.specialtyOfferedDates;
+
+      return {
+        targetState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
+        nextContext: {
+          ...session.context,
+          appointmentDoctorSelection: session.context.appointmentDoctorSelection
+            ? {
+              offeredDoctors: session.context.appointmentDoctorSelection.offeredDoctors,
+              selectedDoctor: undefined,
+            }
+            : undefined,
+          appointmentDateSelection: {
+            ...session.context.appointmentDateSelection,
+            scope: 'SPECIALTY',
+            offeredDates: specialtyOfferedDates,
+            specialtyOfferedDates,
+            selectedDateIso: undefined,
+          },
+          appointmentTimeSelection: undefined,
+        },
+      };
+    }
+
+    if (
+      session.state === CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE &&
+      session.context?.appointmentDateSelection?.scope === 'DOCTOR'
+    ) {
+      return {
+        targetState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
+        nextContext: {
+          ...session.context,
+          appointmentDateSelection: {
+            ...session.context.appointmentDateSelection,
+            selectedDateIso: undefined,
+          },
+          appointmentTimeSelection: undefined,
+        },
+      };
+    }
+
+    return {
+      targetState: BACK_TARGET_BY_STATE[session.state] ?? CONVERSATION_STATES.MAIN_MENU,
+    };
   }
 
   private resolvePresetForState(state: ConversationState): NavigationPreset | null {
@@ -86,7 +140,7 @@ export class ConversationNavigationService {
     }
 
     return [
-      { id: NAVIGATION_OPTION_IDS.BACK, title: '↩ Volver' },
+      { id: NAVIGATION_OPTION_IDS.BACK, title: 'Volver' },
       { id: NAVIGATION_OPTION_IDS.MAIN_MENU, title: 'Menu principal' },
       { id: NAVIGATION_OPTION_IDS.FINISH, title: 'Finalizar' },
     ];

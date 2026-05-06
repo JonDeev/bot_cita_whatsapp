@@ -309,6 +309,13 @@ export class HandleIncomingConversationMessageUseCase {
         CONVERSATION_STATES.MAIN_MENU,
         event.phoneNumberId,
         CONVERSATION_STATUSES.BOT_ACTIVE,
+        {
+          ...session.context,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
       );
 
       return {
@@ -320,16 +327,17 @@ export class HandleIncomingConversationMessageUseCase {
       };
     }
 
-    const backTargetState = this.conversationNavigationService.resolveBackTargetState(session.state);
+    const backNavigation = this.conversationNavigationService.resolveBackNavigation(session);
     const backTargetSession = this.buildUpdatedSession(
       session,
-      backTargetState,
+      backNavigation.targetState,
       event.phoneNumberId,
       CONVERSATION_STATUSES.BOT_ACTIVE,
+      backNavigation.nextContext,
     );
     const promptResult = this.conversationStatePromptService.buildForState(
       backTargetSession,
-      backTargetState,
+      backNavigation.targetState,
     );
     const finalSession = this.buildUpdatedSession(
       backTargetSession,

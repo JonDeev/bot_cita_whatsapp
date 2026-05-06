@@ -126,4 +126,32 @@ describe('AssignAppointmentSlotAfterTimeSelectionUseCase', () => {
 
     expect(result).toEqual({ status: 'TIME_NO_LONGER_AVAILABLE' });
   });
+
+  it('does not use fallback when slot belongs to an explicitly selected doctor', async () => {
+    const assignmentRepository: AppointmentAssignmentRepository = {
+      assignSlotIfAvailable: jest.fn().mockResolvedValue(false),
+      findFallbackAvailableSlot: jest.fn().mockResolvedValue({ slotRef: '202' }),
+    };
+    const useCase = new AssignAppointmentSlotAfterTimeSelectionUseCase(
+      assignmentRepository,
+      {
+        findPatientById: jest.fn().mockResolvedValue(patient),
+        findAssignedAppointmentBySlotRef: jest.fn(),
+      },
+      new AppointmentTimePresenterService(),
+    );
+
+    const result = await useCase.execute({
+      patientId: 98,
+      specialtyName: 'MEDICINA GENERAL',
+      specialtyCups: '890201',
+      appointmentDateIso: '2026-05-20',
+      appointmentTimeHHmm: '11:40',
+      preferredSlotRef: '101',
+      doctorEmployeeCode: 'M001',
+    });
+
+    expect(result).toEqual({ status: 'TIME_NO_LONGER_AVAILABLE' });
+    expect(assignmentRepository.findFallbackAvailableSlot).not.toHaveBeenCalled();
+  });
 });

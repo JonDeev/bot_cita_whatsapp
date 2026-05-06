@@ -71,6 +71,8 @@ describe('SelectingAppointmentTimeHandler', () => {
             },
           },
           appointmentDateSelection: {
+            scope: 'SPECIALTY',
+            specialtyOfferedDates: [{ isoDate: '2026-04-30', displayDate: '30/04/2026' }],
             offeredDates: [{ isoDate: '2026-04-30', displayDate: '30/04/2026' }],
             selectedDateIso: '2026-04-30',
           },
@@ -97,7 +99,11 @@ describe('SelectingAppointmentTimeHandler', () => {
     expect(result.nextState).toBe('MAIN_MENU');
     expect(result.nextContext?.appointmentTimeSelection).toBeUndefined();
     expect(result.outboundMessages[0]).toMatchObject({
-      type: 'text',
+      type: 'interactive_buttons',
+      buttons: [
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
     });
   });
 
@@ -137,6 +143,8 @@ describe('SelectingAppointmentTimeHandler', () => {
             },
           },
           appointmentDateSelection: {
+            scope: 'SPECIALTY',
+            specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
             offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
             selectedDateIso: '2026-05-06',
           },
@@ -169,6 +177,87 @@ describe('SelectingAppointmentTimeHandler', () => {
       ],
       hasMoreTimes: true,
       nextCursorTimeHHmm: '10:00',
+    });
+  });
+
+  it('rebuilds hours for the same doctor and date when selected slot is no longer available', async () => {
+    const resolveTimes = {
+      execute: jest.fn().mockResolvedValue({
+        hasAvailability: true,
+        times: [{ slotRef: '301', timeHHmm: '12:00', displayTime: '12:00 PM' }],
+        hasMore: false,
+        nextCursorTimeHHmm: undefined,
+      }),
+    };
+    const handler = buildHandler(
+      resolveTimes as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'TIME_NO_LONGER_AVAILABLE',
+        }),
+      } as unknown as AssignAppointmentSlotAfterTimeSelectionUseCase,
+    );
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'SELECTING_APPOINTMENT_TIME',
+        status: 'BOT_ACTIVE',
+        context: {
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 98,
+          },
+          specialtySelection: {
+            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            selectedSpecialty: {
+              code: '890201',
+              name: 'MEDICINA GENERAL',
+              cups: '890201',
+            },
+          },
+          appointmentDoctorSelection: {
+            offeredDoctors: [{ employeeCode: 'M001', displayName: 'ANA GARCIA' }],
+            selectedDoctor: { employeeCode: 'M001', displayName: 'ANA GARCIA' },
+          },
+          appointmentDateSelection: {
+            scope: 'DOCTOR',
+            specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+            offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+            selectedDateIso: '2026-05-06',
+          },
+          appointmentTimeSelection: {
+            offeredTimes: [{ slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' }],
+            hasMoreTimes: false,
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-15',
+        from: '573001112233',
+        timestamp: '1711111125',
+        messageType: 'interactive',
+        interactiveReplyId: 'appointment_time:101',
+        interactiveReplyTitle: '08:30 AM',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(resolveTimes.execute).toHaveBeenLastCalledWith({
+      specialtyCups: '890201',
+      appointmentDateIso: '2026-05-06',
+      doctorEmployeeCode: 'M001',
+    });
+    expect(result.nextState).toBe('SELECTING_APPOINTMENT_TIME');
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'text',
+      body: expect.stringContaining('Ese cupo ya fue ocupado por otro paciente.'),
     });
   });
 });

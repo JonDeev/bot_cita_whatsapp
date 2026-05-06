@@ -24,4 +24,18 @@ describe('AppointmentDateListFactory', () => {
       ],
     });
   });
+
+  it('appends choose doctor option when requested', () => {
+    const factory = new AppointmentDateListFactory();
+
+    const message = factory.build(
+      [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+      { includeChooseDoctor: true },
+    );
+
+    expect(message.sections[0]?.rows).toEqual([
+      { id: 'appointment_date:2026-05-06', title: '06/05/2026' },
+      { id: 'appointment_date:choose_doctor', title: 'Elegir medico' },
+    ]);
+  });
 });

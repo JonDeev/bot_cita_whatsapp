@@ -147,10 +147,10 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
 
     return {
       nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
-      nextContext: {
-        ...session.context,
-        patientValidation: {
-          failedAttempts: 0,
+        nextContext: {
+          ...session.context,
+          patientValidation: {
+            failedAttempts: 0,
           documentNumber,
           documentNumberMasked: documentMasked,
           patientId: validationResult.patientId,
@@ -159,7 +159,9 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
           sex: validationResult.sex,
         },
         specialtySelection: undefined,
+        appointmentDoctorSelection: undefined,
         appointmentDateSelection: undefined,
+        appointmentTimeSelection: undefined,
       },
       outboundMessages: [],
     };

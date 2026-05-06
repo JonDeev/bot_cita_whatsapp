@@ -3,6 +3,7 @@ import type { ConversationState } from '../../domain/conversation-state';
 import { MainMenuHandler } from '../state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from '../state-handlers/patient-validated.handler';
 import { SelectingAppointmentDateHandler } from '../state-handlers/selecting-appointment-date.handler';
+import { SelectingAppointmentDoctorHandler } from '../state-handlers/selecting-appointment-doctor.handler';
 import { SelectingAppointmentTimeHandler } from '../state-handlers/selecting-appointment-time.handler';
 import { SelectingSpecialtyHandler } from '../state-handlers/selecting-specialty.handler';
 import { WaitingBirthDateHandler } from '../state-handlers/waiting-birth-date.handler';
@@ -20,6 +21,7 @@ export class ConversationStateHandlerResolverService {
     patientValidatedHandler: PatientValidatedHandler,
     selectingSpecialtyHandler: SelectingSpecialtyHandler,
     selectingAppointmentDateHandler: SelectingAppointmentDateHandler,
+    selectingAppointmentDoctorHandler: SelectingAppointmentDoctorHandler,
     selectingAppointmentTimeHandler: SelectingAppointmentTimeHandler,
   ) {
     this.handlersByState = new Map<ConversationState, ConversationStateHandler>();
@@ -29,6 +31,10 @@ export class ConversationStateHandlerResolverService {
     this.handlersByState.set(patientValidatedHandler.state, patientValidatedHandler);
     this.handlersByState.set(selectingSpecialtyHandler.state, selectingSpecialtyHandler);
     this.handlersByState.set(selectingAppointmentDateHandler.state, selectingAppointmentDateHandler);
+    this.handlersByState.set(
+      selectingAppointmentDoctorHandler.state,
+      selectingAppointmentDoctorHandler,
+    );
     this.handlersByState.set(selectingAppointmentTimeHandler.state, selectingAppointmentTimeHandler);
   }
 

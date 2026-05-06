@@ -33,7 +33,7 @@ export class PendingAppointmentBlockMessageFactory {
       buttons: [
         {
           id: PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES,
-          title: '↩ Volver',
+          title: 'Volver',
         },
         {
           id: NAVIGATION_OPTION_IDS.MAIN_MENU,

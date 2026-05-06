@@ -9,6 +9,7 @@ import { AppointmentDatePresenterService } from '../services/appointment-date-pr
 
 export interface ResolveAvailableAppointmentDatesBySpecialtyInput {
   specialtyCups?: string | null;
+  doctorEmployeeCode?: string | null;
   now?: Date;
 }
 
@@ -56,10 +57,12 @@ export class ResolveAvailableAppointmentDatesBySpecialtyUseCase {
     }
 
     const cutoff = this.appointmentAvailabilityCutoffService.build(input.now ?? new Date());
+    const doctorEmployeeCode = input.doctorEmployeeCode?.trim() || undefined;
     const candidates = await this.appointmentAvailabilityRepository.findAvailableDates({
       specialtyCups,
       cutoffDateIso: cutoff.cutoffDateIso,
       cutoffTimeHHmm: cutoff.cutoffTimeHHmm,
+      doctorEmployeeCode,
     });
 
     const dates = this.pickUniqueDates(candidates);

@@ -3,6 +3,7 @@ import { ResolveAvailableAppointmentDatesBySpecialtyUseCase } from '../../../app
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { NO_AVAILABILITY_OPTION_IDS } from '../services/no-availability-option-id';
 import { PendingAppointmentBlockMessageFactory } from '../services/pending-appointment-block-message.factory';
 import { PENDING_APPOINTMENT_BLOCK_OPTION_IDS } from '../services/pending-appointment-block-option-id';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
@@ -82,9 +83,23 @@ describe('SelectingSpecialtyHandler', () => {
     expect(result.nextContext?.appointmentDateSelection?.offeredDates).toEqual([
       { isoDate: '2026-05-06', displayDate: '06/05/2026' },
     ]);
+    expect(result.nextContext?.appointmentDateSelection?.scope).toBe('SPECIALTY');
+    expect(result.nextContext?.appointmentDateSelection?.specialtyOfferedDates).toEqual([
+      { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+    ]);
+    expect(result.outboundMessages[0]).toMatchObject({
+      sections: [
+        {
+          rows: [
+            { id: 'appointment_date:2026-05-06', title: '06/05/2026' },
+            { id: 'appointment_date:choose_doctor', title: 'Elegir medico' },
+          ],
+        },
+      ],
+    });
   });
 
-  it('returns to main menu with action buttons when no dates are available', async () => {
+  it('stays in specialty selection with action buttons when no dates are available', async () => {
     const pendingUseCase = {
       execute: jest.fn().mockResolvedValue({
         status: 'NOT_FOUND',
@@ -117,10 +132,14 @@ describe('SelectingSpecialtyHandler', () => {
       } as any,
     );
 
-    expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.nextState).toBe('SELECTING_SPECIALTY');
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_buttons',
       buttons: [
+        {
+          id: NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES,
+          title: 'Volver',
+        },
         { id: 'nav_main_menu', title: 'Menu principal' },
         { id: 'nav_finish', title: 'Finalizar' },
       ],
@@ -171,7 +190,7 @@ describe('SelectingSpecialtyHandler', () => {
       buttons: [
         {
           id: PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES,
-          title: '↩ Volver',
+          title: 'Volver',
         },
         { id: 'nav_main_menu', title: 'Menu principal' },
         { id: 'nav_finish', title: 'Finalizar' },
@@ -201,6 +220,38 @@ describe('SelectingSpecialtyHandler', () => {
       {
         ...baseEvent,
         interactiveReplyId: PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES,
+      } as any,
+    );
+
+    expect(result.nextState).toBe('SELECTING_SPECIALTY');
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_list',
+      body: 'Seleccione la especialidad que desea agendar.',
+    });
+  });
+
+  it('rebuilds specialty list when patient taps back from no-availability message', async () => {
+    const handler = new SelectingSpecialtyHandler(
+      new SpecialtyListFactory(),
+      new AppointmentDateListFactory(),
+      new AppointmentAvailabilityMessageFactory(),
+      new PendingAppointmentBlockMessageFactory(),
+      {
+        execute: jest.fn(),
+      } as unknown as FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentDatesBySpecialtyUseCase,
+      {
+        record: jest.fn().mockResolvedValue(undefined),
+      } as unknown as AuditService,
+    );
+
+    const result = await handler.handle(
+      baseSession as any,
+      {
+        ...baseEvent,
+        interactiveReplyId: NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES,
       } as any,
     );
 

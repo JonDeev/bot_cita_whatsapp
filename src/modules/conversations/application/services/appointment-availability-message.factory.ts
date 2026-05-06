@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import type { ConversationOutboundInteractiveButtonsMessage } from '../../domain/value-objects/conversation-outbound-message';
 import { NAVIGATION_OPTION_IDS } from './conversation-navigation.service';
+import { NO_AVAILABILITY_OPTION_IDS } from './no-availability-option-id';
 
 @Injectable()
 export class AppointmentAvailabilityMessageFactory {
   buildNoAvailability(): ConversationOutboundInteractiveButtonsMessage {
     return {
       type: 'interactive_buttons',
-      body: 'En este momento no hay citas disponible para esta especialidad. Pronto habran mas citas disponibles para esta especialidad',
+      body: 'Disculpenos en este momento no hay citas disponibles para esta especialidad. Intente mas tarde',
       buttons: [
+        { id: NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES, title: 'Volver' },
         { id: NAVIGATION_OPTION_IDS.MAIN_MENU, title: 'Menu principal' },
         { id: NAVIGATION_OPTION_IDS.FINISH, title: 'Finalizar' },
       ],

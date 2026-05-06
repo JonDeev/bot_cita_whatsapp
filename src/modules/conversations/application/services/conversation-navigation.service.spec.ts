@@ -34,7 +34,7 @@ describe('ConversationNavigationService', () => {
     expect(message).toMatchObject({
       type: 'interactive_buttons',
       buttons: [
-        { id: 'nav_back', title: '↩ Volver' },
+        { id: 'nav_back', title: 'Volver' },
         { id: 'nav_main_menu', title: 'Menu principal' },
         { id: 'nav_finish', title: 'Finalizar' },
       ],
@@ -44,16 +44,58 @@ describe('ConversationNavigationService', () => {
   it('returns specialty step as back target for appointment date selection', () => {
     const service = new ConversationNavigationService();
 
-    expect(service.resolveBackTargetState(CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE)).toBe(
-      CONVERSATION_STATES.SELECTING_SPECIALTY,
-    );
+    expect(
+      service.resolveBackNavigation({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }).targetState,
+    ).toBe(CONVERSATION_STATES.SELECTING_SPECIALTY);
   });
 
   it('returns appointment date step as back target for appointment time selection', () => {
     const service = new ConversationNavigationService();
 
-    expect(service.resolveBackTargetState(CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME)).toBe(
-      CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
-    );
+    expect(
+      service.resolveBackNavigation({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }).targetState,
+    ).toBe(CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE);
+  });
+
+  it('returns doctor step when navigating back from doctor-filtered dates', () => {
+    const service = new ConversationNavigationService();
+
+    const result = service.resolveBackNavigation({
+      conversationKey: 'whatsapp:123:573001112233',
+      channel: 'whatsapp',
+      participantPhone: '573001112233',
+      phoneNumberId: '123',
+      state: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
+      status: 'BOT_ACTIVE',
+      context: {
+        appointmentDateSelection: {
+          scope: 'DOCTOR',
+          specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+          offeredDates: [{ isoDate: '2026-05-07', displayDate: '07/05/2026' }],
+        },
+      },
+      createdAt: '2026-05-04T10:00:00.000Z',
+      updatedAt: '2026-05-04T10:00:00.000Z',
+    });
+
+    expect(result.targetState).toBe(CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR);
   });
 });

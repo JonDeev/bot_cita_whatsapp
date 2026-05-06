@@ -17,9 +17,13 @@ describe('AppointmentAssignmentConfirmationMessageFactory', () => {
       usedFallbackSlot: false,
     });
 
-    expect(message).toContain('Señor(a) DANIEL ANDRES CASTANO NAVARRO');
-    expect(message).toContain('🩺Especialidad: MEDICINA GENERAL');
-    expect(message).toContain('🕜Hora: 11:40 AM');
-    expect(message).toContain('🏙️Sede: Santa Marta.');
+    expect(message.body).toContain('Señor(a) DANIEL ANDRES CASTANO NAVARRO');
+    expect(message.body).toContain('🩺Especialidad: MEDICINA GENERAL');
+    expect(message.body).toContain('🕜Hora: 11:40 AM');
+    expect(message.body).toContain('🏙️Sede: Santa Marta.');
+    expect(message.buttons).toEqual([
+      { id: 'nav_main_menu', title: 'Menu principal' },
+      { id: 'nav_finish', title: 'Finalizar' },
+    ]);
   });
 });

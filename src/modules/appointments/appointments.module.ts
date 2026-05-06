@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
 import { AssignAppointmentSlotAfterTimeSelectionUseCase } from './application/use-cases/assign-appointment-slot-after-time-selection.use-case';
 import { FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase } from './application/use-cases/find-nearest-pending-future-appointment-by-patient-and-specialty.use-case';
+import { ResolveAvailableAppointmentDoctorsBySpecialtyUseCase } from './application/use-cases/resolve-available-appointment-doctors-by-specialty.use-case';
 import { ResolveAvailableAppointmentDatesBySpecialtyUseCase } from './application/use-cases/resolve-available-appointment-dates-by-specialty.use-case';
 import { ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase } from './application/use-cases/resolve-available-appointment-times-by-specialty-and-date.use-case';
 import { AppointmentAvailabilityCutoffService } from './application/services/appointment-availability-cutoff.service';
@@ -26,6 +27,7 @@ import { PrismaLegacyPendingAppointmentCheckRepository } from './infrastructure/
     AppointmentTimePresenterService,
     AssignAppointmentSlotAfterTimeSelectionUseCase,
     FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase,
+    ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
     ResolveAvailableAppointmentDatesBySpecialtyUseCase,
     ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     {
@@ -48,6 +50,7 @@ import { PrismaLegacyPendingAppointmentCheckRepository } from './infrastructure/
   exports: [
     AssignAppointmentSlotAfterTimeSelectionUseCase,
     FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase,
+    ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
     ResolveAvailableAppointmentDatesBySpecialtyUseCase,
     ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
   ],

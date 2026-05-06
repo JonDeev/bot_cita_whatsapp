@@ -64,6 +64,7 @@ export class PatientValidatedHandler implements ConversationStateHandler {
         nextContext: {
           ...session.context,
           specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
         },
         outboundMessages: [
           {
@@ -93,7 +94,9 @@ export class PatientValidatedHandler implements ConversationStateHandler {
             cups: specialty.cups ?? undefined,
           })),
         },
+        appointmentDoctorSelection: undefined,
         appointmentDateSelection: undefined,
+        appointmentTimeSelection: undefined,
       },
       outboundMessages: [this.specialtyListFactory.build(specialtyResult.specialties)],
     };

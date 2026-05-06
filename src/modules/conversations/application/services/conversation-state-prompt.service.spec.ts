@@ -1,4 +1,6 @@
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
+import { AppointmentDoctorListPresenterService } from './appointment-doctor-list-presenter.service';
 import { ConversationStatePromptService } from './conversation-state-prompt.service';
 import { AppointmentDateListFactory } from './appointment-date-list.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
@@ -10,6 +12,7 @@ describe('ConversationStatePromptService', () => {
     return new ConversationStatePromptService(
       new MainMenuListFactory(),
       new SpecialtyListFactory(),
+      new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
       new AppointmentDateListFactory(),
       new AppointmentTimeListFactory(),
     );
@@ -77,7 +80,7 @@ describe('ConversationStatePromptService', () => {
       outboundMessages: [
         {
           type: 'text',
-          body: 'Para continuar, escribe tu numero de documento de identidad.',
+          body: 'Escribe tu numero de documento de identidad.',
         },
       ],
     });
@@ -121,6 +124,46 @@ describe('ConversationStatePromptService', () => {
                 { id: 'appointment_time:101', title: '08:30 AM' },
                 { id: 'appointment_time:show_more', title: 'Mostrar mas' },
               ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('builds the doctor list when returning to doctor selection', () => {
+    const service = buildService();
+
+    const result = service.buildForState(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
+        status: 'BOT_ACTIVE',
+        context: {
+          appointmentDoctorSelection: {
+            offeredDoctors: [{ employeeCode: 'M001', displayName: 'ANA GARCIA' }],
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
+    );
+
+    expect(result).toEqual({
+      nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
+      outboundMessages: [
+        {
+          type: 'interactive_list',
+          body: 'Selecciona el medico con quien deseas agendar.',
+          buttonText: 'Ver medicos',
+          sections: [
+            {
+              title: 'Medicos disponibles',
+              rows: [{ id: 'appointment_doctor:M001', title: 'ANA GARCIA' }],
             },
           ],
         },

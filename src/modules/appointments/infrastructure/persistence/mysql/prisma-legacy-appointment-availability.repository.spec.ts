@@ -2,6 +2,30 @@ import { PrismaService } from '../../../../../shared/infrastructure/prisma/prism
 import { PrismaLegacyAppointmentAvailabilityRepository } from './prisma-legacy-appointment-availability.repository';
 
 describe('PrismaLegacyAppointmentAvailabilityRepository', () => {
+  it('maps available doctor rows returned by the legacy query', async () => {
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValue([
+        { employeeCode: 'M001', professionalName: 'ANA GARCIA' },
+        { employeeCode: ' M002 ', professionalName: null },
+        { employeeCode: null, professionalName: 'DESCARTAR' },
+      ]),
+    } as unknown as PrismaService;
+
+    const repository = new PrismaLegacyAppointmentAvailabilityRepository(prisma);
+    const doctors = await repository.findAvailableDoctors({
+      specialtyCups: '890201',
+      cutoffDateIso: '2026-05-05',
+      cutoffTimeHHmm: '12:39',
+      maxResults: 9,
+    });
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(doctors).toEqual([
+      { employeeCode: 'M001', professionalName: 'ANA GARCIA' },
+      { employeeCode: 'M002', professionalName: '' },
+    ]);
+  });
+
   it('maps non-empty date rows returned by the legacy query', async () => {
     const prisma = {
       $queryRaw: jest.fn().mockResolvedValue([

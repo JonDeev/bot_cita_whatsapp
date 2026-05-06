@@ -74,4 +74,34 @@ describe('ResolveAvailableAppointmentDatesBySpecialtyUseCase', () => {
     });
     expect(repository.findAvailableDates).not.toHaveBeenCalled();
   });
+
+  it('passes doctor filter when provided', async () => {
+    const repository = {
+      findAvailableDates: jest.fn().mockResolvedValue([{ dateIso: '2026-05-06' }]),
+    };
+    const cutoffService = {
+      build: jest.fn().mockReturnValue({
+        cutoffDateIso: '2026-05-05',
+        cutoffTimeHHmm: '12:39',
+      }),
+    };
+
+    const useCase = new ResolveAvailableAppointmentDatesBySpecialtyUseCase(
+      repository as any,
+      cutoffService as any,
+      new AppointmentDatePresenterService(),
+    );
+
+    await useCase.execute({
+      specialtyCups: '890201',
+      doctorEmployeeCode: 'M001',
+    });
+
+    expect(repository.findAvailableDates).toHaveBeenCalledWith({
+      specialtyCups: '890201',
+      cutoffDateIso: '2026-05-05',
+      cutoffTimeHHmm: '12:39',
+      doctorEmployeeCode: 'M001',
+    });
+  });
 });

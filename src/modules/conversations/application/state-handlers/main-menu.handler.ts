@@ -13,7 +13,7 @@ import type {
 export class MainMenuHandler implements ConversationStateHandler {
   readonly state = CONVERSATION_STATES.MAIN_MENU;
 
-  constructor(private readonly mainMenuListFactory: MainMenuListFactory) {}
+  constructor(private readonly mainMenuListFactory: MainMenuListFactory) { }
 
   async handle(
     _session: ConversationSession,
@@ -37,12 +37,14 @@ export class MainMenuHandler implements ConversationStateHandler {
             failedAttempts: 0,
           },
           specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
         },
         outboundMessages: [
           {
             type: 'text',
-            body: 'Para continuar, escribe tu numero de documento de identidad.',
+            body: 'Escribe tu numero de documento de identidad.',
           },
         ],
       };

@@ -3,6 +3,7 @@ import { CONVERSATION_STATES, type ConversationState } from '../../domain/conver
 import type { ConversationSessionContext } from '../../domain/entities/conversation-session-context.entity';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import type { ConversationOutboundMessage } from '../../domain/value-objects/conversation-outbound-message';
+import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
 import { AppointmentDateListFactory } from './appointment-date-list.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
 import { MainMenuListFactory } from './main-menu-list.factory';
@@ -19,9 +20,10 @@ export class ConversationStatePromptService {
   constructor(
     private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly specialtyListFactory: SpecialtyListFactory,
+    private readonly appointmentDoctorListFactory: AppointmentDoctorListFactory,
     private readonly appointmentDateListFactory: AppointmentDateListFactory,
     private readonly appointmentTimeListFactory: AppointmentTimeListFactory,
-  ) {}
+  ) { }
 
   buildForState(
     session: ConversationSession,
@@ -40,7 +42,7 @@ export class ConversationStatePromptService {
           outboundMessages: [
             {
               type: 'text',
-              body: 'Para continuar, escribe tu numero de documento de identidad.',
+              body: 'Escribe tu numero de documento de identidad.',
             },
           ],
         };
@@ -74,8 +76,23 @@ export class ConversationStatePromptService {
         };
       }
 
+      case CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR: {
+        const offeredDoctors = session.context?.appointmentDoctorSelection?.offeredDoctors ?? [];
+        if (offeredDoctors.length === 0) {
+          return this.buildMainMenuFallback(
+            'No encontramos medicos disponibles para continuar. Volvamos al menu principal.',
+          );
+        }
+
+        return {
+          nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
+          outboundMessages: [this.appointmentDoctorListFactory.build(offeredDoctors)],
+        };
+      }
+
       case CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE: {
-        const offeredDates = session.context?.appointmentDateSelection?.offeredDates ?? [];
+        const appointmentDateSelection = session.context?.appointmentDateSelection;
+        const offeredDates = appointmentDateSelection?.offeredDates ?? [];
         if (offeredDates.length === 0) {
           return this.buildMainMenuFallback(
             'No encontramos fechas disponibles para continuar. Volvamos al menu principal.',
@@ -84,7 +101,11 @@ export class ConversationStatePromptService {
 
         return {
           nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
-          outboundMessages: [this.appointmentDateListFactory.build(offeredDates)],
+          outboundMessages: [
+            this.appointmentDateListFactory.build(offeredDates, {
+              includeChooseDoctor: appointmentDateSelection?.scope !== 'DOCTOR',
+            }),
+          ],
         };
       }
 

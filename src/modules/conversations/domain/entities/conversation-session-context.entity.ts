@@ -25,8 +25,20 @@ export interface OfferedAppointmentDateSessionContext {
 }
 
 export interface AppointmentDateSelectionSessionContext {
+  scope: 'SPECIALTY' | 'DOCTOR';
+  specialtyOfferedDates: OfferedAppointmentDateSessionContext[];
   offeredDates: OfferedAppointmentDateSessionContext[];
   selectedDateIso?: string;
+}
+
+export interface OfferedAppointmentDoctorSessionContext {
+  employeeCode: string;
+  displayName: string;
+}
+
+export interface AppointmentDoctorSelectionSessionContext {
+  offeredDoctors: OfferedAppointmentDoctorSessionContext[];
+  selectedDoctor?: OfferedAppointmentDoctorSessionContext;
 }
 
 export interface OfferedAppointmentTimeSessionContext {
@@ -46,6 +58,7 @@ export interface AppointmentTimeSelectionSessionContext {
 export interface ConversationSessionContext {
   patientValidation?: PatientValidationSessionContext;
   specialtySelection?: SpecialtySelectionSessionContext;
+  appointmentDoctorSelection?: AppointmentDoctorSelectionSessionContext;
   appointmentDateSelection?: AppointmentDateSelectionSessionContext;
   appointmentTimeSelection?: AppointmentTimeSelectionSessionContext;
 }

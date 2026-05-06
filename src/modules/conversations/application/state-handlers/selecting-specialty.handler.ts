@@ -7,6 +7,7 @@ import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { NO_AVAILABILITY_OPTION_IDS } from '../services/no-availability-option-id';
 import { PendingAppointmentBlockMessageFactory } from '../services/pending-appointment-block-message.factory';
 import { PENDING_APPOINTMENT_BLOCK_OPTION_IDS } from '../services/pending-appointment-block-option-id';
 import { parseSpecialtyOptionId } from '../services/specialty-option-id';
@@ -59,6 +60,20 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
       event.messageType === 'interactive' &&
       event.interactiveReplyId === PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES
     ) {
+      return {
+        nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
+        outboundMessages: [this.specialtyListFactory.build(offeredSpecialties)],
+      };
+    }
+
+    if (
+      event.messageType === 'interactive' &&
+      event.interactiveReplyId === NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES
+    ) {
+      await this.auditService.record('conversation.no_availability.back_to_specialties.selected', {
+        conversationKey: session.conversationKey,
+      });
+
       return {
         nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
         outboundMessages: [this.specialtyListFactory.build(offeredSpecialties)],
@@ -118,6 +133,7 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
             offeredSpecialties,
             selectedSpecialty,
           },
+          appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },
@@ -145,6 +161,7 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
             offeredSpecialties,
             selectedSpecialty,
           },
+          appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },
@@ -184,7 +201,7 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
         });
 
         return {
-          nextState: CONVERSATION_STATES.MAIN_MENU,
+          nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
           nextContext: {
             ...session.context,
             specialtySelection: {
@@ -192,6 +209,7 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
               offeredSpecialties,
               selectedSpecialty,
             },
+            appointmentDoctorSelection: undefined,
             appointmentDateSelection: undefined,
             appointmentTimeSelection: undefined,
           },
@@ -215,12 +233,19 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
             offeredSpecialties,
             selectedSpecialty,
           },
+          appointmentDoctorSelection: undefined,
           appointmentDateSelection: {
+            scope: 'SPECIALTY',
+            specialtyOfferedDates: availabilityResult.dates,
             offeredDates: availabilityResult.dates,
           },
           appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentDateListFactory.build(availabilityResult.dates)],
+        outboundMessages: [
+          this.appointmentDateListFactory.build(availabilityResult.dates, {
+            includeChooseDoctor: true,
+          }),
+        ],
       };
     } catch (error) {
       await this.auditService.record('appointment.availability.failed', {
@@ -239,6 +264,7 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
             offeredSpecialties,
             selectedSpecialty,
           },
+          appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },

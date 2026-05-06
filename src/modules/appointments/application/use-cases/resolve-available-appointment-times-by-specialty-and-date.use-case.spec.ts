@@ -284,4 +284,36 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
     });
     expect(repository.findAvailableTimesByDate).not.toHaveBeenCalled();
   });
+
+  it('passes doctor filter when requesting times for a selected doctor', async () => {
+    const repository = {
+      findAvailableTimesByDate: jest.fn().mockResolvedValue([{ slotRef: '301', timeHHmm: '16:30' }]),
+    };
+    const cutoffService = {
+      build: jest.fn().mockReturnValue({
+        cutoffDateIso: '2026-05-06',
+        cutoffTimeHHmm: '07:30',
+      }),
+    };
+    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+      repository as any,
+      cutoffService as any,
+      new AppointmentTimePresenterService(),
+    );
+
+    await useCase.execute({
+      specialtyCups: '890201',
+      appointmentDateIso: '2026-05-06',
+      doctorEmployeeCode: 'M001',
+    });
+
+    expect(repository.findAvailableTimesByDate).toHaveBeenCalledWith({
+      specialtyCups: '890201',
+      dateIso: '2026-05-06',
+      minimumTimeHHmm: '07:30',
+      afterTimeHHmmExclusive: undefined,
+      doctorEmployeeCode: 'M001',
+      maxResults: 10,
+    });
+  });
 });

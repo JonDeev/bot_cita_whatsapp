@@ -11,6 +11,8 @@ import { ConversationConfigService } from './application/services/conversation-c
 import { ConversationKeyFactory } from './application/services/conversation-key.factory';
 import { AppointmentAvailabilityMessageFactory } from './application/services/appointment-availability-message.factory';
 import { AppointmentAssignmentConfirmationMessageFactory } from './application/services/appointment-assignment-confirmation-message.factory';
+import { AppointmentDoctorListFactory } from './application/services/appointment-doctor-list.factory';
+import { AppointmentDoctorListPresenterService } from './application/services/appointment-doctor-list-presenter.service';
 import { AppointmentDateListFactory } from './application/services/appointment-date-list.factory';
 import { AppointmentTimeListFactory } from './application/services/appointment-time-list.factory';
 import { MainMenuListFactory } from './application/services/main-menu-list.factory';
@@ -21,6 +23,7 @@ import { PendingAppointmentBlockMessageFactory } from './application/services/pe
 import { MainMenuHandler } from './application/state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from './application/state-handlers/patient-validated.handler';
 import { SelectingAppointmentDateHandler } from './application/state-handlers/selecting-appointment-date.handler';
+import { SelectingAppointmentDoctorHandler } from './application/state-handlers/selecting-appointment-doctor.handler';
 import { SelectingAppointmentTimeHandler } from './application/state-handlers/selecting-appointment-time.handler';
 import { SelectingSpecialtyHandler } from './application/state-handlers/selecting-specialty.handler';
 import { WaitingBirthDateHandler } from './application/state-handlers/waiting-birth-date.handler';
@@ -40,6 +43,8 @@ import { PatientsModule } from '../patients/patients.module';
     ConversationKeyFactory,
     AppointmentAvailabilityMessageFactory,
     AppointmentAssignmentConfirmationMessageFactory,
+    AppointmentDoctorListPresenterService,
+    AppointmentDoctorListFactory,
     AppointmentDateListFactory,
     AppointmentTimeListFactory,
     MainMenuListFactory,
@@ -53,6 +58,7 @@ import { PatientsModule } from '../patients/patients.module';
     PatientValidatedHandler,
     SelectingSpecialtyHandler,
     SelectingAppointmentDateHandler,
+    SelectingAppointmentDoctorHandler,
     SelectingAppointmentTimeHandler,
     ConversationStateHandlerResolverService,
     HandleIncomingConversationMessageUseCase,
