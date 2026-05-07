@@ -9,6 +9,7 @@ describe('PrismaBotConversationMessageRepository', () => {
       },
       botMessage: {
         upsert: jest.fn().mockResolvedValue(undefined),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
     } as unknown as PrismaBotService;
 
@@ -23,7 +24,9 @@ describe('PrismaBotConversationMessageRepository', () => {
       textBody: 'hola',
       interactiveReplyId: null,
       interactiveReplyTitle: null,
-      timestamp: '1711111111',
+      contextMessageId: null,
+      providerTimestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
     });
 
     expect(prismaBot.botConversation.upsert).toHaveBeenCalledTimes(1);
@@ -38,6 +41,7 @@ describe('PrismaBotConversationMessageRepository', () => {
       botMessage: {
         upsert: jest.fn().mockResolvedValue(undefined),
         create: jest.fn().mockResolvedValue(undefined),
+        findFirst: jest.fn().mockResolvedValue({ id: 1 }),
       },
     } as unknown as PrismaBotService;
 
@@ -49,10 +53,29 @@ describe('PrismaBotConversationMessageRepository', () => {
       to: '573001112233',
       whatsappMessageId: 'wamid.out.1',
       body: 'menu',
-      timestamp: '1711111111',
+      sentAt: '2026-05-07T12:44:18.000Z',
     });
 
     expect(prismaBot.botMessage.upsert).toHaveBeenCalledTimes(1);
     expect(prismaBot.botMessage.create).not.toHaveBeenCalled();
+  });
+
+  it('checks whether an outbound message id is known for the conversation', async () => {
+    const prismaBot = {
+      botConversation: {
+        upsert: jest.fn().mockResolvedValue({ id: 10 }),
+      },
+      botMessage: {
+        upsert: jest.fn(),
+        create: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue({ id: 99 }),
+      },
+    } as unknown as PrismaBotService;
+
+    const repository = new PrismaBotConversationMessageRepository(prismaBot);
+
+    await expect(
+      repository.hasKnownOutboundMessage('whatsapp:123:573001112233', 'wamid.out.1'),
+    ).resolves.toBe(true);
   });
 });

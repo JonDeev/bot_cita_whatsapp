@@ -47,7 +47,6 @@ export class ConversationOrchestratorService {
         await this.dispatchOutboundMessage(
           {
             conversationKey: `whatsapp:${event.phoneNumberId ?? 'unknown'}:${event.from}`,
-            timestamp: event.timestamp,
             to: event.from,
           },
           outboundMessage,
@@ -59,11 +58,12 @@ export class ConversationOrchestratorService {
   private async dispatchOutboundMessage(
     input: {
       conversationKey: string;
-      timestamp: string;
       to: string;
     },
     outboundMessage: ConversationOutboundMessage,
   ): Promise<void> {
+    const sentAt = new Date().toISOString();
+
     try {
       if (outboundMessage.type === 'interactive_list') {
         const response = await this.sendWhatsappInteractiveListMessage.execute({
@@ -79,7 +79,7 @@ export class ConversationOrchestratorService {
           to: input.to,
           whatsappMessageId: response.messageId,
           body: outboundMessage.body,
-          timestamp: input.timestamp,
+          sentAt,
         });
         return;
       }
@@ -97,7 +97,7 @@ export class ConversationOrchestratorService {
           to: input.to,
           whatsappMessageId: response.messageId,
           body: outboundMessage.body,
-          timestamp: input.timestamp,
+          sentAt,
         });
         return;
       }
@@ -113,7 +113,7 @@ export class ConversationOrchestratorService {
         to: input.to,
         whatsappMessageId: response.messageId,
         body: outboundMessage.body,
-        timestamp: input.timestamp,
+        sentAt,
       });
     } catch (error) {
       this.logger.error(

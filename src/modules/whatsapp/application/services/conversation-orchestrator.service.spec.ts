@@ -36,6 +36,7 @@ describe('ConversationOrchestratorService', () => {
     const conversationMessageRepository = {
       saveInbound: jest.fn(),
       saveOutbound: jest.fn(),
+      hasKnownOutboundMessage: jest.fn(),
     };
 
     const sendWhatsappTextMessage = {
@@ -95,6 +96,7 @@ describe('ConversationOrchestratorService', () => {
     const conversationMessageRepository = {
       saveInbound: jest.fn(),
       saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn(),
     };
     const sendWhatsappTextMessage = {
       execute: jest.fn(),

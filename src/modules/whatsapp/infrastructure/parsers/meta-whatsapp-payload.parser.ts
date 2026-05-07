@@ -28,6 +28,9 @@ interface MetaChangeValue {
         title?: string;
       };
     };
+    context?: {
+      id?: string;
+    };
   }>;
   statuses?: Array<{
     id?: string;
@@ -39,7 +42,7 @@ interface MetaChangeValue {
 
 @Injectable()
 export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
-  parse(payload: unknown): NormalizedWhatsappEvent[] {
+  parse(payload: unknown, receivedAt: string): NormalizedWhatsappEvent[] {
     if (!payload || typeof payload !== 'object') {
       return [];
     }
@@ -58,6 +61,11 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
       }
 
       for (const changeItem of changes) {
+        const field = (changeItem as { field?: string }).field;
+        if (field !== 'messages') {
+          continue;
+        }
+
         const value = (changeItem as { value?: MetaChangeValue }).value;
         if (!value) {
           continue;
@@ -76,6 +84,7 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
               messageId: message.id,
               from: message.from,
               timestamp: message.timestamp,
+              receivedAt,
               messageType: message.type,
               textBody: message.text?.body,
               interactiveReplyId:
@@ -83,6 +92,7 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
               interactiveReplyTitle:
                 message.interactive?.list_reply?.title ??
                 message.interactive?.button_reply?.title,
+              contextMessageId: message.context?.id,
               phoneNumberId,
             };
 
@@ -102,6 +112,7 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
               recipientId: status.recipient_id,
               status: status.status,
               timestamp: status.timestamp,
+              receivedAt,
               phoneNumberId,
             };
 

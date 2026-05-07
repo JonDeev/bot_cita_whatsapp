@@ -20,8 +20,12 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       findByKey: jest.Mock;
       save: jest.Mock;
     },
-    conversationPersistenceRepository: { upsert: jest.Mock },
-    conversationMessageRepository: { saveInbound: jest.Mock; saveOutbound: jest.Mock },
+    conversationPersistenceRepository: { findByKey: jest.Mock; upsert: jest.Mock },
+    conversationMessageRepository: {
+      saveInbound: jest.Mock;
+      saveOutbound: jest.Mock;
+      hasKnownOutboundMessage: jest.Mock;
+    },
     conversationStateHandlerResolver: { resolve: jest.Mock },
     auditService: AuditService,
   ): HandleIncomingConversationMessageUseCase {
@@ -53,11 +57,13 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       save: jest.fn().mockResolvedValue(undefined),
     };
     const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue(undefined),
     };
     const conversationMessageRepository = {
       saveInbound: jest.fn().mockResolvedValue(undefined),
       saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
     };
     const mainMenuHandler = new MainMenuHandler(new MainMenuListFactory());
     const conversationStateHandlerResolver = {
@@ -80,6 +86,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       messageId: 'wamid-1',
       from: '573001112233',
       timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
       messageType: 'text',
       textBody: 'hola',
       phoneNumberId: '123',
@@ -107,11 +114,13 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       save: jest.fn().mockResolvedValue(undefined),
     };
     const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue(undefined),
     };
     const conversationMessageRepository = {
       saveInbound: jest.fn().mockResolvedValue(undefined),
       saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
     };
     const waitingDocumentHandler = {
       handle: jest.fn().mockResolvedValue({
@@ -144,6 +153,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       messageId: 'wamid-1',
       from: '573001112233',
       timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
       messageType: 'text',
       textBody: '12345678',
       phoneNumberId: '123',
@@ -168,11 +178,13 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       save: jest.fn().mockResolvedValue(undefined),
     };
     const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue(undefined),
     };
     const conversationMessageRepository = {
       saveInbound: jest.fn().mockResolvedValue(undefined),
       saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
     };
     const conversationStateHandlerResolver = {
       resolve: jest.fn(),
@@ -194,6 +206,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       messageId: 'wamid-2',
       from: '573001112233',
       timestamp: '1711111112',
+      receivedAt: '2026-05-07T12:44:15.000Z',
       messageType: 'interactive',
       interactiveReplyId: 'nav_finish',
       interactiveReplyTitle: 'Finalizar',
@@ -225,11 +238,13 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       save: jest.fn().mockResolvedValue(undefined),
     };
     const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue(undefined),
     };
     const conversationMessageRepository = {
       saveInbound: jest.fn().mockResolvedValue(undefined),
       saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
     };
     const mainMenuHandler = new MainMenuHandler(new MainMenuListFactory());
     const conversationStateHandlerResolver = {
@@ -252,6 +267,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       messageId: 'wamid-3',
       from: '573001112233',
       timestamp: '1711111113',
+      receivedAt: '2026-05-07T12:44:15.000Z',
       messageType: 'text',
       textBody: 'hola otra vez',
       phoneNumberId: '123',
@@ -291,11 +307,13 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       save: jest.fn().mockResolvedValue(undefined),
     };
     const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue(undefined),
     };
     const conversationMessageRepository = {
       saveInbound: jest.fn().mockResolvedValue(undefined),
       saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
     };
     const conversationStateHandlerResolver = {
       resolve: jest.fn(),
@@ -317,10 +335,12 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       messageId: 'wamid-8',
       from: '573001112233',
       timestamp: '1711111118',
+      receivedAt: '2026-05-07T12:44:15.000Z',
       messageType: 'interactive',
       interactiveReplyId: 'nav_back',
       interactiveReplyTitle: 'Volver',
       phoneNumberId: '123',
+      contextMessageId: 'wamid-outbound-1',
     });
 
     expect(result.outboundMessages).toEqual([
@@ -350,5 +370,133 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       }),
     );
     expect(conversationStateHandlerResolver.resolve).not.toHaveBeenCalled();
+  });
+
+  it('restores a durable session when Redis does not have it', async () => {
+    const repository = {
+      findByKey: jest.fn().mockResolvedValue(null),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'WAITING_DOCUMENT',
+        status: 'BOT_ACTIVE',
+        context: {
+          flowIntent: 'REQUEST_APPOINTMENT',
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }),
+      upsert: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationMessageRepository = {
+      saveInbound: jest.fn().mockResolvedValue(undefined),
+      saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
+    };
+    const waitingDocumentHandler = {
+      handle: jest.fn().mockResolvedValue({
+        nextState: 'WAITING_BIRTH_DATE',
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY.',
+          },
+        ],
+      }),
+    };
+    const conversationStateHandlerResolver = {
+      resolve: jest.fn().mockReturnValue(waitingDocumentHandler),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const useCase = buildUseCase(
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
+      conversationStateHandlerResolver,
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-restore',
+      from: '573001112233',
+      timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
+      messageType: 'text',
+      textBody: '12345678',
+      phoneNumberId: '123',
+    });
+
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: 'WAITING_BIRTH_DATE',
+      }),
+    );
+    expect(conversationPersistenceRepository.findByKey).toHaveBeenCalledTimes(1);
+    expect(result.outboundMessages[0]).toMatchObject({ type: 'text' });
+  });
+
+  it('skips interactive replies with unknown outbound context', async () => {
+    const repository = {
+      findByKey: jest.fn().mockResolvedValue({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'MAIN_MENU',
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationMessageRepository = {
+      saveInbound: jest.fn().mockResolvedValue(undefined),
+      saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(false),
+    };
+    const conversationStateHandlerResolver = {
+      resolve: jest.fn(),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const useCase = buildUseCase(
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
+      conversationStateHandlerResolver,
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-invalid-context',
+      from: '573001112233',
+      timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
+      messageType: 'interactive',
+      interactiveReplyId: 'main_menu_request_appointment',
+      interactiveReplyTitle: 'Solicitar cita',
+      contextMessageId: 'wamid-unknown-outbound',
+      phoneNumberId: '123',
+    });
+
+    expect(result.outboundMessages).toEqual([]);
+    expect(conversationStateHandlerResolver.resolve).not.toHaveBeenCalled();
+    expect(repository.save).not.toHaveBeenCalled();
   });
 });

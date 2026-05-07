@@ -7,7 +7,9 @@ export interface SaveInboundConversationMessageInput {
   textBody: string | null;
   interactiveReplyId: string | null;
   interactiveReplyTitle: string | null;
-  timestamp: string;
+  contextMessageId: string | null;
+  providerTimestamp: string;
+  receivedAt: string;
 }
 
 export interface SaveOutboundConversationMessageInput {
@@ -16,10 +18,14 @@ export interface SaveOutboundConversationMessageInput {
   to: string;
   whatsappMessageId: string | null;
   body: string | null;
-  timestamp: string;
+  sentAt: string;
 }
 
 export interface ConversationMessageRepository {
   saveInbound(input: SaveInboundConversationMessageInput): Promise<void>;
   saveOutbound(input: SaveOutboundConversationMessageInput): Promise<void>;
+  hasKnownOutboundMessage(
+    conversationKey: string,
+    whatsappMessageId: string,
+  ): Promise<boolean>;
 }

@@ -31,6 +31,12 @@ export interface HandleIncomingConversationMessageResult {
   outboundMessages: ConversationOutboundMessage[];
 }
 
+interface ResolvedConversationSession {
+  session: ConversationSession;
+  wasCreated: boolean;
+  wasRestoredFromPersistence: boolean;
+}
+
 @Injectable()
 export class HandleIncomingConversationMessageUseCase {
   private static readonly MAX_HANDLER_TRANSITIONS_PER_EVENT = 3;
@@ -62,8 +68,8 @@ export class HandleIncomingConversationMessageUseCase {
       event.phoneNumberId,
       event.from,
     );
-    const existingSession = await this.conversationSessionRepository.findByKey(conversationKey);
-    const session = existingSession ?? this.createInitialSession(conversationKey, event);
+    const resolvedSession = await this.resolveSession(conversationKey, event);
+    const session = resolvedSession.session;
 
     await this.auditService.record('conversation.inbound.message_received', {
       conversationKey,
@@ -72,7 +78,15 @@ export class HandleIncomingConversationMessageUseCase {
       status: session.status,
     });
 
-    if (!existingSession) {
+    if (resolvedSession.wasRestoredFromPersistence) {
+      await this.auditService.record('conversation.session.restored_from_persistence', {
+        conversationKey,
+        state: session.state,
+        status: session.status,
+      });
+    }
+
+    if (resolvedSession.wasCreated) {
       await this.auditService.record('conversation.session.created', {
         conversationKey,
         state: session.state,
@@ -89,8 +103,23 @@ export class HandleIncomingConversationMessageUseCase {
       textBody: event.textBody ?? null,
       interactiveReplyId: event.interactiveReplyId ?? null,
       interactiveReplyTitle: event.interactiveReplyTitle ?? null,
-      timestamp: event.timestamp,
+      contextMessageId: event.contextMessageId ?? null,
+      providerTimestamp: event.timestamp,
+      receivedAt: event.receivedAt ?? new Date().toISOString(),
     });
+
+    const hasValidInteractiveContext = await this.hasValidInteractiveContext(
+      conversationKey,
+      event,
+    );
+    if (!hasValidInteractiveContext) {
+      await this.auditService.record('conversation.interactive.invalid_context_skipped', {
+        conversationKey,
+        messageId: event.messageId,
+        contextMessageId: event.contextMessageId ?? null,
+      });
+      return { outboundMessages: [] };
+    }
 
     const sessionToProcess = await this.reopenIfClosed(session, event);
 
@@ -151,6 +180,40 @@ export class HandleIncomingConversationMessageUseCase {
       status: CONVERSATION_STATUSES.BOT_ACTIVE,
       createdAt: timestamp,
       updatedAt: timestamp,
+    };
+  }
+
+  private async resolveSession(
+    conversationKey: string,
+    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+  ): Promise<ResolvedConversationSession> {
+    const cachedSession = await this.conversationSessionRepository.findByKey(conversationKey);
+    if (cachedSession) {
+      return {
+        session: cachedSession,
+        wasCreated: false,
+        wasRestoredFromPersistence: false,
+      };
+    }
+
+    if (this.conversationConfigService.shouldRestoreSessionFromPersistence()) {
+      const persistedSession = await this.conversationPersistenceRepository.findByKey(
+        conversationKey,
+      );
+      if (persistedSession) {
+        await this.conversationSessionRepository.save(persistedSession);
+        return {
+          session: persistedSession,
+          wasCreated: false,
+          wasRestoredFromPersistence: true,
+        };
+      }
+    }
+
+    return {
+      session: this.createInitialSession(conversationKey, event),
+      wasCreated: true,
+      wasRestoredFromPersistence: false,
     };
   }
 
@@ -224,6 +287,20 @@ export class HandleIncomingConversationMessageUseCase {
       event.phoneNumberId,
       CONVERSATION_STATUSES.BOT_ACTIVE,
       undefined,
+    );
+  }
+
+  private async hasValidInteractiveContext(
+    conversationKey: string,
+    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+  ): Promise<boolean> {
+    if (event.messageType !== 'interactive' || !event.contextMessageId) {
+      return true;
+    }
+
+    return this.conversationMessageRepository.hasKnownOutboundMessage(
+      conversationKey,
+      event.contextMessageId,
     );
   }
 

@@ -13,12 +13,13 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
 
   async saveInbound(input: SaveInboundConversationMessageInput): Promise<void> {
     const conversationId = await this.ensureConversationId(input.conversationKey, input.from);
-    const occurredAt = this.fromUnixTimestamp(input.timestamp);
+    const occurredAt = this.fromUnixTimestamp(input.providerTimestamp);
     const payload = {
       phoneNumberId: input.phoneNumberId,
       textBody: input.textBody,
       interactiveReplyId: input.interactiveReplyId,
       interactiveReplyTitle: input.interactiveReplyTitle,
+      contextMessageId: input.contextMessageId,
     };
 
     await this.prismaBot.botMessage.upsert({
@@ -31,6 +32,8 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
         body: input.textBody,
         payload,
         occurredAt,
+        providerOccurredAt: occurredAt,
+        receivedAt: new Date(input.receivedAt),
       },
       update: {
         conversationId,
@@ -38,13 +41,15 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
         body: input.textBody,
         payload,
         occurredAt,
+        providerOccurredAt: occurredAt,
+        receivedAt: new Date(input.receivedAt),
       },
     });
   }
 
   async saveOutbound(input: SaveOutboundConversationMessageInput): Promise<void> {
     const conversationId = await this.ensureConversationId(input.conversationKey, input.to);
-    const occurredAt = this.fromUnixTimestamp(input.timestamp);
+    const occurredAt = new Date(input.sentAt);
     const payload = {
       to: input.to,
       messageType: input.messageType,
@@ -62,6 +67,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
           body: input.body,
           payload,
           occurredAt,
+          sentAt: occurredAt,
         },
         update: {
           conversationId,
@@ -69,6 +75,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
           body: input.body,
           payload,
           occurredAt,
+          sentAt: occurredAt,
         },
       });
       return;
@@ -82,8 +89,29 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
         body: input.body,
         payload,
         occurredAt,
+        sentAt: occurredAt,
       },
     });
+  }
+
+  async hasKnownOutboundMessage(
+    conversationKey: string,
+    whatsappMessageId: string,
+  ): Promise<boolean> {
+    const message = await this.prismaBot.botMessage.findFirst({
+      where: {
+        whatsappMessageId,
+        direction: BotMessageDirection.OUTBOUND,
+        conversation: {
+          conversationKey,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return Boolean(message);
   }
 
   private async ensureConversationId(conversationKey: string, participantPhone: string): Promise<number> {

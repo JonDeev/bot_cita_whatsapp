@@ -7,10 +7,12 @@ export interface IncomingMessageReceivedEvent {
   messageId: string;
   from: string;
   timestamp: string;
+  receivedAt?: string;
   messageType: string;
   textBody?: string;
   interactiveReplyId?: string;
   interactiveReplyTitle?: string;
+  contextMessageId?: string;
   phoneNumberId?: string;
 }
 
@@ -20,5 +22,6 @@ export interface MessageStatusChangedEvent {
   recipientId: string;
   status: string;
   timestamp: string;
+  receivedAt?: string;
   phoneNumberId?: string;
 }

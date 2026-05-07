@@ -19,6 +19,14 @@ enum BotOutboxStatus {
   FAILED
 }
 
+enum BotWebhookProcessingStatus {
+  RECEIVED
+  PROCESSED
+  SKIPPED_STALE
+  SKIPPED_INVALID_CONTEXT
+  FAILED
+}
+
 enum BotSexRule {
   ANY
   H
@@ -33,6 +41,7 @@ model BotConversation {
   phoneNumberId    String?            @map("phone_number_id") @db.VarChar(64)
   state            String             @db.VarChar(64)
   status           String             @db.VarChar(32)
+  context          Json?              @db.Json
   createdAt        DateTime           @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt        DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
   messages         BotMessage[]
@@ -54,12 +63,43 @@ model BotMessage {
   body              String?             @db.Text
   payload           Json?               @db.Json
   occurredAt        DateTime            @map("occurred_at") @db.DateTime(3)
+  providerOccurredAt DateTime?          @map("provider_occurred_at") @db.DateTime(3)
+  receivedAt        DateTime?           @map("received_at") @db.DateTime(3)
+  sentAt            DateTime?           @map("sent_at") @db.DateTime(3)
   createdAt         DateTime            @default(now()) @map("created_at") @db.DateTime(3)
   conversation      BotConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, occurredAt], map: "idx_bot_messages_conversation_occurred_at")
   @@index([direction, occurredAt], map: "idx_bot_messages_direction_occurred_at")
   @@map("bot_messages")
+}
+
+model BotWebhookEvent {
+  id                Int                        @id @default(autoincrement())
+  deduplicationKey  String                     @unique(map: "uq_bot_webhook_events_deduplication_key") @map("deduplication_key") @db.VarChar(191)
+  providerMessageId String                     @map("provider_message_id") @db.VarChar(191)
+  eventKind         String                     @map("event_kind") @db.VarChar(64)
+  phoneNumberId     String?                    @map("phone_number_id") @db.VarChar(64)
+  participantPhone  String?                    @map("participant_phone") @db.VarChar(32)
+  messageType       String?                    @map("message_type") @db.VarChar(64)
+  interactiveReplyId String?                   @map("interactive_reply_id") @db.VarChar(191)
+  contextMessageId  String?                    @map("context_message_id") @db.VarChar(191)
+  providerOccurredAt DateTime                  @map("provider_occurred_at") @db.DateTime(3)
+  receivedAt        DateTime                   @map("received_at") @db.DateTime(3)
+  processedAt       DateTime?                  @map("processed_at") @db.DateTime(3)
+  signatureValid    Boolean                    @default(false) @map("signature_valid")
+  payloadHash       String                     @map("payload_hash") @db.VarChar(64)
+  payload           Json?                      @db.Json
+  processingStatus  BotWebhookProcessingStatus @default(RECEIVED) @map("processing_status")
+  rejectionReason   String?                    @map("rejection_reason") @db.VarChar(64)
+  errorMessage      String?                    @map("error_message") @db.Text
+  createdAt         DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime                   @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@index([providerMessageId], map: "idx_bot_webhook_events_provider_message_id")
+  @@index([eventKind, receivedAt], map: "idx_bot_webhook_events_event_kind_received_at")
+  @@index([participantPhone, receivedAt], map: "idx_bot_webhook_events_participant_phone_received_at")
+  @@map("bot_webhook_events")
 }
 
 model BotAuditEvent {

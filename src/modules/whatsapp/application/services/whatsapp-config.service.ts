@@ -28,11 +28,46 @@ export class WhatsappConfigService {
     return value || 'v22.0';
   }
 
+  getInteractiveEventMaxAgeSeconds(): number | null {
+    return this.readOptionalPositiveNumberEnv('WHATSAPP_INTERACTIVE_EVENT_MAX_AGE_SECONDS');
+  }
+
+  getTextEventMaxAgeSeconds(): number | null {
+    return this.readOptionalPositiveNumberEnv('WHATSAPP_TEXT_EVENT_MAX_AGE_SECONDS');
+  }
+
+  shouldStoreWebhookPayloads(): boolean {
+    return this.readBooleanEnv('WHATSAPP_STORE_WEBHOOK_PAYLOADS', true);
+  }
+
   isAutoReplyEnabled(): boolean {
-    return this.readStringEnv('WHATSAPP_AUTO_REPLY_ENABLED').toLowerCase() === 'true';
+    return this.readBooleanEnv('WHATSAPP_AUTO_REPLY_ENABLED', false);
   }
 
   private readStringEnv(key: string): string {
     return (process.env[key] ?? '').trim();
+  }
+
+  private readBooleanEnv(key: string, fallback: boolean): boolean {
+    const value = this.readStringEnv(key);
+    if (!value) {
+      return fallback;
+    }
+
+    return value.toLowerCase() === 'true';
+  }
+
+  private readOptionalPositiveNumberEnv(key: string): number | null {
+    const value = this.readStringEnv(key);
+    if (!value) {
+      return null;
+    }
+
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+      return null;
+    }
+
+    return parsedValue;
   }
 }
