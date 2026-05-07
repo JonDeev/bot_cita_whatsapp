@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import type { ConversationState } from '../../domain/conversation-state';
 import { MainMenuHandler } from '../state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from '../state-handlers/patient-validated.handler';
+import { ReviewingAssignedAppointmentActionsHandler } from '../state-handlers/reviewing-assigned-appointment-actions.handler';
+import { SelectingAssignedAppointmentHandler } from '../state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from '../state-handlers/selecting-appointment-date.handler';
 import { SelectingAppointmentDoctorHandler } from '../state-handlers/selecting-appointment-doctor.handler';
 import { SelectingAppointmentTimeHandler } from '../state-handlers/selecting-appointment-time.handler';
@@ -19,6 +21,8 @@ export class ConversationStateHandlerResolverService {
     waitingDocumentHandler: WaitingDocumentHandler,
     waitingBirthDateHandler: WaitingBirthDateHandler,
     patientValidatedHandler: PatientValidatedHandler,
+    selectingAssignedAppointmentHandler: SelectingAssignedAppointmentHandler,
+    reviewingAssignedAppointmentActionsHandler: ReviewingAssignedAppointmentActionsHandler,
     selectingSpecialtyHandler: SelectingSpecialtyHandler,
     selectingAppointmentDateHandler: SelectingAppointmentDateHandler,
     selectingAppointmentDoctorHandler: SelectingAppointmentDoctorHandler,
@@ -29,6 +33,14 @@ export class ConversationStateHandlerResolverService {
     this.handlersByState.set(waitingDocumentHandler.state, waitingDocumentHandler);
     this.handlersByState.set(waitingBirthDateHandler.state, waitingBirthDateHandler);
     this.handlersByState.set(patientValidatedHandler.state, patientValidatedHandler);
+    this.handlersByState.set(
+      selectingAssignedAppointmentHandler.state,
+      selectingAssignedAppointmentHandler,
+    );
+    this.handlersByState.set(
+      reviewingAssignedAppointmentActionsHandler.state,
+      reviewingAssignedAppointmentActionsHandler,
+    );
     this.handlersByState.set(selectingSpecialtyHandler.state, selectingSpecialtyHandler);
     this.handlersByState.set(selectingAppointmentDateHandler.state, selectingAppointmentDateHandler);
     this.handlersByState.set(

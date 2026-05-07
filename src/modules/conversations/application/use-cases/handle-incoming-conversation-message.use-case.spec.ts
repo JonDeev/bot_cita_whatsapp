@@ -1,4 +1,6 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { AssignedAppointmentDetailsMessageFactory } from '../services/assigned-appointment-details-message.factory';
+import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from '../services/appointment-doctor-list.factory';
 import { AppointmentDoctorListPresenterService } from '../services/appointment-doctor-list-presenter.service';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
@@ -33,6 +35,8 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       new ConversationStatePromptService(
         new MainMenuListFactory(),
         new SpecialtyListFactory(),
+        new AssignedAppointmentListFactory(),
+        new AssignedAppointmentDetailsMessageFactory(),
         new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
         new AppointmentDateListFactory(),
         new AppointmentTimeListFactory(),

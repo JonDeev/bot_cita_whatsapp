@@ -9,6 +9,7 @@ import type { ConversationSession } from '../../domain/entities/conversation-ses
 import { AppointmentAssignmentConfirmationMessageFactory } from '../services/appointment-assignment-confirmation-message.factory';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { AppointmentReschedulingTimeSelectionService } from '../services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
 import { parseAppointmentTimeOptionId } from '../services/appointment-time-option-id';
 import type {
@@ -25,6 +26,7 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     private readonly appointmentDateListFactory: AppointmentDateListFactory,
     private readonly appointmentAssignmentConfirmationMessageFactory: AppointmentAssignmentConfirmationMessageFactory,
     private readonly appointmentAvailabilityMessageFactory: AppointmentAvailabilityMessageFactory,
+    private readonly appointmentReschedulingTimeSelectionService: AppointmentReschedulingTimeSelectionService,
     private readonly resolveAvailableAppointmentTimesBySpecialtyAndDate: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     private readonly assignAppointmentSlotAfterTimeSelection: AssignAppointmentSlotAfterTimeSelectionUseCase,
     private readonly auditService: AuditService,
@@ -93,6 +95,23 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       slotRef: selectedTime.slotRef,
     });
 
+    if (session.context?.appointmentReschedule) {
+      const rescheduleOutcome =
+        await this.appointmentReschedulingTimeSelectionService.handleAfterTimeSelection(
+          session,
+          selectedTime,
+        );
+
+      if (rescheduleOutcome.status === 'TIME_NO_LONGER_AVAILABLE') {
+        return this.rebuildTimeSelectionAfterSlotExhausted(
+          session,
+          rescheduleOutcome.selectedDisplayTime,
+        );
+      }
+
+      return rescheduleOutcome.result;
+    }
+
     await this.auditService.record('appointment.assignment.attempted', {
       conversationKey: session.conversationKey,
       patientId: session.context?.patientValidation?.patientId ?? null,
@@ -140,6 +159,7 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         nextState: CONVERSATION_STATES.MAIN_MENU,
         nextContext: {
           ...session.context,
+          appointmentReschedule: undefined,
           specialtySelection: undefined,
           appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,

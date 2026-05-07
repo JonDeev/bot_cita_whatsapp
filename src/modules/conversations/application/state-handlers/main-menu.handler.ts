@@ -33,9 +33,39 @@ export class MainMenuHandler implements ConversationStateHandler {
       return {
         nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
         nextContext: {
+          flowIntent: 'REQUEST_APPOINTMENT',
           patientValidation: {
             failedAttempts: 0,
           },
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'Escribe tu numero de documento de identidad.',
+          },
+        ],
+      };
+    }
+
+    if (
+      event.messageType === 'interactive' &&
+      event.interactiveReplyId === MAIN_MENU_OPTION_IDS.CANCEL_OR_RESCHEDULE
+    ) {
+      return {
+        nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
+        nextContext: {
+          flowIntent: 'CANCEL_OR_RESCHEDULE',
+          patientValidation: {
+            failedAttempts: 0,
+          },
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
           specialtySelection: undefined,
           appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,

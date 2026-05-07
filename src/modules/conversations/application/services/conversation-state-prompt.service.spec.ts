@@ -1,4 +1,6 @@
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { AssignedAppointmentDetailsMessageFactory } from './assigned-appointment-details-message.factory';
+import { AssignedAppointmentListFactory } from './assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
 import { AppointmentDoctorListPresenterService } from './appointment-doctor-list-presenter.service';
 import { ConversationStatePromptService } from './conversation-state-prompt.service';
@@ -12,6 +14,8 @@ describe('ConversationStatePromptService', () => {
     return new ConversationStatePromptService(
       new MainMenuListFactory(),
       new SpecialtyListFactory(),
+      new AssignedAppointmentListFactory(),
+      new AssignedAppointmentDetailsMessageFactory(),
       new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
       new AppointmentDateListFactory(),
       new AppointmentTimeListFactory(),
@@ -128,6 +132,47 @@ describe('ConversationStatePromptService', () => {
           ],
         },
       ],
+    });
+  });
+
+  it('builds the assigned appointment list when returning to cancel or reschedule flow', () => {
+    const service = buildService();
+
+    const result = service.buildForState(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+        status: 'BOT_ACTIVE',
+        context: {
+          assignedAppointmentSelection: {
+            patientFullName: 'DANIEL CASTANO',
+            currentOffset: 0,
+            hasMoreAppointments: false,
+            offeredAppointments: [
+              {
+                slotRef: '101',
+                specialtyName: 'MEDICINA GENERAL',
+                professionalName: 'MEDICO',
+                appointmentDateIso: '2026-05-30',
+                appointmentTimeHHmm: '11:40',
+                appointmentDisplayTime: '11:40 AM',
+              },
+            ],
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+    );
+
+    expect(result.nextState).toBe(CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT);
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_list',
+      buttonText: 'Ver citas',
     });
   });
 

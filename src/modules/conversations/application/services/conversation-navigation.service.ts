@@ -25,11 +25,16 @@ const STATES_WITHOUT_NAVIGATION = new Set<ConversationState>([
 
 const STATES_WITHOUT_BACK = new Set<ConversationState>([
   CONVERSATION_STATES.SELECTING_SPECIALTY,
+  CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+  CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_ACTIONS,
 ]);
 
 const BACK_TARGET_BY_STATE: Partial<Record<ConversationState, ConversationState>> = {
   [CONVERSATION_STATES.WAITING_BIRTH_DATE]: CONVERSATION_STATES.WAITING_DOCUMENT,
   [CONVERSATION_STATES.SELECTING_SPECIALTY]: CONVERSATION_STATES.WAITING_BIRTH_DATE,
+  [CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT]: CONVERSATION_STATES.WAITING_BIRTH_DATE,
+  [CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_ACTIONS]:
+    CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
   [CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE]: CONVERSATION_STATES.SELECTING_SPECIALTY,
   [CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR]: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
   [CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME]: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
@@ -107,6 +112,23 @@ export class ConversationNavigationService {
             ...session.context.appointmentDateSelection,
             selectedDateIso: undefined,
           },
+          appointmentTimeSelection: undefined,
+        },
+      };
+    }
+
+    if (
+      session.state === CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE &&
+      session.context?.appointmentReschedule
+    ) {
+      return {
+        targetState: CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_ACTIONS,
+        nextContext: {
+          ...session.context,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },
       };

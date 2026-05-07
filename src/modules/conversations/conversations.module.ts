@@ -11,9 +11,13 @@ import { ConversationConfigService } from './application/services/conversation-c
 import { ConversationKeyFactory } from './application/services/conversation-key.factory';
 import { AppointmentAvailabilityMessageFactory } from './application/services/appointment-availability-message.factory';
 import { AppointmentAssignmentConfirmationMessageFactory } from './application/services/appointment-assignment-confirmation-message.factory';
+import { AssignedAppointmentDetailsMessageFactory } from './application/services/assigned-appointment-details-message.factory';
+import { AssignedAppointmentListFactory } from './application/services/assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './application/services/appointment-doctor-list.factory';
 import { AppointmentDoctorListPresenterService } from './application/services/appointment-doctor-list-presenter.service';
 import { AppointmentDateListFactory } from './application/services/appointment-date-list.factory';
+import { AppointmentRescheduleConfirmationMessageFactory } from './application/services/appointment-reschedule-confirmation-message.factory';
+import { AppointmentReschedulingTimeSelectionService } from './application/services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from './application/services/appointment-time-list.factory';
 import { MainMenuListFactory } from './application/services/main-menu-list.factory';
 import { ConversationStatePromptService } from './application/services/conversation-state-prompt.service';
@@ -22,6 +26,8 @@ import { ConversationNavigationService } from './application/services/conversati
 import { PendingAppointmentBlockMessageFactory } from './application/services/pending-appointment-block-message.factory';
 import { MainMenuHandler } from './application/state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from './application/state-handlers/patient-validated.handler';
+import { ReviewingAssignedAppointmentActionsHandler } from './application/state-handlers/reviewing-assigned-appointment-actions.handler';
+import { SelectingAssignedAppointmentHandler } from './application/state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from './application/state-handlers/selecting-appointment-date.handler';
 import { SelectingAppointmentDoctorHandler } from './application/state-handlers/selecting-appointment-doctor.handler';
 import { SelectingAppointmentTimeHandler } from './application/state-handlers/selecting-appointment-time.handler';
@@ -43,9 +49,13 @@ import { PatientsModule } from '../patients/patients.module';
     ConversationKeyFactory,
     AppointmentAvailabilityMessageFactory,
     AppointmentAssignmentConfirmationMessageFactory,
+    AssignedAppointmentDetailsMessageFactory,
+    AssignedAppointmentListFactory,
     AppointmentDoctorListPresenterService,
     AppointmentDoctorListFactory,
     AppointmentDateListFactory,
+    AppointmentRescheduleConfirmationMessageFactory,
+    AppointmentReschedulingTimeSelectionService,
     AppointmentTimeListFactory,
     MainMenuListFactory,
     ConversationStatePromptService,
@@ -56,6 +66,8 @@ import { PatientsModule } from '../patients/patients.module';
     WaitingDocumentHandler,
     WaitingBirthDateHandler,
     PatientValidatedHandler,
+    SelectingAssignedAppointmentHandler,
+    ReviewingAssignedAppointmentActionsHandler,
     SelectingSpecialtyHandler,
     SelectingAppointmentDateHandler,
     SelectingAppointmentDoctorHandler,

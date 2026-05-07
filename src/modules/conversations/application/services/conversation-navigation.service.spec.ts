@@ -26,6 +26,22 @@ describe('ConversationNavigationService', () => {
     });
   });
 
+  it('builds menu+finish buttons for assigned appointment selection step', () => {
+    const service = new ConversationNavigationService();
+
+    const message = service.buildNavigationMessage(
+      CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+    );
+
+    expect(message).toMatchObject({
+      type: 'interactive_buttons',
+      buttons: [
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
+    });
+  });
+
   it('builds back+menu+finish buttons for other states', () => {
     const service = new ConversationNavigationService();
 
@@ -97,5 +113,39 @@ describe('ConversationNavigationService', () => {
     });
 
     expect(result.targetState).toBe(CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR);
+  });
+
+  it('returns reviewing-assigned-actions when navigating back from reprogramming date selection', () => {
+    const service = new ConversationNavigationService();
+
+    const result = service.resolveBackNavigation({
+      conversationKey: 'whatsapp:123:573001112233',
+      channel: 'whatsapp',
+      participantPhone: '573001112233',
+      phoneNumberId: '123',
+      state: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
+      status: 'BOT_ACTIVE',
+      context: {
+        appointmentReschedule: {
+          originalSlotRef: '101',
+          originalSpecialtyName: 'MEDICINA GENERAL',
+          originalSpecialtyCups: '890201',
+          originalAppointmentDateIso: '2026-05-20',
+          originalAppointmentTimeHHmm: '11:40',
+        },
+        appointmentDateSelection: {
+          scope: 'SPECIALTY',
+          specialtyOfferedDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
+          offeredDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
+        },
+      },
+      createdAt: '2026-05-04T10:00:00.000Z',
+      updatedAt: '2026-05-04T10:00:00.000Z',
+    });
+
+    expect(result.targetState).toBe(
+      CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_ACTIONS,
+    );
+    expect(result.nextContext?.appointmentReschedule).toBeUndefined();
   });
 });

@@ -311,6 +311,9 @@ export class HandleIncomingConversationMessageUseCase {
         CONVERSATION_STATUSES.BOT_ACTIVE,
         {
           ...session.context,
+          flowIntent: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
           specialtySelection: undefined,
           appointmentDoctorSelection: undefined,
           appointmentDateSelection: undefined,

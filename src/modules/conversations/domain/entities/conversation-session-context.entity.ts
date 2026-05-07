@@ -8,6 +8,8 @@ export interface PatientValidationSessionContext {
   sex?: 'H' | 'M';
 }
 
+export type ConversationFlowIntent = 'REQUEST_APPOINTMENT' | 'CANCEL_OR_RESCHEDULE';
+
 export interface OfferedSpecialtySessionContext {
   code: string;
   name: string;
@@ -55,8 +57,38 @@ export interface AppointmentTimeSelectionSessionContext {
   selectedTimeHHmm?: string;
 }
 
+export interface OfferedAssignedAppointmentSessionContext {
+  slotRef: string;
+  specialtyName: string;
+  specialtyCups?: string;
+  professionalName: string;
+  appointmentDateIso: string;
+  appointmentTimeHHmm: string;
+  appointmentDisplayTime: string;
+}
+
+export interface AssignedAppointmentSelectionSessionContext {
+  patientFullName: string;
+  currentOffset: number;
+  hasMoreAppointments: boolean;
+  nextOffset?: number;
+  offeredAppointments: OfferedAssignedAppointmentSessionContext[];
+  selectedAppointment?: OfferedAssignedAppointmentSessionContext;
+}
+
+export interface AppointmentRescheduleSessionContext {
+  originalSlotRef: string;
+  originalSpecialtyName: string;
+  originalSpecialtyCups: string;
+  originalAppointmentDateIso: string;
+  originalAppointmentTimeHHmm: string;
+}
+
 export interface ConversationSessionContext {
+  flowIntent?: ConversationFlowIntent;
   patientValidation?: PatientValidationSessionContext;
+  assignedAppointmentSelection?: AssignedAppointmentSelectionSessionContext;
+  appointmentReschedule?: AppointmentRescheduleSessionContext;
   specialtySelection?: SpecialtySelectionSessionContext;
   appointmentDoctorSelection?: AppointmentDoctorSelectionSessionContext;
   appointmentDateSelection?: AppointmentDateSelectionSessionContext;
