@@ -91,6 +91,23 @@ describe('ConversationNavigationService', () => {
     ).toBe(CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE);
   });
 
+  it('returns assigned appointment selection when navigating back from consultation details', () => {
+    const service = new ConversationNavigationService();
+
+    expect(
+      service.resolveBackNavigation({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }).targetState,
+    ).toBe(CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT);
+  });
+
   it('returns doctor step when navigating back from doctor-filtered dates', () => {
     const service = new ConversationNavigationService();
 

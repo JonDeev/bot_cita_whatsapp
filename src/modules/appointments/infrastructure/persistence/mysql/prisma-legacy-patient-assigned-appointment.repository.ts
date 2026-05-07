@@ -24,6 +24,8 @@ export class PrismaLegacyPatientAssignedAppointmentRepository
         specialtyName: string | null;
         specialtyCups: string | null;
         professionalName: string | null;
+        siteName: string | null;
+        siteAddress: string | null;
       }>
     >(Prisma.sql`
       SELECT
@@ -43,10 +45,14 @@ export class PrismaLegacyPatientAssignedAppointmentRepository
           )
         ) AS specialtyName,
         NULLIF(TRIM(COALESCE(a.TipoCita, '')), '') AS specialtyCups,
-        TRIM(COALESCE(e.Nombre_empleado, '')) AS professionalName
+        TRIM(COALESCE(e.Nombre_empleado, '')) AS professionalName,
+        TRIM(COALESCE(s.Sede, '')) AS siteName,
+        TRIM(COALESCE(s.Direccion, '')) AS siteAddress
       FROM agenda a
       LEFT JOIN empleados e
         ON TRIM(a.idmedico) = TRIM(e.\`Código_empleado\`)
+      LEFT JOIN sedes s
+        ON a.IdSede = s.IdSede
       LEFT JOIN tvespecialidades teByCups
         ON TRIM(COALESCE(a.TipoCita, '')) <> ''
        AND TRIM(COALESCE(teByCups.CUPS, '')) = TRIM(COALESCE(a.TipoCita, ''))
@@ -77,6 +83,8 @@ export class PrismaLegacyPatientAssignedAppointmentRepository
         specialtyName: row.specialtyName?.trim() || null,
         specialtyCups: row.specialtyCups?.trim() || null,
         professionalName: row.professionalName?.trim() || null,
+        siteName: row.siteName?.trim() || null,
+        siteAddress: row.siteAddress?.trim() || null,
       }))
       .filter(
         (row) =>

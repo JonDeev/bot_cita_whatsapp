@@ -3,6 +3,7 @@ import { CONVERSATION_STATES, type ConversationState } from '../../domain/conver
 import type { ConversationSessionContext } from '../../domain/entities/conversation-session-context.entity';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import type { ConversationOutboundMessage } from '../../domain/value-objects/conversation-outbound-message';
+import { AssignedAppointmentConsultationDetailsMessageFactory } from './assigned-appointment-consultation-details-message.factory';
 import { AssignedAppointmentDetailsMessageFactory } from './assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from './assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
@@ -23,6 +24,7 @@ export class ConversationStatePromptService {
     private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly specialtyListFactory: SpecialtyListFactory,
     private readonly assignedAppointmentListFactory: AssignedAppointmentListFactory,
+    private readonly assignedAppointmentConsultationDetailsMessageFactory: AssignedAppointmentConsultationDetailsMessageFactory,
     private readonly assignedAppointmentDetailsMessageFactory: AssignedAppointmentDetailsMessageFactory,
     private readonly appointmentDoctorListFactory: AppointmentDoctorListFactory,
     private readonly appointmentDateListFactory: AppointmentDateListFactory,
@@ -81,7 +83,37 @@ export class ConversationStatePromptService {
             this.assignedAppointmentListFactory.build(
               offeredAppointments,
               assignedSelection?.hasMoreAppointments ?? false,
+              {
+                mode:
+                  session.context?.flowIntent === 'CHECK_APPOINTMENTS'
+                    ? 'CHECK_APPOINTMENTS'
+                    : 'CANCEL_OR_RESCHEDULE',
+                patientFullName: assignedSelection?.patientFullName,
+              },
             ),
+          ],
+        };
+      }
+
+      case CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS: {
+        const assignedSelection = session.context?.assignedAppointmentSelection;
+        const selectedAppointment = assignedSelection?.selectedAppointment;
+        if (!selectedAppointment) {
+          return this.buildForState(session, CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT);
+        }
+
+        return {
+          nextState: CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
+          outboundMessages: [
+            this.assignedAppointmentConsultationDetailsMessageFactory.build({
+              patientFullName: assignedSelection?.patientFullName ?? 'PACIENTE',
+              specialtyName: selectedAppointment.specialtyName,
+              professionalName: selectedAppointment.professionalName,
+              siteName: selectedAppointment.siteName,
+              siteAddress: selectedAppointment.siteAddress,
+              appointmentDateIso: selectedAppointment.appointmentDateIso,
+              appointmentDisplayTime: selectedAppointment.appointmentDisplayTime,
+            }),
           ],
         };
       }

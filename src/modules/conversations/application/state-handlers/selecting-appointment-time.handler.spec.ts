@@ -318,6 +318,8 @@ describe('SelectingAppointmentTimeHandler', () => {
               specialtyName: 'MEDICINA GENERAL',
               specialtyCups: '890201',
               professionalName: 'MEDICO',
+              siteName: 'Sede Central',
+              siteAddress: 'Calle 1 # 2-3',
               appointmentDateIso: '2026-05-20',
               appointmentTimeHHmm: '11:40',
               appointmentDisplayTime: '11:40 AM',

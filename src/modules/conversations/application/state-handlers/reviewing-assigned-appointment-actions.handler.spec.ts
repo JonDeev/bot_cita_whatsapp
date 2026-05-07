@@ -31,6 +31,8 @@ describe('ReviewingAssignedAppointmentActionsHandler', () => {
               specialtyName: 'MEDICINA GENERAL',
               specialtyCups: '890201',
               professionalName: 'MEDICO',
+              siteName: 'Sede Central',
+              siteAddress: 'Calle 1 # 2-3',
               appointmentDateIso: '2026-05-30',
               appointmentTimeHHmm: '11:40',
               appointmentDisplayTime: '11:40 AM',
@@ -41,6 +43,8 @@ describe('ReviewingAssignedAppointmentActionsHandler', () => {
             specialtyName: 'MEDICINA GENERAL',
             specialtyCups: '890201',
             professionalName: 'MEDICO',
+            siteName: 'Sede Central',
+            siteAddress: 'Calle 1 # 2-3',
             appointmentDateIso: '2026-05-30',
             appointmentTimeHHmm: '11:40',
             appointmentDisplayTime: '11:40 AM',
@@ -84,8 +88,12 @@ describe('ReviewingAssignedAppointmentActionsHandler', () => {
 
     expect(result.nextState).toBe('SELECTING_ASSIGNED_APPOINTMENT');
     expect(result.outboundMessages[0]).toMatchObject({
-      type: 'text',
+      type: 'interactive_buttons',
       body: 'Su cita se cancelo correctamente',
+      buttons: [
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
     });
   });
 

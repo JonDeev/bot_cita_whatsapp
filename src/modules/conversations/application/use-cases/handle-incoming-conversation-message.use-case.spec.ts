@@ -1,4 +1,5 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { AssignedAppointmentConsultationDetailsMessageFactory } from '../services/assigned-appointment-consultation-details-message.factory';
 import { AssignedAppointmentDetailsMessageFactory } from '../services/assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from '../services/appointment-doctor-list.factory';
@@ -40,6 +41,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         new MainMenuListFactory(),
         new SpecialtyListFactory(),
         new AssignedAppointmentListFactory(),
+        new AssignedAppointmentConsultationDetailsMessageFactory(),
         new AssignedAppointmentDetailsMessageFactory(),
         new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
         new AppointmentDateListFactory(),

@@ -8,7 +8,10 @@ export interface PatientValidationSessionContext {
   sex?: 'H' | 'M';
 }
 
-export type ConversationFlowIntent = 'REQUEST_APPOINTMENT' | 'CANCEL_OR_RESCHEDULE';
+export type ConversationFlowIntent =
+  | 'REQUEST_APPOINTMENT'
+  | 'CANCEL_OR_RESCHEDULE'
+  | 'CHECK_APPOINTMENTS';
 
 export interface OfferedSpecialtySessionContext {
   code: string;
@@ -62,6 +65,8 @@ export interface OfferedAssignedAppointmentSessionContext {
   specialtyName: string;
   specialtyCups?: string;
   professionalName: string;
+  siteName: string;
+  siteAddress: string;
   appointmentDateIso: string;
   appointmentTimeHHmm: string;
   appointmentDisplayTime: string;

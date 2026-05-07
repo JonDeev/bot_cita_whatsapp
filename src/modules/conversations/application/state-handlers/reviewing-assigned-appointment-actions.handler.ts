@@ -14,6 +14,7 @@ import {
 import { AssignedAppointmentDetailsMessageFactory } from '../services/assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { NAVIGATION_OPTION_IDS } from '../services/conversation-navigation.service';
 import type {
   ConversationStateHandler,
   ConversationStateHandlerResult,
@@ -103,8 +104,18 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
         },
         outboundMessages: [
           {
-            type: 'text',
+            type: 'interactive_buttons',
             body: 'Su cita se cancelo correctamente',
+            buttons: [
+              {
+                id: NAVIGATION_OPTION_IDS.MAIN_MENU,
+                title: 'Menu principal',
+              },
+              {
+                id: NAVIGATION_OPTION_IDS.FINISH,
+                title: 'Finalizar',
+              },
+            ],
           },
         ],
       };

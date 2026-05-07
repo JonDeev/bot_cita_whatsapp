@@ -66,6 +66,8 @@ describe('ListFutureAssignedAppointmentsByPatientUseCase', () => {
           specialtyName: '890201 - MEDICINA GENERAL',
           specialtyCups: '890201',
           professionalName: 'MEDICO',
+          siteName: 'Sede Central',
+          siteAddress: 'Calle 1 # 2-3',
         })),
       ),
     };
@@ -95,6 +97,8 @@ describe('ListFutureAssignedAppointmentsByPatientUseCase', () => {
     expect(result.appointments[0]).toMatchObject({
       specialtyName: 'MEDICINA GENERAL',
       appointmentDisplayTime: '11:40 AM',
+      siteName: 'Sede Central',
+      siteAddress: 'Calle 1 # 2-3',
     });
   });
 
@@ -108,6 +112,8 @@ describe('ListFutureAssignedAppointmentsByPatientUseCase', () => {
           specialtyName: null,
           specialtyCups: null,
           professionalName: 'MEDICO',
+          siteName: null,
+          siteAddress: null,
         },
       ]),
     };
@@ -128,6 +134,8 @@ describe('ListFutureAssignedAppointmentsByPatientUseCase', () => {
     }
     expect(result.appointments[0]).toMatchObject({
       specialtyName: 'ESPECIALIDAD POR CONFIRMAR',
+      siteName: 'SEDE POR CONFIRMAR',
+      siteAddress: 'DIRECCION POR CONFIRMAR',
     });
   });
 });

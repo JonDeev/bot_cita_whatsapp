@@ -30,54 +30,21 @@ export class MainMenuHandler implements ConversationStateHandler {
       event.messageType === 'interactive' &&
       event.interactiveReplyId === MAIN_MENU_OPTION_IDS.REQUEST_APPOINTMENT
     ) {
-      return {
-        nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
-        nextContext: {
-          flowIntent: 'REQUEST_APPOINTMENT',
-          patientValidation: {
-            failedAttempts: 0,
-          },
-          assignedAppointmentSelection: undefined,
-          appointmentReschedule: undefined,
-          specialtySelection: undefined,
-          appointmentDoctorSelection: undefined,
-          appointmentDateSelection: undefined,
-          appointmentTimeSelection: undefined,
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: 'Escribe tu numero de documento de identidad.',
-          },
-        ],
-      };
+      return this.buildDocumentRequestResponse('REQUEST_APPOINTMENT');
+    }
+
+    if (
+      event.messageType === 'interactive' &&
+      event.interactiveReplyId === MAIN_MENU_OPTION_IDS.CHECK_APPOINTMENTS
+    ) {
+      return this.buildDocumentRequestResponse('CHECK_APPOINTMENTS');
     }
 
     if (
       event.messageType === 'interactive' &&
       event.interactiveReplyId === MAIN_MENU_OPTION_IDS.CANCEL_OR_RESCHEDULE
     ) {
-      return {
-        nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
-        nextContext: {
-          flowIntent: 'CANCEL_OR_RESCHEDULE',
-          patientValidation: {
-            failedAttempts: 0,
-          },
-          assignedAppointmentSelection: undefined,
-          appointmentReschedule: undefined,
-          specialtySelection: undefined,
-          appointmentDoctorSelection: undefined,
-          appointmentDateSelection: undefined,
-          appointmentTimeSelection: undefined,
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: 'Escribe tu numero de documento de identidad.',
-          },
-        ],
-      };
+      return this.buildDocumentRequestResponse('CANCEL_OR_RESCHEDULE');
     }
 
     if (event.messageType === 'interactive' && event.interactiveReplyId) {
@@ -96,6 +63,32 @@ export class MainMenuHandler implements ConversationStateHandler {
     return {
       nextState: CONVERSATION_STATES.MAIN_MENU,
       outboundMessages: [this.mainMenuListFactory.build()],
+    };
+  }
+
+  private buildDocumentRequestResponse(
+    flowIntent: 'REQUEST_APPOINTMENT' | 'CANCEL_OR_RESCHEDULE' | 'CHECK_APPOINTMENTS',
+  ): ConversationStateHandlerResult {
+    return {
+      nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
+      nextContext: {
+        flowIntent,
+        patientValidation: {
+          failedAttempts: 0,
+        },
+        assignedAppointmentSelection: undefined,
+        appointmentReschedule: undefined,
+        specialtySelection: undefined,
+        appointmentDoctorSelection: undefined,
+        appointmentDateSelection: undefined,
+        appointmentTimeSelection: undefined,
+      },
+      outboundMessages: [
+        {
+          type: 'text',
+          body: 'Escribe tu numero de documento de identidad.',
+        },
+      ],
     };
   }
 }

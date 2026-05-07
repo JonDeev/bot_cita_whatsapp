@@ -1,4 +1,5 @@
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { AssignedAppointmentConsultationDetailsMessageFactory } from './assigned-appointment-consultation-details-message.factory';
 import { AssignedAppointmentDetailsMessageFactory } from './assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from './assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
@@ -15,6 +16,7 @@ describe('ConversationStatePromptService', () => {
       new MainMenuListFactory(),
       new SpecialtyListFactory(),
       new AssignedAppointmentListFactory(),
+      new AssignedAppointmentConsultationDetailsMessageFactory(),
       new AssignedAppointmentDetailsMessageFactory(),
       new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
       new AppointmentDateListFactory(),
@@ -156,6 +158,8 @@ describe('ConversationStatePromptService', () => {
                 slotRef: '101',
                 specialtyName: 'MEDICINA GENERAL',
                 professionalName: 'MEDICO',
+                siteName: 'Sede Central',
+                siteAddress: 'Calle 1 # 2-3',
                 appointmentDateIso: '2026-05-30',
                 appointmentTimeHHmm: '11:40',
                 appointmentDisplayTime: '11:40 AM',
@@ -173,6 +177,53 @@ describe('ConversationStatePromptService', () => {
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_list',
       buttonText: 'Ver citas',
+    });
+  });
+
+  it('builds assigned appointment consultation details prompt when returning to read-only details', () => {
+    const service = buildService();
+
+    const result = service.buildForState(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
+        status: 'BOT_ACTIVE',
+        context: {
+          flowIntent: 'CHECK_APPOINTMENTS',
+          assignedAppointmentSelection: {
+            patientFullName: 'DANIEL CASTANO',
+            currentOffset: 0,
+            hasMoreAppointments: false,
+            offeredAppointments: [],
+            selectedAppointment: {
+              slotRef: '101',
+              specialtyName: 'MEDICINA GENERAL',
+              professionalName: 'MEDICO',
+              siteName: 'Sede Central',
+              siteAddress: 'Calle 1 # 2-3',
+              appointmentDateIso: '2026-05-30',
+              appointmentTimeHHmm: '11:40',
+              appointmentDisplayTime: '11:40 AM',
+            },
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
+    );
+
+    expect(result.nextState).toBe(CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS);
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_buttons',
+      buttons: [
+        { id: 'nav_back', title: 'Volver' },
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
     });
   });
 

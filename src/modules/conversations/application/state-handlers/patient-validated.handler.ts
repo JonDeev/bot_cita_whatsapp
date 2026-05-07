@@ -6,6 +6,7 @@ import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/no
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
+import { NAVIGATION_OPTION_IDS } from '../services/conversation-navigation.service';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
 import type {
   ConversationStateHandler,
@@ -28,6 +29,10 @@ export class PatientValidatedHandler implements ConversationStateHandler {
     session: ConversationSession,
     _event: NormalizedWhatsappEvent,
   ): Promise<ConversationStateHandlerResult> {
+    if (session.context?.flowIntent === 'CHECK_APPOINTMENTS') {
+      return this.handleCheckAppointmentsIntent(session);
+    }
+
     if (session.context?.flowIntent === 'CANCEL_OR_RESCHEDULE') {
       return this.handleCancelOrRescheduleIntent(session);
     }
@@ -158,6 +163,9 @@ export class PatientValidatedHandler implements ConversationStateHandler {
           this.assignedAppointmentListFactory.build(
             listResult.appointments,
             listResult.hasMore,
+            {
+              mode: 'CANCEL_OR_RESCHEDULE',
+            },
           ),
         ],
       };
@@ -208,6 +216,121 @@ export class PatientValidatedHandler implements ConversationStateHandler {
         {
           type: 'text',
           body: 'En este momento no podemos consultar tus citas asignadas. Intenta nuevamente en unos minutos desde el menu principal.',
+        },
+      ],
+    };
+  }
+
+  private async handleCheckAppointmentsIntent(
+    session: ConversationSession,
+  ): Promise<ConversationStateHandlerResult> {
+    await this.auditService.record('conversation.check_appointments.started', {
+      conversationKey: session.conversationKey,
+      patientId: session.context?.patientValidation?.patientId ?? null,
+    });
+
+    await this.auditService.record('appointment.check_list.requested', {
+      conversationKey: session.conversationKey,
+      patientId: session.context?.patientValidation?.patientId ?? null,
+      offset: 0,
+    });
+
+    const listResult = await this.listFutureAssignedAppointmentsByPatient.execute({
+      patientId: session.context?.patientValidation?.patientId ?? null,
+      offset: 0,
+    });
+
+    if (listResult.status === 'FOUND') {
+      await this.auditService.record('appointment.check_list.resolved', {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        appointmentCount: listResult.appointments.length,
+        hasMore: listResult.hasMore,
+        offset: listResult.currentOffset,
+      });
+
+      return {
+        nextState: CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+        nextContext: {
+          ...session.context,
+          appointmentReschedule: undefined,
+          assignedAppointmentSelection: {
+            patientFullName: listResult.patientFullName,
+            currentOffset: listResult.currentOffset,
+            hasMoreAppointments: listResult.hasMore,
+            nextOffset: listResult.nextOffset,
+            offeredAppointments: listResult.appointments,
+            selectedAppointment: undefined,
+          },
+        },
+        outboundMessages: [
+          this.assignedAppointmentListFactory.build(
+            listResult.appointments,
+            listResult.hasMore,
+            {
+              mode: 'CHECK_APPOINTMENTS',
+              patientFullName: listResult.patientFullName,
+            },
+          ),
+        ],
+      };
+    }
+
+    if (listResult.status === 'EMPTY') {
+      await this.auditService.record('appointment.check_list.empty', {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+      });
+
+      return {
+        nextState: CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+        nextContext: {
+          ...session.context,
+          appointmentReschedule: undefined,
+          assignedAppointmentSelection: {
+            patientFullName: listResult.patientFullName,
+            currentOffset: 0,
+            hasMoreAppointments: false,
+            offeredAppointments: [],
+            selectedAppointment: undefined,
+          },
+        },
+        outboundMessages: [
+          {
+            type: 'interactive_buttons',
+            body: `Hola ${listResult.patientFullName} No tienes citas agendadas`,
+            buttons: [
+              {
+                id: NAVIGATION_OPTION_IDS.MAIN_MENU,
+                title: 'Menu principal',
+              },
+              {
+                id: NAVIGATION_OPTION_IDS.FINISH,
+                title: 'Finalizar',
+              },
+            ],
+          },
+        ],
+      };
+    }
+
+    await this.auditService.record('appointment.check_list.failed', {
+      conversationKey: session.conversationKey,
+      patientId: session.context?.patientValidation?.patientId ?? null,
+      reason: listResult.reason,
+    });
+
+    return {
+      nextState: CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+      nextContext: {
+        ...session.context,
+        appointmentReschedule: undefined,
+        assignedAppointmentSelection: undefined,
+      },
+      outboundMessages: [
+        {
+          type: 'text',
+          body: 'En este momento no podemos consultar tus citas agendadas. Intenta nuevamente en unos minutos desde el menu principal.',
         },
       ],
     };

@@ -12,6 +12,8 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
           specialtyName: '890201 - MEDICINA GENERAL',
           specialtyCups: '890201',
           professionalName: 'ALICAN MARIA',
+          siteName: 'Sede Central',
+          siteAddress: 'Calle 1 # 2-3',
         },
       ]),
     } as unknown as PrismaService;
@@ -34,6 +36,8 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
         specialtyName: '890201 - MEDICINA GENERAL',
         specialtyCups: '890201',
         professionalName: 'ALICAN MARIA',
+        siteName: 'Sede Central',
+        siteAddress: 'Calle 1 # 2-3',
       },
     ]);
   });
@@ -48,6 +52,8 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
           specialtyName: 'MEDICINA GENERAL',
           specialtyCups: '890201',
           professionalName: 'MEDICO',
+          siteName: null,
+          siteAddress: null,
         },
       ]),
     } as unknown as PrismaService;
@@ -74,6 +80,8 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
           specialtyName: null,
           specialtyCups: null,
           professionalName: 'MEDICO',
+          siteName: null,
+          siteAddress: null,
         },
       ]),
     } as unknown as PrismaService;
@@ -95,6 +103,8 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
         specialtyName: null,
         specialtyCups: null,
         professionalName: 'MEDICO',
+        siteName: null,
+        siteAddress: null,
       },
     ]);
   });

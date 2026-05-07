@@ -18,6 +18,8 @@ export interface ListedFutureAssignedAppointment {
   specialtyName: string;
   specialtyCups?: string;
   professionalName: string;
+  siteName: string;
+  siteAddress: string;
   appointmentDateIso: string;
   appointmentTimeHHmm: string;
   appointmentDisplayTime: string;
@@ -52,6 +54,8 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
   private static readonly MAX_VISIBLE_ROWS_WHEN_HAS_MORE = 9;
   private static readonly DEFAULT_SPECIALTY_NAME = 'ESPECIALIDAD POR CONFIRMAR';
   private static readonly DEFAULT_PROFESSIONAL_NAME = 'PROFESIONAL POR CONFIRMAR';
+  private static readonly DEFAULT_SITE_NAME = 'SEDE POR CONFIRMAR';
+  private static readonly DEFAULT_SITE_ADDRESS = 'DIRECCION POR CONFIRMAR';
 
   constructor(
     @Inject(APPOINTMENT_ASSIGNED_LIST_REPOSITORY)
@@ -124,6 +128,12 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
           professionalName:
             candidate.professionalName?.trim() ||
             ListFutureAssignedAppointmentsByPatientUseCase.DEFAULT_PROFESSIONAL_NAME,
+          siteName:
+            candidate.siteName?.trim() ||
+            ListFutureAssignedAppointmentsByPatientUseCase.DEFAULT_SITE_NAME,
+          siteAddress:
+            candidate.siteAddress?.trim() ||
+            ListFutureAssignedAppointmentsByPatientUseCase.DEFAULT_SITE_ADDRESS,
           appointmentDateIso: candidate.appointmentDateIso,
           appointmentTimeHHmm: candidate.appointmentTimeHHmm,
           appointmentDisplayTime: this.appointmentTimePresenterService.formatHHmmAsTwelveHour(

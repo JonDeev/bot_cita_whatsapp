@@ -30,7 +30,7 @@ export class MainMenuListFactory {
             },
             {
               id: 'main_menu_cancel_or_reschedule',
-              title: '⚠️ Mover o cancelar',
+              title: '⚠️ Cancelar/Reprogramar',
               description: 'Cancelar o reprogramar una cita',
             },
             {

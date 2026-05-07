@@ -5,8 +5,10 @@ import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/no
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { AssignedAppointmentSelectionSessionContext } from '../../domain/entities/conversation-session-context.entity';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
+import { AssignedAppointmentConsultationDetailsMessageFactory } from '../services/assigned-appointment-consultation-details-message.factory';
 import { AssignedAppointmentDetailsMessageFactory } from '../services/assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
+import { NAVIGATION_OPTION_IDS } from '../services/conversation-navigation.service';
 import { parseAssignedAppointmentOptionId } from '../services/assigned-appointment-option-id';
 import type {
   ConversationStateHandler,
@@ -21,6 +23,7 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
     private readonly listFutureAssignedAppointmentsByPatient: ListFutureAssignedAppointmentsByPatientUseCase,
     private readonly assignedAppointmentListFactory: AssignedAppointmentListFactory,
     private readonly assignedAppointmentDetailsMessageFactory: AssignedAppointmentDetailsMessageFactory,
+    private readonly assignedAppointmentConsultationDetailsMessageFactory: AssignedAppointmentConsultationDetailsMessageFactory,
     private readonly auditService: AuditService,
   ) {}
 
@@ -58,6 +61,7 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
           this.assignedAppointmentListFactory.build(
             offeredAppointments,
             selection?.hasMoreAppointments ?? false,
+            this.buildListOptions(session, selection?.patientFullName),
           ),
         ],
       };
@@ -77,7 +81,50 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
           this.assignedAppointmentListFactory.build(
             offeredAppointments,
             selection?.hasMoreAppointments ?? false,
+            this.buildListOptions(session, selection?.patientFullName),
           ),
+        ],
+      };
+    }
+
+    if (session.context?.flowIntent === 'CHECK_APPOINTMENTS') {
+      await this.auditService.record('conversation.check_appointment.selected', {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        slotRef: selectedAppointment.slotRef,
+      });
+
+      const patientFullName = selection?.patientFullName?.trim() || 'PACIENTE';
+      return {
+        nextState: CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
+        nextContext: {
+          ...session.context,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+          assignedAppointmentSelection: {
+            ...(selection ?? {
+              patientFullName,
+              currentOffset: 0,
+              hasMoreAppointments: false,
+              offeredAppointments,
+            }),
+            patientFullName,
+            selectedAppointment,
+          },
+        },
+        outboundMessages: [
+          this.assignedAppointmentConsultationDetailsMessageFactory.build({
+            patientFullName,
+            specialtyName: selectedAppointment.specialtyName,
+            professionalName: selectedAppointment.professionalName,
+            siteName: selectedAppointment.siteName,
+            siteAddress: selectedAppointment.siteAddress,
+            appointmentDateIso: selectedAppointment.appointmentDateIso,
+            appointmentDisplayTime: selectedAppointment.appointmentDisplayTime,
+          }),
         ],
       };
     }
@@ -133,6 +180,7 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
           this.assignedAppointmentListFactory.build(
             offeredAppointments,
             selection?.hasMoreAppointments ?? false,
+            this.buildListOptions(session, selection?.patientFullName),
           ),
         ],
       };
@@ -169,6 +217,7 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
           this.assignedAppointmentListFactory.build(
             listResult.appointments,
             listResult.hasMore,
+            this.buildListOptions(session, listResult.patientFullName),
           ),
         ],
       };
@@ -189,12 +238,30 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
             selectedAppointment: undefined,
           },
         },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: `Hola ${listResult.patientFullName} Usted no tiene citas agendadas`,
-          },
-        ],
+        outboundMessages:
+          session.context?.flowIntent === 'CHECK_APPOINTMENTS'
+            ? [
+                {
+                  type: 'interactive_buttons',
+                  body: `Hola ${listResult.patientFullName} No tienes citas agendadas`,
+                  buttons: [
+                    {
+                      id: NAVIGATION_OPTION_IDS.MAIN_MENU,
+                      title: 'Menu principal',
+                    },
+                    {
+                      id: NAVIGATION_OPTION_IDS.FINISH,
+                      title: 'Finalizar',
+                    },
+                  ],
+                },
+              ]
+            : [
+                {
+                  type: 'text',
+                  body: `Hola ${listResult.patientFullName} Usted no tiene citas agendadas`,
+                },
+              ],
       };
     }
 
@@ -206,6 +273,22 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
           body: 'En este momento no podemos consultar tus citas asignadas. Intenta nuevamente en unos minutos desde el menu principal.',
         },
       ],
+    };
+  }
+
+  private buildListOptions(
+    session: ConversationSession,
+    patientFullName: string | undefined,
+  ) {
+    if (session.context?.flowIntent !== 'CHECK_APPOINTMENTS') {
+      return {
+        mode: 'CANCEL_OR_RESCHEDULE' as const,
+      };
+    }
+
+    return {
+      mode: 'CHECK_APPOINTMENTS' as const,
+      patientFullName,
     };
   }
 }

@@ -13,6 +13,8 @@ export interface FutureAssignedAppointmentCandidate {
   specialtyName: string | null;
   specialtyCups: string | null;
   professionalName: string | null;
+  siteName: string | null;
+  siteAddress: string | null;
 }
 
 export interface PatientAssignedAppointmentRepository {

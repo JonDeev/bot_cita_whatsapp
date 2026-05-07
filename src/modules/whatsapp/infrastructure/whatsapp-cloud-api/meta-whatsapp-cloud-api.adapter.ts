@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { WhatsappConfigService } from '../../application/services/whatsapp-config.service';
 import type { WhatsappMessageSenderPort } from '../../domain/ports/whatsapp-message-sender.port';
 import {
@@ -24,8 +29,23 @@ interface MetaSendMessageResponse {
   };
 }
 
+const MAX_FETCH_ATTEMPTS = 2;
+const INITIAL_RETRY_DELAY_MS = 250;
+const RETRYABLE_NETWORK_ERROR_CODES = new Set([
+  'EAI_AGAIN',
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EPIPE',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_SOCKET',
+]);
+
 @Injectable()
 export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
+  private readonly logger = new Logger(MetaWhatsappCloudApiAdapter.name);
+
   constructor(private readonly configService: WhatsappConfigService) {}
 
   async sendTextMessage(
@@ -112,14 +132,7 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     }
 
     const endpoint = `${apiBaseUrl}/${apiVersion}/${phoneNumberId}/messages`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const response = await this.sendWithRetry(endpoint, accessToken, payload);
 
     const json = await this.parseResponseJson(response);
 
@@ -138,6 +151,55 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     }
 
     return { messageId };
+  }
+
+  private async sendWithRetry(
+    endpoint: string,
+    accessToken: string,
+    payload: Record<string, unknown>,
+  ): Promise<Response> {
+    let attempt = 0;
+    let lastError: unknown = null;
+
+    while (attempt < MAX_FETCH_ATTEMPTS) {
+      attempt += 1;
+      try {
+        return await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        lastError = error;
+        const details = this.buildFetchErrorDetails(error);
+        const shouldRetry =
+          attempt < MAX_FETCH_ATTEMPTS && this.isRetryableNetworkError(error);
+
+        if (shouldRetry) {
+          this.logger.warn(
+            `WhatsApp API transport error on attempt ${attempt}/${MAX_FETCH_ATTEMPTS}; retrying in ${INITIAL_RETRY_DELAY_MS}ms. ${details}`,
+          );
+          await this.delay(INITIAL_RETRY_DELAY_MS);
+          continue;
+        }
+
+        throw new InternalServerErrorException(
+          `WhatsApp API transport error after ${attempt} attempt(s). ${details}`,
+          {
+            cause: error instanceof Error ? error : undefined,
+          },
+        );
+      }
+    }
+
+    throw new InternalServerErrorException(
+      `WhatsApp API transport error after ${MAX_FETCH_ATTEMPTS} attempt(s). ${this.buildFetchErrorDetails(
+        lastError,
+      )}`,
+    );
   }
 
   private async parseResponseJson(response: Response): Promise<MetaSendMessageResponse> {
@@ -160,5 +222,54 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     const trace = error?.fbtrace_id ? ` trace=${error.fbtrace_id}` : '';
 
     return `WhatsApp API request failed with status ${status}. ${message}${details}${code}${subcode}${type}${trace}`;
+  }
+
+  private isRetryableNetworkError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const cause = this.extractErrorCause(error);
+    if (!cause?.code) {
+      return false;
+    }
+
+    return RETRYABLE_NETWORK_ERROR_CODES.has(cause.code);
+  }
+
+  private buildFetchErrorDetails(error: unknown): string {
+    if (!(error instanceof Error)) {
+      return 'unknown fetch transport error.';
+    }
+
+    const cause = this.extractErrorCause(error);
+    const causeCode = cause?.code ? ` causeCode=${cause.code}` : '';
+    const causeMessage = cause?.message ? ` causeMessage=${cause.message}` : '';
+
+    return `message=${error.message}${causeCode}${causeMessage}`;
+  }
+
+  private extractErrorCause(
+    error: Error,
+  ): {
+    code?: string;
+    message?: string;
+  } | null {
+    const cause = error.cause;
+    if (!cause || typeof cause !== 'object') {
+      return null;
+    }
+
+    const code = 'code' in cause && typeof cause.code === 'string' ? cause.code : undefined;
+    const message =
+      'message' in cause && typeof cause.message === 'string' ? cause.message : undefined;
+
+    return { code, message };
+  }
+
+  private async delay(milliseconds: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, milliseconds);
+    });
   }
 }

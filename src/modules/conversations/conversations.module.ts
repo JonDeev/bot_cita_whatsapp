@@ -11,6 +11,7 @@ import { ConversationConfigService } from './application/services/conversation-c
 import { ConversationKeyFactory } from './application/services/conversation-key.factory';
 import { AppointmentAvailabilityMessageFactory } from './application/services/appointment-availability-message.factory';
 import { AppointmentAssignmentConfirmationMessageFactory } from './application/services/appointment-assignment-confirmation-message.factory';
+import { AssignedAppointmentConsultationDetailsMessageFactory } from './application/services/assigned-appointment-consultation-details-message.factory';
 import { AssignedAppointmentDetailsMessageFactory } from './application/services/assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from './application/services/assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './application/services/appointment-doctor-list.factory';
@@ -26,6 +27,7 @@ import { ConversationNavigationService } from './application/services/conversati
 import { PendingAppointmentBlockMessageFactory } from './application/services/pending-appointment-block-message.factory';
 import { MainMenuHandler } from './application/state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from './application/state-handlers/patient-validated.handler';
+import { ReviewingAssignedAppointmentDetailsHandler } from './application/state-handlers/reviewing-assigned-appointment-details.handler';
 import { ReviewingAssignedAppointmentActionsHandler } from './application/state-handlers/reviewing-assigned-appointment-actions.handler';
 import { SelectingAssignedAppointmentHandler } from './application/state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from './application/state-handlers/selecting-appointment-date.handler';
@@ -49,6 +51,7 @@ import { PatientsModule } from '../patients/patients.module';
     ConversationKeyFactory,
     AppointmentAvailabilityMessageFactory,
     AppointmentAssignmentConfirmationMessageFactory,
+    AssignedAppointmentConsultationDetailsMessageFactory,
     AssignedAppointmentDetailsMessageFactory,
     AssignedAppointmentListFactory,
     AppointmentDoctorListPresenterService,
@@ -67,6 +70,7 @@ import { PatientsModule } from '../patients/patients.module';
     WaitingBirthDateHandler,
     PatientValidatedHandler,
     SelectingAssignedAppointmentHandler,
+    ReviewingAssignedAppointmentDetailsHandler,
     ReviewingAssignedAppointmentActionsHandler,
     SelectingSpecialtyHandler,
     SelectingAppointmentDateHandler,

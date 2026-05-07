@@ -1,5 +1,6 @@
 import { ListFutureAssignedAppointmentsByPatientUseCase } from '../../../appointments/application/use-cases/list-future-assigned-appointments-by-patient.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { AssignedAppointmentConsultationDetailsMessageFactory } from '../services/assigned-appointment-consultation-details-message.factory';
 import { AssignedAppointmentDetailsMessageFactory } from '../services/assigned-appointment-details-message.factory';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { SelectingAssignedAppointmentHandler } from './selecting-assigned-appointment.handler';
@@ -27,6 +28,8 @@ describe('SelectingAssignedAppointmentHandler', () => {
               slotRef: '101',
               specialtyName: 'MEDICINA GENERAL',
               professionalName: 'MEDICO',
+              siteName: 'Sede Central',
+              siteAddress: 'Calle 1 # 2-3',
               appointmentDateIso: '2026-05-30',
               appointmentTimeHHmm: '11:40',
               appointmentDisplayTime: '11:40 AM',
@@ -46,6 +49,7 @@ describe('SelectingAssignedAppointmentHandler', () => {
       } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedAppointmentDetailsMessageFactory(),
+      new AssignedAppointmentConsultationDetailsMessageFactory(),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -79,6 +83,8 @@ describe('SelectingAssignedAppointmentHandler', () => {
               slotRef: '202',
               specialtyName: 'ODONTOLOGIA',
               professionalName: 'MEDICO 2',
+              siteName: 'Sede Norte',
+              siteAddress: 'Calle 9 # 10-11',
               appointmentDateIso: '2026-06-01',
               appointmentTimeHHmm: '09:00',
               appointmentDisplayTime: '09:00 AM',
@@ -90,6 +96,7 @@ describe('SelectingAssignedAppointmentHandler', () => {
       } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedAppointmentDetailsMessageFactory(),
+      new AssignedAppointmentConsultationDetailsMessageFactory(),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -123,6 +130,50 @@ describe('SelectingAssignedAppointmentHandler', () => {
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_list',
       buttonText: 'Ver citas',
+    });
+  });
+
+  it('moves to consultation details when flow intent is check appointments', async () => {
+    const handler = new SelectingAssignedAppointmentHandler(
+      {
+        execute: jest.fn(),
+      } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
+      new AssignedAppointmentListFactory(),
+      new AssignedAppointmentDetailsMessageFactory(),
+      new AssignedAppointmentConsultationDetailsMessageFactory(),
+      {
+        record: jest.fn().mockResolvedValue(undefined),
+      } as unknown as AuditService,
+    );
+
+    const result = await handler.handle(
+      {
+        ...buildSession(),
+        context: {
+          ...buildSession().context,
+          flowIntent: 'CHECK_APPOINTMENTS',
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-3',
+        from: '573001112233',
+        timestamp: '1711111113',
+        messageType: 'interactive',
+        interactiveReplyId: 'assigned_appointment:101',
+        interactiveReplyTitle: 'MEDICINA GENERAL',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('REVIEWING_ASSIGNED_APPOINTMENT_DETAILS');
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_buttons',
+      buttons: [
+        { id: 'nav_back', title: 'Volver' },
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
     });
   });
 });

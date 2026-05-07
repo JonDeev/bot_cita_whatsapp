@@ -12,6 +12,11 @@ interface AssignedAppointmentListItem {
   appointmentDisplayTime: string;
 }
 
+export interface AssignedAppointmentListBuildOptions {
+  mode?: 'CANCEL_OR_RESCHEDULE' | 'CHECK_APPOINTMENTS';
+  patientFullName?: string;
+}
+
 @Injectable()
 export class AssignedAppointmentListFactory {
   private static readonly MAX_TITLE_LENGTH = 24;
@@ -20,6 +25,7 @@ export class AssignedAppointmentListFactory {
   build(
     appointments: AssignedAppointmentListItem[],
     hasMoreAppointments: boolean,
+    options: AssignedAppointmentListBuildOptions = {},
   ): ConversationOutboundInteractiveListMessage {
     const rows = appointments.map((appointment) => ({
       id: buildAssignedAppointmentOptionId(appointment.slotRef),
@@ -37,7 +43,7 @@ export class AssignedAppointmentListFactory {
 
     return {
       type: 'interactive_list',
-      body: 'Selecciona la cita que deseas mover o cancelar.',
+      body: this.resolveBody(options),
       buttonText: 'Ver citas',
       sections: [
         {
@@ -66,5 +72,14 @@ export class AssignedAppointmentListFactory {
       .trim();
 
     return `${truncated}${AssignedAppointmentListFactory.TITLE_ELLIPSIS}`;
+  }
+
+  private resolveBody(options: AssignedAppointmentListBuildOptions): string {
+    if (options.mode === 'CHECK_APPOINTMENTS') {
+      const patientFullName = options.patientFullName?.trim() || 'PACIENTE';
+      return `Hola ${patientFullName} Estas son tus citas agendadas`;
+    }
+
+    return 'Selecciona la cita que deseas mover o cancelar.';
   }
 }
