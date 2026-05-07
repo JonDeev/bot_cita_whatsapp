@@ -131,6 +131,23 @@ Expected:
 1. `whatsapp.webhook.stale_skipped` present for stale test message.
 2. `whatsapp.webhook.event_accepted` present for valid recent message.
 
+## Optional: install operational procedures
+
+To standardize production diagnostics, execute:
+
+```bash
+mysql -u <user> -p whatsapp_bot < ops/database/002-create-whatsapp-bot-observability-procedures.sql
+```
+
+Useful calls:
+
+```sql
+CALL sp_bot_webhook_recent_events(NULL, 50);
+CALL sp_bot_webhook_status_summary(60);
+CALL sp_bot_conversation_timeline('573043477809', 100);
+CALL sp_bot_clock_diagnostics();
+```
+
 ## Rollback strategy
 
 If unexpected rejects occur:

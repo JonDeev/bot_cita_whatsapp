@@ -38,6 +38,7 @@ Bootstrap options:
 
 - Scripted: `pnpm db:create:whatsapp-bot` with `MYSQL_ADMIN_*`, `BOT_DATABASE_*_USER`, and `BOT_DATABASE_*_PASSWORD` variables set.
 - Manual SQL: `ops/database/001-create-whatsapp-bot-database.sql`.
+- Operational diagnostics SPs: `ops/database/002-create-whatsapp-bot-observability-procedures.sql`.
 - Prisma bot schema: `prisma/bot/schema.prisma` with migrations in `prisma/bot/migrations`.
 - Prisma bot commands: `pnpm prisma:bot:generate`, `pnpm prisma:bot:migrate:deploy`.
 
