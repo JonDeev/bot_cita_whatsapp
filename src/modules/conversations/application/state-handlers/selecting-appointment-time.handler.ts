@@ -9,6 +9,7 @@ import type { ConversationSession } from '../../domain/entities/conversation-ses
 import { AppointmentAssignmentConfirmationMessageFactory } from '../services/appointment-assignment-confirmation-message.factory';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
 import { AppointmentReschedulingTimeSelectionService } from '../services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
 import { parseAppointmentTimeOptionId } from '../services/appointment-time-option-id';
@@ -26,6 +27,7 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     private readonly appointmentDateListFactory: AppointmentDateListFactory,
     private readonly appointmentAssignmentConfirmationMessageFactory: AppointmentAssignmentConfirmationMessageFactory,
     private readonly appointmentAvailabilityMessageFactory: AppointmentAvailabilityMessageFactory,
+    private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
     private readonly appointmentReschedulingTimeSelectionService: AppointmentReschedulingTimeSelectionService,
     private readonly resolveAvailableAppointmentTimesBySpecialtyAndDate: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     private readonly assignAppointmentSlotAfterTimeSelection: AssignAppointmentSlotAfterTimeSelectionUseCase,
@@ -156,9 +158,11 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       });
 
       return {
-        nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextState:
+          CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
         nextContext: {
           ...session.context,
+          flowIntent: undefined,
           appointmentReschedule: undefined,
           specialtySelection: undefined,
           appointmentDoctorSelection: undefined,
@@ -166,7 +170,13 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
           appointmentTimeSelection: undefined,
         },
         outboundMessages: [
-          this.appointmentAssignmentConfirmationMessageFactory.build(assignmentResult.appointment),
+          {
+            type: 'text',
+            body: this.appointmentAssignmentConfirmationMessageFactory.buildBody(
+              assignmentResult.appointment,
+            ),
+          },
+          this.appointmentNotificationOptInMessageFactory.build(),
         ],
       };
     }

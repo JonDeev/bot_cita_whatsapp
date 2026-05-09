@@ -10,16 +10,7 @@ export class AppointmentAssignmentConfirmationMessageFactory {
   ): ConversationOutboundInteractiveButtonsMessage {
     return {
       type: 'interactive_buttons',
-      body:
-        `Señor(a) ${appointment.patientFullName}, su cita se asignó satisfactoriamente.\n\n` +
-        `🩺Especialidad: ${appointment.specialtyName}\n` +
-        '👩🏼‍💻Modalida: PRESENCIAL\n' +
-        `📅Fecha de la cita: ${appointment.appointmentDateIso}\n` +
-        `🕜Hora: ${appointment.appointmentDisplayTime}\n` +
-        `👩🏼‍⚕️Profesional: ${appointment.professionalName}\n` +
-        `🏙️Sede: ${appointment.siteName}.\n` +
-        `🏙️Direccion: ${appointment.siteAddress}.\n\n` +
-        'Favor estar 🕘 15 minutos antes de la hora asignada',
+      body: this.buildBody(appointment),
       buttons: [
         {
           id: NAVIGATION_OPTION_IDS.MAIN_MENU,
@@ -31,5 +22,19 @@ export class AppointmentAssignmentConfirmationMessageFactory {
         },
       ],
     };
+  }
+
+  buildBody(appointment: AssignedAppointmentDetails): string {
+    return (
+      `Señor(a) ${appointment.patientFullName}, su cita se asignó satisfactoriamente.\n\n` +
+      `🩺Especialidad: ${appointment.specialtyName}\n` +
+      '👩🏼‍💻Modalida: PRESENCIAL\n' +
+      `📅Fecha de la cita: ${appointment.appointmentDateIso}\n` +
+      `🕜Hora: ${appointment.appointmentDisplayTime}\n` +
+      `👩🏼‍⚕️Profesional: ${appointment.professionalName}\n` +
+      `🏙️Sede: ${appointment.siteName}.\n` +
+      `🏙️Direccion: ${appointment.siteAddress}.\n\n` +
+      'Favor estar 🕘 15 minutos antes de la hora asignada'
+    );
   }
 }

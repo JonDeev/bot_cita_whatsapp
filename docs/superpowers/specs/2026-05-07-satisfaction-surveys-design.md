@@ -119,7 +119,7 @@ Se considera valido si existe un registro que documente:
 
 Si la politica de tratamiento actual menciona de forma explicita que el paciente autoriza contacto por WhatsApp para notificaciones y encuestas de satisfaccion, y la IPS conserva evidencia verificable de esa aceptacion, dicha aceptacion puede cargarse como fuente inicial de opt-in. Si la politica solo habla de tratamiento de datos de forma general y no menciona WhatsApp o encuestas, no debe asumirse como opt-in suficiente para mensajes negocio-iniciados.
 
-La fuente recomendada para este proyecto es capturar el consentimiento de WhatsApp inmediatamente despues de que el paciente complete exitosamente el autoagendamiento de la cita. Si la IPS maneja el consentimiento de encuestas por separado frente al de recordatorios y notificaciones de citas, ambos deben persistirse como finalidades distintas.
+La fuente recomendada para este proyecto es capturar un consentimiento unificado de WhatsApp inmediatamente despues de que el paciente complete exitosamente el autoagendamiento de la cita, con texto explicito que cubra recordatorios/notificaciones de cita y encuestas de satisfaccion. Aunque la pregunta de UX sea una sola, el resultado debe persistirse por finalidades separadas, al menos `APPOINTMENT_NOTIFICATIONS` y `SATISFACTION_SURVEYS`.
 
 ### Regla de estado legacy
 

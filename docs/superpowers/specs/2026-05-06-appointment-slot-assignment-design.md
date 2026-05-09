@@ -96,13 +96,13 @@ El valor usado para `agenda.idusuario` debe salir de `usuarios.IdUsuario`.
 
 ### Regla de opt-in post-agendamiento
 
-Despues de una asignacion exitosa, el bot debe solicitar consentimiento explicito para mensajeria por WhatsApp relacionada con citas.
+Despues de una asignacion exitosa, el bot debe solicitar consentimiento explicito para mensajeria por WhatsApp relacionada con citas y encuestas de satisfaccion.
 
 El consentimiento debe pedirse como un paso separado del mensaje de confirmacion o inmediatamente despues de este, con una accion afirmativa clara del paciente.
 
 Texto recomendado:
 
-`Autorizo a IPS SISM a contactarme por WhatsApp para recordatorios, confirmaciones, cambios y notificaciones relacionadas con mis citas.`
+`Autorizo a IPS SISM a contactarme por WhatsApp para recordatorios, confirmaciones, cambios y otras notificaciones relacionadas con mis citas, asi como para encuestas de satisfaccion sobre la atencion recibida.`
 
 Opciones recomendadas:
 
@@ -114,7 +114,7 @@ Reglas:
 1. No se debe tratar como consentimiento valido un texto implicito del tipo `si continua autoriza`.
 2. Debe guardarse evidencia del texto exacto mostrado, fecha y hora, telefono, paciente, canal y resultado.
 3. Si el paciente no responde en ese momento, la cita queda creada normalmente, pero no se habilitan recordatorios negocio-iniciados hasta capturar un opt-in valido.
-4. El consentimiento de recordatorios y notificaciones de citas no implica automaticamente consentimiento para encuestas de satisfaccion si la IPS decide manejarlas por separado.
+4. Aunque el paciente responde una sola vez en el flujo, el backend debe persistir el resultado por finalidades separadas al menos para `APPOINTMENT_NOTIFICATIONS` y `SATISFACTION_SURVEYS`.
 
 ## Flujo conversacional
 
@@ -126,7 +126,7 @@ Reglas:
 4. El caso de uso intenta asignar el cupo principal.
 5. Si el cupo principal ya no esta libre, intenta fallback automatico a otro cupo libre de la misma hora.
 6. Si la asignacion ocurre, el handler responde con el mensaje final de cita asignada.
-7. Inmediatamente despues, el bot solicita el opt-in explicito para recordatorios, confirmaciones, cambios y notificaciones relacionadas con citas por WhatsApp.
+7. Inmediatamente despues, el bot solicita el opt-in explicito para recordatorios, confirmaciones, cambios, otras notificaciones de citas y encuestas de satisfaccion por WhatsApp.
 8. Si el paciente acepta, el sistema persiste el consentimiento para futuras comunicaciones negocio-iniciadas.
 9. Si el paciente rechaza o no responde, la cita permanece asignada pero el sistema no debe enviar recordatorios automaticos fuera de la ventana de 24 horas.
 

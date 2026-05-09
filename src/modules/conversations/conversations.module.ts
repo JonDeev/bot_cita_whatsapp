@@ -17,6 +17,7 @@ import { AssignedAppointmentListFactory } from './application/services/assigned-
 import { AppointmentDoctorListFactory } from './application/services/appointment-doctor-list.factory';
 import { AppointmentDoctorListPresenterService } from './application/services/appointment-doctor-list-presenter.service';
 import { AppointmentDateListFactory } from './application/services/appointment-date-list.factory';
+import { AppointmentNotificationOptInMessageFactory } from './application/services/appointment-notification-opt-in-message.factory';
 import { AppointmentRescheduleConfirmationMessageFactory } from './application/services/appointment-reschedule-confirmation-message.factory';
 import { AppointmentReschedulingTimeSelectionService } from './application/services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from './application/services/appointment-time-list.factory';
@@ -29,6 +30,7 @@ import { MainMenuHandler } from './application/state-handlers/main-menu.handler'
 import { PatientValidatedHandler } from './application/state-handlers/patient-validated.handler';
 import { ReviewingAssignedAppointmentDetailsHandler } from './application/state-handlers/reviewing-assigned-appointment-details.handler';
 import { ReviewingAssignedAppointmentActionsHandler } from './application/state-handlers/reviewing-assigned-appointment-actions.handler';
+import { RequestingWhatsappAppointmentNotificationsOptInHandler } from './application/state-handlers/requesting-whatsapp-appointment-notifications-opt-in.handler';
 import { SelectingAssignedAppointmentHandler } from './application/state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from './application/state-handlers/selecting-appointment-date.handler';
 import { SelectingAppointmentDoctorHandler } from './application/state-handlers/selecting-appointment-doctor.handler';
@@ -57,6 +59,7 @@ import { PatientsModule } from '../patients/patients.module';
     AppointmentDoctorListPresenterService,
     AppointmentDoctorListFactory,
     AppointmentDateListFactory,
+    AppointmentNotificationOptInMessageFactory,
     AppointmentRescheduleConfirmationMessageFactory,
     AppointmentReschedulingTimeSelectionService,
     AppointmentTimeListFactory,
@@ -72,6 +75,7 @@ import { PatientsModule } from '../patients/patients.module';
     SelectingAssignedAppointmentHandler,
     ReviewingAssignedAppointmentDetailsHandler,
     ReviewingAssignedAppointmentActionsHandler,
+    RequestingWhatsappAppointmentNotificationsOptInHandler,
     SelectingSpecialtyHandler,
     SelectingAppointmentDateHandler,
     SelectingAppointmentDoctorHandler,

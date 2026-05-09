@@ -5,6 +5,7 @@ import { AssignedAppointmentListFactory } from '../services/assigned-appointment
 import { AppointmentDoctorListFactory } from '../services/appointment-doctor-list.factory';
 import { AppointmentDoctorListPresenterService } from '../services/appointment-doctor-list-presenter.service';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
 import { ConversationConfigService } from '../services/conversation-config.service';
 import { ConversationKeyFactory } from '../services/conversation-key.factory';
@@ -46,6 +47,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
         new AppointmentDateListFactory(),
         new AppointmentTimeListFactory(),
+        new AppointmentNotificationOptInMessageFactory(),
       ),
       new MainMenuListFactory(),
       new ConversationConfigService(),

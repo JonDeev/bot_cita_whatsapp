@@ -42,6 +42,22 @@ describe('ConversationNavigationService', () => {
     });
   });
 
+  it('builds menu+finish buttons for post-booking opt-in step', () => {
+    const service = new ConversationNavigationService();
+
+    const message = service.buildNavigationMessage(
+      CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+    );
+
+    expect(message).toMatchObject({
+      type: 'interactive_buttons',
+      buttons: [
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
+    });
+  });
+
   it('builds back+menu+finish buttons for other states', () => {
     const service = new ConversationNavigationService();
 

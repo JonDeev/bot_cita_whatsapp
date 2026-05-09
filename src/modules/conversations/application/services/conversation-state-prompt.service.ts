@@ -8,6 +8,7 @@ import { AssignedAppointmentDetailsMessageFactory } from './assigned-appointment
 import { AssignedAppointmentListFactory } from './assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
 import { AppointmentDateListFactory } from './appointment-date-list.factory';
+import { AppointmentNotificationOptInMessageFactory } from './appointment-notification-opt-in-message.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
 import { MainMenuListFactory } from './main-menu-list.factory';
 import { SpecialtyListFactory } from './specialty-list.factory';
@@ -29,6 +30,7 @@ export class ConversationStatePromptService {
     private readonly appointmentDoctorListFactory: AppointmentDoctorListFactory,
     private readonly appointmentDateListFactory: AppointmentDateListFactory,
     private readonly appointmentTimeListFactory: AppointmentTimeListFactory,
+    private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
   ) { }
 
   buildForState(
@@ -200,6 +202,13 @@ export class ConversationStatePromptService {
           outboundMessages: [this.appointmentTimeListFactory.build(offeredTimes, hasMoreTimes)],
         };
       }
+
+      case CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN:
+        return {
+          nextState:
+            CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+          outboundMessages: [this.appointmentNotificationOptInMessageFactory.build()],
+        };
 
       default:
         return this.buildForState(session, CONVERSATION_STATES.MAIN_MENU);

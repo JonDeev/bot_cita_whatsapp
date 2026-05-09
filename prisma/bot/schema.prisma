@@ -33,6 +33,20 @@ enum BotSexRule {
   M
 }
 
+enum BotContactChannel {
+  WHATSAPP
+}
+
+enum BotContactConsentPurpose {
+  APPOINTMENT_NOTIFICATIONS
+  SATISFACTION_SURVEYS
+}
+
+enum BotContactConsentResponse {
+  ACCEPTED
+  DECLINED
+}
+
 model BotConversation {
   id               Int                @id @default(autoincrement())
   conversationKey  String             @unique(map: "uq_bot_conversations_conversation_key") @map("conversation_key") @db.VarChar(191)
@@ -198,4 +212,43 @@ model BotEpsSpecialtyRule {
   @@index([sexRule, isActive], map: "idx_bot_eps_specialty_rules_sex_active")
   @@index([specialtyCode], map: "idx_bot_eps_specialty_rules_specialty_code")
   @@map("bot_eps_specialty_rules")
+}
+
+model BotContactConsentEvent {
+  id                  Int                       @id @default(autoincrement())
+  patientLegacyUserId Int                       @map("patient_legacy_user_id")
+  phone               String                    @db.VarChar(32)
+  channel             BotContactChannel
+  source              String                    @db.VarChar(64)
+  consentTextSnapshot String                    @map("consent_text_snapshot") @db.Text
+  policyUrl           String?                   @map("policy_url") @db.VarChar(255)
+  policyVersion       String?                   @map("policy_version") @db.VarChar(64)
+  response            BotContactConsentResponse
+  respondedAt         DateTime                  @map("responded_at") @db.DateTime(3)
+  createdAt           DateTime                  @default(now()) @map("created_at") @db.DateTime(3)
+  consents            BotPatientContactConsent[]
+
+  @@index([patientLegacyUserId, respondedAt], map: "idx_bot_contact_consent_events_patient_responded_at")
+  @@index([phone, respondedAt], map: "idx_bot_contact_consent_events_phone_responded_at")
+  @@map("bot_contact_consent_events")
+}
+
+model BotPatientContactConsent {
+  id                  Int                     @id @default(autoincrement())
+  consentEventId      Int                     @map("consent_event_id")
+  patientLegacyUserId Int                     @map("patient_legacy_user_id")
+  phone               String                  @db.VarChar(32)
+  channel             BotContactChannel
+  purpose             BotContactConsentPurpose
+  granted             Boolean
+  grantedAt           DateTime?               @map("granted_at") @db.DateTime(3)
+  revokedAt           DateTime?               @map("revoked_at") @db.DateTime(3)
+  createdAt           DateTime                @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime                @updatedAt @map("updated_at") @db.DateTime(3)
+  consentEvent        BotContactConsentEvent  @relation(fields: [consentEventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([patientLegacyUserId, channel, purpose], map: "uq_bot_patient_contact_consents_patient_channel_purpose")
+  @@index([phone, channel, purpose], map: "idx_bot_patient_contact_consents_phone_channel_purpose")
+  @@index([granted, purpose], map: "idx_bot_patient_contact_consents_granted_purpose")
+  @@map("bot_patient_contact_consents")
 }

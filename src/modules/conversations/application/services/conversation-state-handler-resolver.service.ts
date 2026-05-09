@@ -4,6 +4,7 @@ import { MainMenuHandler } from '../state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from '../state-handlers/patient-validated.handler';
 import { ReviewingAssignedAppointmentDetailsHandler } from '../state-handlers/reviewing-assigned-appointment-details.handler';
 import { ReviewingAssignedAppointmentActionsHandler } from '../state-handlers/reviewing-assigned-appointment-actions.handler';
+import { RequestingWhatsappAppointmentNotificationsOptInHandler } from '../state-handlers/requesting-whatsapp-appointment-notifications-opt-in.handler';
 import { SelectingAssignedAppointmentHandler } from '../state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from '../state-handlers/selecting-appointment-date.handler';
 import { SelectingAppointmentDoctorHandler } from '../state-handlers/selecting-appointment-doctor.handler';
@@ -25,6 +26,7 @@ export class ConversationStateHandlerResolverService {
     selectingAssignedAppointmentHandler: SelectingAssignedAppointmentHandler,
     reviewingAssignedAppointmentDetailsHandler: ReviewingAssignedAppointmentDetailsHandler,
     reviewingAssignedAppointmentActionsHandler: ReviewingAssignedAppointmentActionsHandler,
+    requestingWhatsappAppointmentNotificationsOptInHandler: RequestingWhatsappAppointmentNotificationsOptInHandler,
     selectingSpecialtyHandler: SelectingSpecialtyHandler,
     selectingAppointmentDateHandler: SelectingAppointmentDateHandler,
     selectingAppointmentDoctorHandler: SelectingAppointmentDoctorHandler,
@@ -46,6 +48,10 @@ export class ConversationStateHandlerResolverService {
     this.handlersByState.set(
       reviewingAssignedAppointmentActionsHandler.state,
       reviewingAssignedAppointmentActionsHandler,
+    );
+    this.handlersByState.set(
+      requestingWhatsappAppointmentNotificationsOptInHandler.state,
+      requestingWhatsappAppointmentNotificationsOptInHandler,
     );
     this.handlersByState.set(selectingSpecialtyHandler.state, selectingSpecialtyHandler);
     this.handlersByState.set(selectingAppointmentDateHandler.state, selectingAppointmentDateHandler);

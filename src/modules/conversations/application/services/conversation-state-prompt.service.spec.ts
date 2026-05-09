@@ -4,6 +4,7 @@ import { AssignedAppointmentDetailsMessageFactory } from './assigned-appointment
 import { AssignedAppointmentListFactory } from './assigned-appointment-list.factory';
 import { AppointmentDoctorListFactory } from './appointment-doctor-list.factory';
 import { AppointmentDoctorListPresenterService } from './appointment-doctor-list-presenter.service';
+import { AppointmentNotificationOptInMessageFactory } from './appointment-notification-opt-in-message.factory';
 import { ConversationStatePromptService } from './conversation-state-prompt.service';
 import { AppointmentDateListFactory } from './appointment-date-list.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
@@ -21,6 +22,7 @@ describe('ConversationStatePromptService', () => {
       new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
       new AppointmentDateListFactory(),
       new AppointmentTimeListFactory(),
+      new AppointmentNotificationOptInMessageFactory(),
     );
   }
 
@@ -261,6 +263,38 @@ describe('ConversationStatePromptService', () => {
               title: 'Medicos disponibles',
               rows: [{ id: 'appointment_doctor:M001', title: 'ANA GARCIA' }],
             },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('builds opt-in prompt when returning to post-booking consent state', () => {
+    const service = buildService();
+
+    const result = service.buildForState(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-09T10:00:00.000Z',
+        updatedAt: '2026-05-09T10:00:00.000Z',
+      },
+      CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+    );
+
+    expect(result).toEqual({
+      nextState: CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+      outboundMessages: [
+        {
+          type: 'interactive_buttons',
+          body: expect.stringContaining('recordatorios'),
+          buttons: [
+            { id: 'appointment_notifications_opt_in:accept', title: 'Si autorizo' },
+            { id: 'appointment_notifications_opt_in:decline', title: 'No autorizo' },
           ],
         },
       ],

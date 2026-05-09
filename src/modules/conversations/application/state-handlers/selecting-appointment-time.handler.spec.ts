@@ -4,6 +4,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { AppointmentAssignmentConfirmationMessageFactory } from '../services/appointment-assignment-confirmation-message.factory';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
+import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
 import { AppointmentReschedulingTimeSelectionService } from '../services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
 import { SelectingAppointmentTimeHandler } from './selecting-appointment-time.handler';
@@ -19,6 +20,7 @@ describe('SelectingAppointmentTimeHandler', () => {
       new AppointmentDateListFactory(),
       new AppointmentAssignmentConfirmationMessageFactory(),
       new AppointmentAvailabilityMessageFactory(),
+      new AppointmentNotificationOptInMessageFactory(),
       (reschedulingTimeSelectionService ??
         ({
           handleAfterTimeSelection: jest.fn(),
@@ -102,13 +104,17 @@ describe('SelectingAppointmentTimeHandler', () => {
       },
     );
 
-    expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.nextState).toBe('REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN');
     expect(result.nextContext?.appointmentTimeSelection).toBeUndefined();
     expect(result.outboundMessages[0]).toMatchObject({
+      type: 'text',
+      body: expect.stringContaining('su cita se asignó satisfactoriamente'),
+    });
+    expect(result.outboundMessages[1]).toMatchObject({
       type: 'interactive_buttons',
       buttons: [
-        { id: 'nav_main_menu', title: 'Menu principal' },
-        { id: 'nav_finish', title: 'Finalizar' },
+        { id: 'appointment_notifications_opt_in:accept', title: 'Si autorizo' },
+        { id: 'appointment_notifications_opt_in:decline', title: 'No autorizo' },
       ],
     });
   });
