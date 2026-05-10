@@ -2,16 +2,16 @@
 
 ## Objetivo
 
-Implementar el envio automatico de encuestas de satisfaccion para pacientes con citas atendidas, usando la API oficial de Meta WhatsApp Cloud API en modo de coexistencia, con trazabilidad completa, deduplicacion por paciente y cumplimiento de politicas de mensajeria.
+Implementar el envio automatico de encuestas de satisfaccion para pacientes con citas atendidas, usando la API oficial de Meta WhatsApp Cloud API en modo de coexistencia, con trazabilidad completa, deduplicacion por paciente, cumplimiento de politicas de mensajeria y una experiencia nativa dentro de WhatsApp basada en `Flows`.
 
 El comportamiento esperado es:
 
 1. El sistema ejecuta un proceso automatico cada 30 minutos, de lunes a viernes, desde las 07:30 hasta las 17:00 en `America/Bogota`.
 2. En cada ejecucion identifica citas del dia con `agenda.Estado = 'Atendida'`, `agenda.notificacion_encuesta = 'No enviado'` y telefono valido en `usuarios.Telefono`.
 3. El sistema envia una sola encuesta por paciente por dia aunque tenga multiples citas atendidas.
-4. El primer mensaje se envia con una plantilla oficial aprobada por Meta.
-5. Si el paciente acepta responder, el bot realiza las 5 preguntas dentro de la conversacion.
-6. Si el paciente rechaza, no conoce a la persona o no responde, el sistema cierra o expira el proceso segun reglas controladas.
+4. El primer mensaje se envia con una plantilla oficial aprobada por Meta que abre un `WhatsApp Flow`.
+5. El paciente responde toda la encuesta dentro del `Flow`, sin obligarlo a contestar pregunta por pregunta en texto libre.
+6. El backend conserva la fuente de verdad del proceso: elegibilidad, despacho, auditoria, handoff, bloqueo de contactos y resultados.
 7. Todas las acciones quedan auditadas en la base bot sin exponer datos sensibles innecesarios.
 
 ## Alcance
@@ -21,8 +21,8 @@ Incluye:
 - Deteccion automatica de pacientes elegibles por ventana de 30 minutos.
 - Dedupe de una encuesta por paciente por dia.
 - Persistencia bot para definiciones, despachos, respuestas, bloqueos y consentimientos.
-- Envio de plantilla inicial de encuesta por WhatsApp Cloud API.
-- Flujo conversacional completo de encuesta con 5 preguntas.
+- Envio de plantilla inicial de encuesta por WhatsApp Cloud API usando boton `FLOW`.
+- Diseno del `Flow` con las 5 preguntas de satisfaccion.
 - Manejo de rechazo, telefono desconocido, expiracion y handoff humano.
 - Actualizacion operativa controlada de `agenda.notificacion_encuesta`.
 - Auditoria, idempotencia, reintentos y pruebas relevantes.
@@ -41,18 +41,19 @@ No incluye:
    - `agenda.Estado = 'Atendida'`
    - `agenda.notificacion_encuesta = 'No enviado'`
    - telefono valido en `usuarios.Telefono`
-2. El telefono valido en Colombia para este flujo es un numero de 10 digitos que cumple `^3\d{9}$` despues de sanitizar.
+2. El telefono valido en Colombia para elegibilidad es un numero de 10 digitos que cumple `^3\d{9}$` despues de sanitizar.
 3. La fuente del telefono para encuesta sera `usuarios.Telefono`, no `agenda.Telefono`.
 4. El sistema enviara solo una encuesta por paciente por dia.
 5. Si el paciente tiene varias citas atendidas el mismo dia, la encuesta se asociara a todas las agendas elegibles relacionadas a traves de una tabla puente, pero solo se enviara una vez.
-6. El primer mensaje de encuesta sera negocio-iniciado y se enviara mediante una plantilla oficial aprobada por Meta.
-7. El primer mensaje usara `reply buttons`, no `list`, porque es el punto de entrada mas seguro para una plantilla de inicio de conversacion.
-8. Las preguntas posteriores se responderan dentro de la ventana conversacional de 24 horas con mensajes del bot.
-9. Si el paciente responde `No conozco a la persona`, el sistema bloqueara futuros envios de encuestas para ese telefono en la base bot y no modificara `usuarios.Telefono`.
-10. Si el paciente no responde o abandona, la encuesta expirara a las 24 horas desde el envio o inicio del flujo.
+6. La encuesta negocio-iniciada se enviara mediante una plantilla oficial aprobada por Meta con boton `FLOW`, no con `reply buttons` ni con `list` como mensaje inicial.
+7. La primera pantalla del `Flow` resolvera la decision de continuar o no continuar, para evitar varias preguntas de arranque en el chat.
+8. Las 5 preguntas de satisfaccion se responderan dentro del `Flow`, no como estados individuales del bot conversacional.
+9. Si el paciente indica `No conozco a la persona`, el sistema bloqueara futuros envios de encuestas para ese telefono en la base bot y no modificara `usuarios.Telefono`.
+10. Si el paciente no responde o abandona, la encuesta expirara a las 24 horas desde el envio del template.
 11. Si la conversacion entra en `HUMAN_HANDOFF`, la encuesta no seguira enviando mensajes automaticos.
 12. La columna legacy `agenda.notificacion_encuesta` se mantendra como marcador operativo, pero la fuente real del estado sera la base bot.
 13. El sistema solo enviara encuestas a pacientes con opt-in valido para WhatsApp y para esta finalidad.
+14. Para elegibilidad y legado se conserva el telefono de 10 digitos, pero para el envio real a Cloud API se normaliza a formato de destinatario WhatsApp `57 + numero` sin el signo `+`.
 
 ## Reglas funcionales
 
@@ -93,16 +94,23 @@ La clave de dedupe sera:
 
 Consecuencias:
 
-1. Si un paciente ya tiene un despacho `PENDING`, `SENT`, `STARTED`, `COMPLETED`, `DECLINED` o `EXPIRED` ese mismo dia, no se crea un nuevo despacho.
+1. Si un paciente ya tiene un despacho `PENDING`, `SENT`, `STARTED`, `COMPLETED`, `DECLINED`, `EXPIRED`, `BLOCKED_CONTACT` o `CANCELLED_BY_HANDOFF` ese mismo dia, no se crea un nuevo despacho.
 2. Si una nueva agenda del mismo paciente entra en una corrida posterior del mismo dia, se vincula al despacho diario existente mediante tabla puente, pero no dispara un nuevo envio.
 
 ### Regla de telefono
 
-Normalizacion:
+Normalizacion de elegibilidad:
 
 1. remover espacios, guiones, parentesis y cualquier caracter no numerico
-2. si el valor empieza por `57` y queda de 12 digitos, no se considerara valido para este flujo porque el requerimiento actual exige almacenar y usar 10 digitos sin prefijo
+2. si el valor empieza por `57` y queda de 12 digitos, no se considerara valido como dato legacy para este flujo porque el requerimiento operativo actual exige almacenar y usar 10 digitos sin prefijo
 3. solo sera valido si el resultado final tiene exactamente 10 digitos y empieza por `3`
+
+Normalizacion de transporte hacia Meta:
+
+1. el sistema tomara el telefono legacy valido de 10 digitos
+2. construira el destinatario WhatsApp como `57${telefonoLegacy}`
+3. ese valor se almacenara como snapshot en `patient_phone_e164`
+4. el numero legacy original se conserva para auditoria y consistencia operativa
 
 ### Regla de opt-in
 
@@ -111,7 +119,7 @@ El sistema solo puede enviar la encuesta si existe evidencia de consentimiento p
 Se considera valido si existe un registro que documente:
 
 - canal `WHATSAPP`
-- finalidad `SATISFACTION_SURVEY`
+- finalidad `SATISFACTION_SURVEYS`
 - consentimiento otorgado
 - fecha de otorgamiento
 - fuente del consentimiento
@@ -125,9 +133,9 @@ La fuente recomendada para este proyecto es capturar un consentimiento unificado
 
 `agenda.notificacion_encuesta` se actualizara asi:
 
-- `Enviado`: cuando la plantilla inicial sea aceptada para envio por el adaptador y se registre el `messageId`
+- `Enviado`: cuando la plantilla inicial con boton `FLOW` sea aceptada para envio por el adaptador y se registre el `messageId`
 - `Respondida`: cuando la encuesta quede `COMPLETED`
-- `No aplica`: cuando una agenda quede cubierta por dedupe diario, bloqueo de telefono, falta de opt-in o `UNKNOWN_PERSON`
+- `No aplica`: cuando una agenda quede cubierta por dedupe diario, bloqueo de telefono, falta de opt-in, `UNKNOWN_PERSON` o `CANCELLED_BY_HANDOFF`
 
 No se usara esta columna para reconstruir resultados ni respuestas.
 
@@ -142,10 +150,11 @@ No se usara esta columna para reconstruir resultados ni respuestas.
 5. El sistema agrupa resultados por paciente y fecha.
 6. Si no existe despacho diario, crea `bot_survey_dispatches` con estado `PENDING`.
 7. El sistema vincula todas las `agenda.idagenda` elegibles del paciente al despacho mediante `bot_survey_dispatch_appointments`.
-8. El sistema encola un job de envio por despacho.
-9. El worker envia la plantilla inicial por Cloud API.
+8. El sistema encola o ejecuta el envio del template `FLOW` por despacho.
+9. El worker o caso de uso de envio manda la plantilla oficial por Cloud API.
 10. Si el envio es exitoso:
     - guarda `initial_whatsapp_message_id`
+    - guarda `flow_token`
     - cambia estado a `SENT`
     - registra mensaje outbound
     - audita
@@ -197,100 +206,85 @@ Como el numero operara en modo de coexistencia:
 1. el backend sigue siendo la fuente de verdad del estado de encuesta
 2. todos los mensajes de encuesta entrantes y salientes se auditan en la base bot
 3. si una conversacion asociada entra a `HUMAN_HANDOFF`, la encuesta no sigue enviando mensajes automatizados
-4. si hay actividad manual en la conversacion, el backend no debe relanzar preguntas automaticamente salvo reanudacion explicita
+4. si hay actividad manual en la conversacion, el backend no debe relanzar encuestas automaticamente salvo reanudacion explicita
 
-## Flujo conversacional
+## Flujo con WhatsApp Flow
 
 ### Mensaje inicial
 
-El inicio de encuesta se enviara con una plantilla oficial aprobada por Meta con `reply buttons`.
+La encuesta se inicia con una plantilla oficial aprobada por Meta del tipo `template` con un boton `FLOW`.
 
-Botones recomendados:
+La plantilla debe:
 
-- `survey_accept` -> `Si responder`
-- `survey_decline` -> `No responder`
-- `survey_unknown_person` -> `No conozco a la persona`
+- estar aprobada antes del primer envio
+- usar el texto final validado por IPS SISM
+- incluir placeholders para `patientName`, `specialtyName` y `hour` en el `body`, si asi se define el template
+- incluir un unico boton `FLOW` en `index = 0`
+- abrir el `Flow` publicado de encuesta de satisfaccion
 
-La opcion `Terminar proceso` no es necesaria como boton inicial porque funcionalmente queda cubierta por `No responder`.
-
-Texto base:
-
-```txt
-Hola *${patientName}*! Tu opinion es muy valiosa para nosotros y queremos mejorar para ti. Como 🏥 *IPS SISM* nos gustaria conocer tu experiencia en la atencion de tu cita de 🩺 *${specialtyName}* a las *${hour}*.
-
-Selecciona una opcion para continuar:
-```
-
-### Preguntas
-
-Pregunta 1:
+Texto base recomendado del template:
 
 ```txt
-Pregunta 1 de 5: ¿Considera usted que fue facil conseguir su cita con la 🏥IPS SISM?
+Hola *{{1}}*! Tu opinion es muy valiosa para nosotros y queremos mejorar para ti. Como 🏥 *IPS SISM* nos gustaria conocer tu experiencia en la atencion de tu cita de 🩺 *{{2}}* a las *{{3}}*.
 
-*1.* SI
-*2.* NO
+Selecciona el boton para responder la breve encuesta.
 ```
 
-Pregunta 2:
+El backend enviara el template y adjuntara:
 
-```txt
-Pregunta 2 de 5: De acuerdo a su experiencia, ¿Que tan satisfecho se encuentra con la atencion brindada? Siendo (4) muy satisfecho y (1) muy insatisfecho.
+- `template.name`
+- `template.language.code`
+- `components[type=body].parameters[text]` si la plantilla usa placeholders
+- `components[type=button, sub_type=flow, index=0].parameters[type=action].action.flow_token`
+- `flow_action_data` con metadatos minimos del despacho si el `Flow` necesita datos de entrada
 
-*4.* ⭐⭐⭐⭐
-*3.* ⭐⭐⭐
-*2.* ⭐⭐
-*1.* ⭐
-```
+### Estructura del Flow
 
-Pregunta 3:
+El `Flow` debe vivir en WhatsApp Manager o administrarse por Flows API, pero su version publicada debe respetar este contenido funcional:
 
-```txt
-Pregunta 3 de 5: ¿Recomendaria los servicios de la IPS con algun familiar y/o amigo?
+Pantalla 1:
 
-*1.* SI
-*2.* NO
-```
+- pregunta de continuacion
+- opciones:
+  - `Si responder la encuesta`
+  - `No responder la encuesta`
+  - `No conozco a la persona`
+  - `Terminar proceso`
 
-Pregunta 4:
+Pantalla 2 a 5:
 
-```txt
-Pregunta 4 de 5: ¿En que te gustaria que mejoraramos para tu proxima visita?
+- Pregunta 1 de 5: facilidad para conseguir la cita
+- Pregunta 2 de 5: satisfaccion general con escala 1 a 4
+- Pregunta 3 de 5: recomendacion a familiar o amigo
+- Pregunta 4 de 5: aspecto a mejorar
+- Pregunta 5 de 5: comentario o recomendacion libre
 
-*1.* EN LAS INSTALACIONES
-*2.* EN LA ATENCION DE TU PROFESIONAL
-*3.* EN LA ATENCION DE SERVICIO AL USUARIO
-*4.* EN EL TIEMPO DE ESPERA EN LA SALA
-*5.* EN NADA TODO ESTUVO BIEN
-```
+Tipos recomendados de componentes:
 
-Pregunta 5:
+- radio / single choice para preguntas cerradas
+- long text o text area para comentario final
+- pantalla final de agradecimiento
 
-```txt
-Pregunta 5 de 5: Dejanos un comentario o recomendacion para seguir mejorando.
-```
+### Resultado del Flow
 
-### Comportamiento
+El backend debe ser capaz de diferenciar al menos estos resultados:
 
-Mensaje inicial:
+- `DECLINED`: el paciente decide no responder o terminar el proceso
+- `BLOCKED_CONTACT`: el paciente marca `No conozco a la persona`
+- `COMPLETED`: el paciente responde y finaliza exitosamente
+- `EXPIRED`: no abre o no finaliza dentro de 24 horas
 
-1. `survey_accept` inicia la encuesta
-2. `survey_decline` cierra la encuesta en estado `DECLINED`
-3. `survey_unknown_person` bloquea el telefono en bot y cierra la encuesta en estado `BLOCKED_CONTACT`
+### Captura de respuestas
 
-Preguntas:
+La captura oficial de resultados debe hacerse por la integracion propia de `WhatsApp Flows`, no revirtiendo a preguntas por chat.
 
-1. Q1 acepta `1` o `2`
-2. Q2 acepta `1`, `2`, `3` o `4`
-3. Q3 acepta `1` o `2`
-4. Q4 acepta `1`, `2`, `3`, `4` o `5`
-5. Q5 acepta texto libre
+Reglas:
 
-Reglas generales:
-
-- si el paciente responde fuera del catalogo valido, el bot repite la pregunta actual
-- si el paciente escribe una opcion de navegacion global definida por el bot, se aplica la politica general del canal
-- si entra handoff humano, la encuesta se pausa o se cierra segun estado
+1. el resultado del `Flow` debe correlacionarse con `bot_survey_dispatches` mediante `flow_token`
+2. las respuestas deben guardarse en `bot_survey_answers`
+3. la finalizacion debe actualizar el despacho y las agendas relacionadas
+4. si el `Flow` devuelve `No conozco a la persona`, el sistema debe crear un bloqueo en `bot_contact_suppressions`
+5. si entra `HUMAN_HANDOFF`, no se inicia un nuevo envio automatico para esa conversacion
 
 ### Expiracion
 
@@ -303,9 +297,9 @@ Si expira:
 3. se audita el vencimiento
 4. las agendas relacionadas no vuelven a disparar una nueva encuesta ese mismo dia
 
-## Arquitectura y estados
+## Arquitectura
 
-Se mantiene modular monolith + arquitectura hexagonal + state machine.
+Se mantiene modular monolith + arquitectura hexagonal.
 
 ### Modulos afectados
 
@@ -314,7 +308,7 @@ Se mantiene modular monolith + arquitectura hexagonal + state machine.
 - `conversations`
 - `audit`
 - `human-handoff`
-- `shared` para colas y scheduler si se centralizan adaptadores comunes
+- `shared` para scheduler y colas cuando se incorporen
 
 ### Responsabilidades por modulo
 
@@ -325,6 +319,7 @@ Responsable de:
 - reglas de elegibilidad de encuesta
 - definiciones y preguntas
 - despachos diarios
+- tokens de correlacion de Flow
 - respuestas de encuesta
 - expiracion
 - bloqueos de contacto
@@ -334,19 +329,20 @@ Responsable de:
 
 Responsable de:
 
-- envio de plantilla inicial
-- envio de preguntas dentro de la ventana
-- recepcion y normalizacion de respuestas
+- envio del template `FLOW`
+- adaptacion del payload oficial de Cloud API
+- recepcion y normalizacion de webhooks relacionados con mensajes enviados
 - persistencia de mensajes inbound y outbound
 
 #### `conversations`
 
 Responsable de:
 
-- estado de la conversacion
-- session context
-- enrutamiento por estado
-- respeto de `BOT_ACTIVE` y `HUMAN_HANDOFF`
+- identidad de conversacion por `conversationKey`
+- auditoria del hilo de mensajes
+- consulta de estado de conversacion para respetar `HUMAN_HANDOFF`
+
+No es responsable de modelar cada pregunta de la encuesta como un estado del bot.
 
 #### `audit`
 
@@ -354,43 +350,12 @@ Responsable de:
 
 - registrar todos los eventos de negocio y de envio
 
-### Estados nuevos recomendados
-
-Agregar a `CONVERSATION_STATES`:
-
-- `SURVEY_INVITATION`
-- `SURVEY_Q1`
-- `SURVEY_Q2`
-- `SURVEY_Q3`
-- `SURVEY_Q4`
-- `SURVEY_Q5`
-- `SURVEY_COMPLETED`
-- `SURVEY_DECLINED`
-- `SURVEY_EXPIRED`
-
-### Session context recomendado
-
-Agregar un bloque como:
-
-```ts
-surveySession?: {
-  dispatchId: string;
-  surveyDefinitionCode: string;
-  surveyVersion: number;
-  surveyDateIso: string;
-  patientLegacyUserId: number;
-  appointmentIds: number[];
-  currentQuestionKey?: string;
-  expiresAtIso: string;
-}
-```
-
 ### Casos de uso recomendados
 
 - `dispatch-half-hourly-satisfaction-surveys.use-case.ts`
-- `send-satisfaction-survey-invitation.use-case.ts`
-- `start-satisfaction-survey.use-case.ts`
-- `record-satisfaction-survey-answer.use-case.ts`
+- `create-satisfaction-survey-dispatch.use-case.ts`
+- `send-satisfaction-survey-flow-invitation.use-case.ts`
+- `record-satisfaction-survey-flow-submission.use-case.ts`
 - `complete-satisfaction-survey.use-case.ts`
 - `expire-satisfaction-surveys.use-case.ts`
 - `suppress-survey-contact.use-case.ts`
@@ -422,6 +387,7 @@ Campos:
 - `name`
 - `is_active`
 - `created_at`
+- `updated_at`
 
 ### `bot_survey_questions`
 
@@ -435,6 +401,7 @@ Campos:
 - `body`
 - `is_required`
 - `created_at`
+- `updated_at`
 
 ### `bot_survey_question_options`
 
@@ -446,6 +413,8 @@ Campos:
 - `option_label`
 - `option_order`
 - `is_terminal_action`
+- `created_at`
+- `updated_at`
 
 ### `bot_survey_dispatches`
 
@@ -454,6 +423,7 @@ Campos:
 - `id`
 - `survey_definition_id`
 - `patient_legacy_user_id`
+- `patient_name`
 - `patient_phone`
 - `patient_phone_e164`
 - `survey_date`
@@ -462,15 +432,18 @@ Campos:
 - `window_start_at`
 - `window_end_at`
 - `expires_at`
+- `conversation_key`
+- `initial_template_name`
+- `initial_template_language`
+- `initial_whatsapp_message_id`
+- `flow_token`
+- `flow_opened_at`
 - `started_at`
 - `completed_at`
 - `declined_at`
 - `expired_at`
 - `failed_at`
-- `conversation_key`
-- `initial_template_name`
-- `initial_whatsapp_message_id`
-- `last_inbound_whatsapp_message_id`
+- `failure_reason`
 - `dedupe_key`
 - `created_at`
 - `updated_at`
@@ -510,6 +483,7 @@ Campos:
 - `free_text_answer`
 - `answered_at`
 - `source_message_id`
+- `created_at`
 
 ### `bot_contact_suppressions`
 
@@ -522,150 +496,72 @@ Campos:
 - `reason`
 - `scope`
 - `active`
-- `created_at`
 - `expires_at`
 - `notes`
+- `created_at`
+- `updated_at`
 
 ### `bot_patient_contact_consents`
 
-Campos:
-
-- `id`
-- `patient_legacy_user_id`
-- `phone`
-- `channel`
-- `purpose`
-- `granted`
-- `granted_at`
-- `revoked_at`
-- `source`
-- `policy_version`
-- `evidence_snapshot`
-- `created_at`
+Ya definida previamente para soportar la validacion de opt-in por finalidad.
 
 ## Auditoria
 
-Eventos minimos recomendados:
+Eventos minimos:
 
-- `survey.eligibility.scan.started`
-- `survey.eligibility.scan.completed`
+- `survey.eligibility.found`
 - `survey.eligibility.skipped.invalid_phone`
-- `survey.eligibility.skipped.no_opt_in`
-- `survey.eligibility.skipped.blocked_contact`
 - `survey.eligibility.skipped.already_sent_same_day`
 - `survey.dispatch.created`
-- `survey.dispatch.appointment_linked`
-- `survey.dispatch.sent`
-- `survey.dispatch.failed`
-- `survey.started`
+- `survey.dispatch.reused`
+- `survey.dispatch.flow_template.attempted`
+- `survey.dispatch.flow_template.sent`
+- `survey.dispatch.flow_template.failed`
+- `survey.flow.started`
 - `survey.answer.recorded`
 - `survey.completed`
 - `survey.declined`
 - `survey.expired`
-- `survey.contact_suppressed`
+- `survey.phone_suppressed`
 - `survey.cancelled.human_handoff`
-
-Reglas de privacidad:
-
-- no registrar telefono completo en logs de aplicacion si no es estrictamente necesario
-- si se audita el telefono, preferir version enmascarada
-- no guardar texto libre sensible fuera de la respuesta necesaria
-
-## Manejo de errores
-
-1. Si falla la consulta legacy:
-   - registrar auditoria
-   - no marcar agendas
-   - reintentar en siguiente corrida o segun job policy
-2. Si falla el envio a Meta:
-   - mantener `FAILED`
-   - reintentos controlados
-   - no marcar `Enviado` en legacy
-3. Si el paciente responde una opcion invalida:
-   - repetir la pregunta actual
-4. Si el dispatch ya expiro y llega respuesta tardia:
-   - no reabrir
-   - responder mensaje controlado opcional indicando que la encuesta finalizo
-5. Si el paciente esta en `HUMAN_HANDOFF`:
-   - no continuar la encuesta automaticamente
-6. Si falta opt-in:
-   - no enviar
-   - marcar agendas relacionadas a `No aplica`
 
 ## Testing
 
-### Unitarias
+Pruebas unitarias recomendadas:
 
-- normalizacion y validacion de telefono colombiano
-- calculo de ventana de 30 minutos
-- dedupe diario por paciente
-- reglas de opt-in
-- reglas de bloqueo por `UNKNOWN_PERSON`
-- transiciones de estados de encuesta
-- grabacion de respuestas por pregunta
+- normalizacion y validacion de telefono para encuestas
+- creacion idempotente de `dispatch`
+- factory de `flow_token`
+- use case de envio del `Flow Template Message`
+- repositorio Prisma de `survey-dispatch`
+- mapping de estado `HUMAN_HANDOFF` a cancelacion o bloqueo de envio
 
-### Integracion
+Pruebas posteriores de integracion:
 
-- query legacy de elegibilidad
-- persistencia de dispatches y answers
-- update de `agenda.notificacion_encuesta`
-- integracion con adaptador WhatsApp sender mock
+- scheduler contra repositorio legacy aislado
+- persistencia de respuestas del `Flow`
+- actualizacion de `agenda.notificacion_encuesta`
 
-### Flujo conversacional
-
-- aceptacion completa de encuesta
-- rechazo en mensaje inicial
-- `No conozco a la persona`
-- expiracion a 24 horas
-- bloqueo por handoff humano
-- respuesta invalida y reintento de la misma pregunta
-
-## Rollout recomendado
+## Fases recomendadas
 
 ### Fase 1
 
-- crear tablas bot
-- sembrar definicion de encuesta v1
-- implementar consulta de elegibilidad y dedupe
-- implementar envio de plantilla inicial
+- tablas bot de encuesta
+- siembra de la definicion v1 con 5 preguntas
+- creacion idempotente de despachos
+- envio del `Flow Template Message`
+- auditoria y persistencia de outbound
 
 ### Fase 2
 
-- implementar flujo conversacional completo
-- registrar respuestas
-- actualizar `agenda.notificacion_encuesta`
+- scheduler cada 30 minutos
+- repositorio legacy de elegibilidad
+- actualizacion operativa de `agenda.notificacion_encuesta`
+- expiracion automatica
 
 ### Fase 3
 
-- agregar expiracion automatica
-- bloqueo por `UNKNOWN_PERSON`
-- opt-in gate estricto
-- endurecer auditoria y metricas
-
-### Fase 4
-
-- monitoreo operativo
-- revision de tasa de entrega, inicio y finalizacion
-- ajustes de copy de plantilla segun aprobacion y calidad
-
-## Criterios de aceptacion
-
-1. El sistema ejecuta el barrido automatico cada 30 minutos de lunes a viernes entre 07:30 y 17:00.
-2. Solo se consideran agendas `Atendida` del dia, dentro de la ventana correspondiente, con `notificacion_encuesta = 'No enviado'`.
-3. Solo se envian encuestas a telefonos validos de 10 digitos en `usuarios.Telefono`.
-4. Solo se envia una encuesta por paciente por dia.
-5. El inicio de encuesta sale por plantilla oficial de Meta.
-6. El paciente puede aceptar, rechazar o reportar `No conozco a la persona`.
-7. Las 5 preguntas quedan almacenadas con version y respuestas auditables.
-8. Si el paciente no responde, la encuesta expira a las 24 horas.
-9. Si el paciente reporta telefono desconocido, se bloquean futuros envios de encuesta sin modificar `usuarios.Telefono`.
-10. Si la conversacion entra en handoff humano, el bot no continua la encuesta automaticamente.
-11. `agenda.notificacion_encuesta` se actualiza de forma coherente con el estado operativo.
-12. Las pruebas relevantes del modulo quedan en verde.
-
-## Referencias oficiales
-
-- WhatsApp Business Messaging Policy: https://whatsappbusiness.com/policy/
-- WhatsApp Business Platform Features: https://whatsappbusiness.com/products/business-platform-features/
-- WhatsApp Business Platform Pricing: https://whatsappbusiness.com/products/platform-pricing/
-- Managing Message Templates with the WhatsApp Business Platform: https://whatsappbusiness.com/blog/manage-message-templates-whatsapp-business-api/
+- captura completa de resultados del `Flow`
+- persistencia de respuestas en `bot_survey_answers`
+- bloqueo automatizado por `No conozco a la persona`
+- metricas y conciliacion de resultados

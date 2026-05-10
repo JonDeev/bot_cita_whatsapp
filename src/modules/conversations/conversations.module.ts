@@ -97,6 +97,7 @@ import { PatientsModule } from '../patients/patients.module';
   ],
   exports: [
     HandleIncomingConversationMessageUseCase,
+    ConversationKeyFactory,
     CONVERSATION_MESSAGE_REPOSITORY,
     CONVERSATION_PERSISTENCE_REPOSITORY,
   ],

@@ -8,6 +8,7 @@ describe('SendWhatsappInteractiveListMessageUseCase', () => {
       sendTextMessage: jest.fn(),
       sendInteractiveListMessage: jest.fn().mockResolvedValue({ messageId: 'wamid-456' }),
       sendInteractiveButtonsMessage: jest.fn(),
+      sendFlowTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
 
@@ -39,6 +40,7 @@ describe('SendWhatsappInteractiveListMessageUseCase', () => {
       sendTextMessage: jest.fn(),
       sendInteractiveListMessage: jest.fn(),
       sendInteractiveButtonsMessage: jest.fn(),
+      sendFlowTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
     const useCase = new SendWhatsappInteractiveListMessageUseCase(sender, auditService);
@@ -59,6 +61,7 @@ describe('SendWhatsappInteractiveListMessageUseCase', () => {
       sendTextMessage: jest.fn(),
       sendInteractiveListMessage: jest.fn(),
       sendInteractiveButtonsMessage: jest.fn(),
+      sendFlowTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
     const useCase = new SendWhatsappInteractiveListMessageUseCase(sender, auditService);

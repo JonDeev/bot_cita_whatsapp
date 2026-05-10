@@ -1,4 +1,5 @@
 import {
+  OutboundWhatsappFlowTemplateMessage,
   OutboundWhatsappInteractiveButtonsMessage,
   OutboundWhatsappInteractiveListMessage,
   OutboundWhatsappSendResult,
@@ -12,5 +13,8 @@ export interface WhatsappMessageSenderPort {
   ): Promise<OutboundWhatsappSendResult>;
   sendInteractiveButtonsMessage(
     message: OutboundWhatsappInteractiveButtonsMessage,
+  ): Promise<OutboundWhatsappSendResult>;
+  sendFlowTemplateMessage(
+    message: OutboundWhatsappFlowTemplateMessage,
   ): Promise<OutboundWhatsappSendResult>;
 }

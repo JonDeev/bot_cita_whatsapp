@@ -47,6 +47,30 @@ enum BotContactConsentResponse {
   DECLINED
 }
 
+enum BotSurveyQuestionType {
+  SINGLE_CHOICE
+  FREE_TEXT
+}
+
+enum BotSurveyDispatchStatus {
+  PENDING
+  SENT
+  STARTED
+  COMPLETED
+  DECLINED
+  EXPIRED
+  FAILED
+  CANCELLED_BY_HANDOFF
+  BLOCKED_CONTACT
+}
+
+enum BotContactSuppressionReason {
+  UNKNOWN_PERSON
+  OPT_OUT_SURVEY
+  INVALID_PHONE
+  MANUAL_BLOCK
+}
+
 model BotConversation {
   id               Int                @id @default(autoincrement())
   conversationKey  String             @unique(map: "uq_bot_conversations_conversation_key") @map("conversation_key") @db.VarChar(191)
@@ -69,19 +93,19 @@ model BotConversation {
 }
 
 model BotMessage {
-  id                Int                 @id @default(autoincrement())
-  conversationId    Int                 @map("conversation_id")
-  direction         BotMessageDirection
-  whatsappMessageId String?             @unique(map: "uq_bot_messages_whatsapp_message_id") @map("whatsapp_message_id") @db.VarChar(191)
-  messageType       String              @map("message_type") @db.VarChar(64)
-  body              String?             @db.Text
-  payload           Json?               @db.Json
-  occurredAt        DateTime            @map("occurred_at") @db.DateTime(3)
-  providerOccurredAt DateTime?          @map("provider_occurred_at") @db.DateTime(3)
-  receivedAt        DateTime?           @map("received_at") @db.DateTime(3)
-  sentAt            DateTime?           @map("sent_at") @db.DateTime(3)
-  createdAt         DateTime            @default(now()) @map("created_at") @db.DateTime(3)
-  conversation      BotConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  id                 Int                 @id @default(autoincrement())
+  conversationId     Int                 @map("conversation_id")
+  direction          BotMessageDirection
+  whatsappMessageId  String?             @unique(map: "uq_bot_messages_whatsapp_message_id") @map("whatsapp_message_id") @db.VarChar(191)
+  messageType        String              @map("message_type") @db.VarChar(64)
+  body               String?             @db.Text
+  payload            Json?               @db.Json
+  occurredAt         DateTime            @map("occurred_at") @db.DateTime(3)
+  providerOccurredAt DateTime?           @map("provider_occurred_at") @db.DateTime(3)
+  receivedAt         DateTime?           @map("received_at") @db.DateTime(3)
+  sentAt             DateTime?           @map("sent_at") @db.DateTime(3)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+  conversation       BotConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, occurredAt], map: "idx_bot_messages_conversation_occurred_at")
   @@index([direction, occurredAt], map: "idx_bot_messages_direction_occurred_at")
@@ -89,26 +113,26 @@ model BotMessage {
 }
 
 model BotWebhookEvent {
-  id                Int                        @id @default(autoincrement())
-  deduplicationKey  String                     @unique(map: "uq_bot_webhook_events_deduplication_key") @map("deduplication_key") @db.VarChar(191)
-  providerMessageId String                     @map("provider_message_id") @db.VarChar(191)
-  eventKind         String                     @map("event_kind") @db.VarChar(64)
-  phoneNumberId     String?                    @map("phone_number_id") @db.VarChar(64)
-  participantPhone  String?                    @map("participant_phone") @db.VarChar(32)
-  messageType       String?                    @map("message_type") @db.VarChar(64)
-  interactiveReplyId String?                   @map("interactive_reply_id") @db.VarChar(191)
-  contextMessageId  String?                    @map("context_message_id") @db.VarChar(191)
-  providerOccurredAt DateTime                  @map("provider_occurred_at") @db.DateTime(3)
-  receivedAt        DateTime                   @map("received_at") @db.DateTime(3)
-  processedAt       DateTime?                  @map("processed_at") @db.DateTime(3)
-  signatureValid    Boolean                    @default(false) @map("signature_valid")
-  payloadHash       String                     @map("payload_hash") @db.VarChar(64)
-  payload           Json?                      @db.Json
-  processingStatus  BotWebhookProcessingStatus @default(RECEIVED) @map("processing_status")
-  rejectionReason   String?                    @map("rejection_reason") @db.VarChar(64)
-  errorMessage      String?                    @map("error_message") @db.Text
-  createdAt         DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt         DateTime                   @updatedAt @map("updated_at") @db.DateTime(3)
+  id                 Int                        @id @default(autoincrement())
+  deduplicationKey   String                     @unique(map: "uq_bot_webhook_events_deduplication_key") @map("deduplication_key") @db.VarChar(191)
+  providerMessageId  String                     @map("provider_message_id") @db.VarChar(191)
+  eventKind          String                     @map("event_kind") @db.VarChar(64)
+  phoneNumberId      String?                    @map("phone_number_id") @db.VarChar(64)
+  participantPhone   String?                    @map("participant_phone") @db.VarChar(32)
+  messageType        String?                    @map("message_type") @db.VarChar(64)
+  interactiveReplyId String?                    @map("interactive_reply_id") @db.VarChar(191)
+  contextMessageId   String?                    @map("context_message_id") @db.VarChar(191)
+  providerOccurredAt DateTime                   @map("provider_occurred_at") @db.DateTime(3)
+  receivedAt         DateTime                   @map("received_at") @db.DateTime(3)
+  processedAt        DateTime?                  @map("processed_at") @db.DateTime(3)
+  signatureValid     Boolean                    @default(false) @map("signature_valid")
+  payloadHash        String                     @map("payload_hash") @db.VarChar(64)
+  payload            Json?                      @db.Json
+  processingStatus   BotWebhookProcessingStatus @default(RECEIVED) @map("processing_status")
+  rejectionReason    String?                    @map("rejection_reason") @db.VarChar(64)
+  errorMessage       String?                    @map("error_message") @db.Text
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime                   @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@index([providerMessageId], map: "idx_bot_webhook_events_provider_message_id")
   @@index([eventKind, receivedAt], map: "idx_bot_webhook_events_event_kind_received_at")
@@ -215,17 +239,17 @@ model BotEpsSpecialtyRule {
 }
 
 model BotContactConsentEvent {
-  id                  Int                       @id @default(autoincrement())
-  patientLegacyUserId Int                       @map("patient_legacy_user_id")
-  phone               String                    @db.VarChar(32)
+  id                  Int                        @id @default(autoincrement())
+  patientLegacyUserId Int                        @map("patient_legacy_user_id")
+  phone               String                     @db.VarChar(32)
   channel             BotContactChannel
-  source              String                    @db.VarChar(64)
-  consentTextSnapshot String                    @map("consent_text_snapshot") @db.Text
-  policyUrl           String?                   @map("policy_url") @db.VarChar(255)
-  policyVersion       String?                   @map("policy_version") @db.VarChar(64)
+  source              String                     @db.VarChar(64)
+  consentTextSnapshot String                     @map("consent_text_snapshot") @db.Text
+  policyUrl           String?                    @map("policy_url") @db.VarChar(255)
+  policyVersion       String?                    @map("policy_version") @db.VarChar(64)
   response            BotContactConsentResponse
-  respondedAt         DateTime                  @map("responded_at") @db.DateTime(3)
-  createdAt           DateTime                  @default(now()) @map("created_at") @db.DateTime(3)
+  respondedAt         DateTime                   @map("responded_at") @db.DateTime(3)
+  createdAt           DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
   consents            BotPatientContactConsent[]
 
   @@index([patientLegacyUserId, respondedAt], map: "idx_bot_contact_consent_events_patient_responded_at")
@@ -234,21 +258,167 @@ model BotContactConsentEvent {
 }
 
 model BotPatientContactConsent {
-  id                  Int                     @id @default(autoincrement())
-  consentEventId      Int                     @map("consent_event_id")
-  patientLegacyUserId Int                     @map("patient_legacy_user_id")
-  phone               String                  @db.VarChar(32)
+  id                  Int                      @id @default(autoincrement())
+  consentEventId      Int                      @map("consent_event_id")
+  patientLegacyUserId Int                      @map("patient_legacy_user_id")
+  phone               String                   @db.VarChar(32)
   channel             BotContactChannel
   purpose             BotContactConsentPurpose
   granted             Boolean
-  grantedAt           DateTime?               @map("granted_at") @db.DateTime(3)
-  revokedAt           DateTime?               @map("revoked_at") @db.DateTime(3)
-  createdAt           DateTime                @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt           DateTime                @updatedAt @map("updated_at") @db.DateTime(3)
-  consentEvent        BotContactConsentEvent  @relation(fields: [consentEventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  grantedAt           DateTime?                @map("granted_at") @db.DateTime(3)
+  revokedAt           DateTime?                @map("revoked_at") @db.DateTime(3)
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.DateTime(3)
+  consentEvent        BotContactConsentEvent   @relation(fields: [consentEventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([patientLegacyUserId, channel, purpose], map: "uq_bot_patient_contact_consents_patient_channel_purpose")
   @@index([phone, channel, purpose], map: "idx_bot_patient_contact_consents_phone_channel_purpose")
   @@index([granted, purpose], map: "idx_bot_patient_contact_consents_granted_purpose")
   @@map("bot_patient_contact_consents")
+}
+
+model BotSurveyDefinition {
+  id         Int                 @id @default(autoincrement())
+  code       String              @db.VarChar(64)
+  version    Int
+  name       String              @db.VarChar(120)
+  isActive   Boolean             @default(true) @map("is_active")
+  createdAt  DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt  DateTime            @updatedAt @map("updated_at") @db.DateTime(3)
+  questions  BotSurveyQuestion[]
+  dispatches BotSurveyDispatch[]
+
+  @@unique([code, version], map: "uq_bot_survey_definitions_code_version")
+  @@index([isActive], map: "idx_bot_survey_definitions_is_active")
+  @@map("bot_survey_definitions")
+}
+
+model BotSurveyQuestion {
+  id                 Int                       @id @default(autoincrement())
+  surveyDefinitionId Int                       @map("survey_definition_id")
+  questionOrder      Int                       @map("question_order")
+  questionKey        String                    @map("question_key") @db.VarChar(64)
+  questionType       BotSurveyQuestionType     @map("question_type")
+  body               String                    @db.Text
+  isRequired         Boolean                   @default(true) @map("is_required")
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime                  @updatedAt @map("updated_at") @db.DateTime(3)
+  surveyDefinition   BotSurveyDefinition       @relation(fields: [surveyDefinitionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  options            BotSurveyQuestionOption[]
+  answers            BotSurveyAnswer[]
+
+  @@unique([surveyDefinitionId, questionOrder], map: "uq_bot_survey_questions_definition_order")
+  @@unique([surveyDefinitionId, questionKey], map: "uq_bot_survey_questions_definition_key")
+  @@index([questionType], map: "idx_bot_survey_questions_question_type")
+  @@map("bot_survey_questions")
+}
+
+model BotSurveyQuestionOption {
+  id               Int               @id @default(autoincrement())
+  surveyQuestionId Int               @map("survey_question_id")
+  optionValue      String            @map("option_value") @db.VarChar(32)
+  optionLabel      String            @map("option_label") @db.VarChar(120)
+  optionOrder      Int               @map("option_order")
+  isTerminalAction Boolean           @default(false) @map("is_terminal_action")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.DateTime(3)
+  surveyQuestion   BotSurveyQuestion @relation(fields: [surveyQuestionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([surveyQuestionId, optionValue], map: "uq_bot_survey_question_options_question_value")
+  @@index([surveyQuestionId, optionOrder], map: "idx_bot_survey_question_options_question_order")
+  @@map("bot_survey_question_options")
+}
+
+model BotSurveyDispatch {
+  id                       Int                            @id @default(autoincrement())
+  surveyDefinitionId       Int                            @map("survey_definition_id")
+  patientLegacyUserId      Int                            @map("patient_legacy_user_id")
+  patientName              String                         @map("patient_name") @db.VarChar(120)
+  patientPhone             String                         @map("patient_phone") @db.VarChar(32)
+  patientPhoneE164         String?                        @map("patient_phone_e164") @db.VarChar(32)
+  surveyDate               DateTime                       @map("survey_date") @db.Date
+  status                   BotSurveyDispatchStatus        @default(PENDING)
+  triggerType              String                         @map("trigger_type") @db.VarChar(64)
+  windowStartAt            DateTime                       @map("window_start_at") @db.DateTime(3)
+  windowEndAt              DateTime                       @map("window_end_at") @db.DateTime(3)
+  expiresAt                DateTime                       @map("expires_at") @db.DateTime(3)
+  conversationKey          String?                        @map("conversation_key") @db.VarChar(191)
+  initialTemplateName      String?                        @map("initial_template_name") @db.VarChar(128)
+  initialTemplateLanguage  String?                        @map("initial_template_language") @db.VarChar(16)
+  initialWhatsappMessageId String?                        @map("initial_whatsapp_message_id") @db.VarChar(191)
+  flowToken                String?                        @map("flow_token") @db.VarChar(191)
+  flowOpenedAt             DateTime?                      @map("flow_opened_at") @db.DateTime(3)
+  startedAt                DateTime?                      @map("started_at") @db.DateTime(3)
+  completedAt              DateTime?                      @map("completed_at") @db.DateTime(3)
+  declinedAt               DateTime?                      @map("declined_at") @db.DateTime(3)
+  expiredAt                DateTime?                      @map("expired_at") @db.DateTime(3)
+  failedAt                 DateTime?                      @map("failed_at") @db.DateTime(3)
+  failureReason            String?                        @map("failure_reason") @db.Text
+  dedupeKey                String                         @map("dedupe_key") @db.VarChar(191)
+  createdAt                DateTime                       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                DateTime                       @updatedAt @map("updated_at") @db.DateTime(3)
+  surveyDefinition         BotSurveyDefinition            @relation(fields: [surveyDefinitionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  appointments             BotSurveyDispatchAppointment[]
+  answers                  BotSurveyAnswer[]
+
+  @@unique([patientLegacyUserId, surveyDate], map: "uq_bot_survey_dispatches_patient_survey_date")
+  @@unique([dedupeKey], map: "uq_bot_survey_dispatches_dedupe_key")
+  @@index([status, expiresAt], map: "idx_bot_survey_dispatches_status_expires_at")
+  @@index([conversationKey], map: "idx_bot_survey_dispatches_conversation_key")
+  @@index([flowToken], map: "idx_bot_survey_dispatches_flow_token")
+  @@map("bot_survey_dispatches")
+}
+
+model BotSurveyDispatchAppointment {
+  id                  Int               @id @default(autoincrement())
+  surveyDispatchId    Int               @map("survey_dispatch_id")
+  legacyAgendaId      Int               @map("legacy_agenda_id")
+  appointmentDate     DateTime          @map("appointment_date") @db.Date
+  appointmentTimeHhmm String            @map("appointment_time_hhmm") @db.VarChar(5)
+  specialtyName       String?           @map("specialty_name") @db.VarChar(120)
+  doctorName          String?           @map("doctor_name") @db.VarChar(120)
+  siteName            String?           @map("site_name") @db.VarChar(120)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  surveyDispatch      BotSurveyDispatch @relation(fields: [surveyDispatchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([legacyAgendaId], map: "uq_bot_survey_dispatch_appointments_legacy_agenda_id")
+  @@index([surveyDispatchId], map: "idx_bot_survey_dispatch_appointments_dispatch_id")
+  @@map("bot_survey_dispatch_appointments")
+}
+
+model BotSurveyAnswer {
+  id                          Int               @id @default(autoincrement())
+  surveyDispatchId            Int               @map("survey_dispatch_id")
+  surveyQuestionId            Int               @map("survey_question_id")
+  answerOrder                 Int               @map("answer_order")
+  selectedOptionValue         String?           @map("selected_option_value") @db.VarChar(32)
+  selectedOptionLabelSnapshot String?           @map("selected_option_label_snapshot") @db.VarChar(120)
+  freeTextAnswer              String?           @map("free_text_answer") @db.Text
+  answeredAt                  DateTime          @map("answered_at") @db.DateTime(3)
+  sourceMessageId             String?           @map("source_message_id") @db.VarChar(191)
+  createdAt                   DateTime          @default(now()) @map("created_at") @db.DateTime(3)
+  surveyDispatch              BotSurveyDispatch @relation(fields: [surveyDispatchId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  surveyQuestion              BotSurveyQuestion @relation(fields: [surveyQuestionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([surveyDispatchId, surveyQuestionId], map: "uq_bot_survey_answers_dispatch_question")
+  @@index([answeredAt], map: "idx_bot_survey_answers_answered_at")
+  @@map("bot_survey_answers")
+}
+
+model BotContactSuppression {
+  id                  Int                         @id @default(autoincrement())
+  patientLegacyUserId Int?                        @map("patient_legacy_user_id")
+  phone               String                      @db.VarChar(32)
+  channel             BotContactChannel
+  reason              BotContactSuppressionReason
+  scope               String                      @db.VarChar(32)
+  active              Boolean                     @default(true)
+  expiresAt           DateTime?                   @map("expires_at") @db.DateTime(3)
+  notes               String?                     @db.Text
+  createdAt           DateTime                    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime                    @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@index([phone, channel, active], map: "idx_bot_contact_suppressions_phone_channel_active")
+  @@index([patientLegacyUserId, active], map: "idx_bot_contact_suppressions_patient_active")
+  @@map("bot_contact_suppressions")
 }

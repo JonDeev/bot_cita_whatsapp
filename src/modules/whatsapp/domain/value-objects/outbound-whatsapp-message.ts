@@ -32,6 +32,16 @@ export interface OutboundWhatsappInteractiveButtonsMessage {
   buttons: OutboundWhatsappInteractiveButtonReply[];
 }
 
+export interface OutboundWhatsappFlowTemplateMessage {
+  to: string;
+  templateName: string;
+  languageCode: string;
+  bodyTextParameters?: string[];
+  buttonIndex: string;
+  flowToken: string;
+  flowActionData?: Record<string, string | number | boolean>;
+}
+
 export interface OutboundWhatsappSendResult {
   messageId: string;
 }

@@ -16,6 +16,7 @@ import {
 } from './domain/whatsapp.tokens';
 import { WebhookIdempotencyKeyFactory } from './application/services/idempotency/webhook-idempotency-key.factory';
 import { SendWhatsappInteractiveButtonsMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-buttons-message.use-case';
+import { SendWhatsappFlowTemplateMessageUseCase } from './application/use-cases/outbound/send-whatsapp-flow-template-message.use-case';
 import { SendWhatsappInteractiveListMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-list-message.use-case';
 import { SendWhatsappTextMessageUseCase } from './application/use-cases/outbound/send-whatsapp-text-message.use-case';
 import { MetaWhatsappPayloadParser } from './infrastructure/parsers/meta-whatsapp-payload.parser';
@@ -32,6 +33,7 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
     WhatsappConfigService,
     VerifyWebhookChallengeUseCase,
     ProcessWhatsappWebhookUseCase,
+    SendWhatsappFlowTemplateMessageUseCase,
     SendWhatsappInteractiveButtonsMessageUseCase,
     SendWhatsappInteractiveListMessageUseCase,
     SendWhatsappTextMessageUseCase,
@@ -58,5 +60,6 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
       useClass: MetaWhatsappCloudApiAdapter,
     },
   ],
+  exports: [SendWhatsappFlowTemplateMessageUseCase, WhatsappConfigService],
 })
 export class WhatsappModule {}

@@ -7,6 +7,7 @@ import {
 import { WhatsappConfigService } from '../../application/services/whatsapp-config.service';
 import type { WhatsappMessageSenderPort } from '../../domain/ports/whatsapp-message-sender.port';
 import {
+  OutboundWhatsappFlowTemplateMessage,
   OutboundWhatsappInteractiveButtonsMessage,
   OutboundWhatsappInteractiveListMessage,
   OutboundWhatsappSendResult,
@@ -119,6 +120,52 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     });
 
     return response;
+  }
+
+  async sendFlowTemplateMessage(
+    message: OutboundWhatsappFlowTemplateMessage,
+  ): Promise<OutboundWhatsappSendResult> {
+    const components: Array<Record<string, unknown>> = [];
+
+    if (message.bodyTextParameters && message.bodyTextParameters.length > 0) {
+      components.push({
+        type: 'body',
+        parameters: message.bodyTextParameters.map((text) => ({
+          type: 'text',
+          text,
+        })),
+      });
+    }
+
+    components.push({
+      type: 'button',
+      sub_type: 'flow',
+      index: message.buttonIndex,
+      parameters: [
+        {
+          type: 'action',
+          action: {
+            flow_token: message.flowToken,
+            ...(message.flowActionData && Object.keys(message.flowActionData).length > 0
+              ? { flow_action_data: message.flowActionData }
+              : {}),
+          },
+        },
+      ],
+    });
+
+    return this.send({
+      messaging_product: 'whatsapp',
+      to: message.to,
+      type: 'template',
+      template: {
+        name: message.templateName,
+        language: {
+          code: message.languageCode,
+        },
+        components,
+      },
+    });
   }
 
   private async send(payload: Record<string, unknown>): Promise<OutboundWhatsappSendResult> {

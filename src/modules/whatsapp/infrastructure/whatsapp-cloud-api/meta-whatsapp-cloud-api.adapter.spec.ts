@@ -97,6 +97,77 @@ describe('MetaWhatsappCloudApiAdapter', () => {
     ).rejects.toBeInstanceOf(InternalServerErrorException);
     expect(mockedFetch).toHaveBeenCalledTimes(2);
   });
+
+  it('sends a flow template message using the official template payload shape', async () => {
+    mockedFetch.mockResolvedValue(
+      createResponse({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          messages: [{ id: 'wamid-flow-321' }],
+        }),
+      }),
+    );
+
+    const adapter = new MetaWhatsappCloudApiAdapter(configService);
+
+    const result = await adapter.sendFlowTemplateMessage({
+      to: '573001112233',
+      templateName: 'satisfaction_survey_flow',
+      languageCode: 'es_CO',
+      bodyTextParameters: ['Adriana', 'MEDICINA GENERAL', '07:30'],
+      buttonIndex: '0',
+      flowToken: 'survey_dispatch:21:2026-05-10',
+      flowActionData: {
+        dispatch_id: '21',
+      },
+    });
+
+    expect(result).toEqual({ messageId: 'wamid-flow-321' });
+    expect(mockedFetch).toHaveBeenCalledWith(
+      'https://graph.facebook.com/v22.0/112260851488328/messages',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: '573001112233',
+          type: 'template',
+          template: {
+            name: 'satisfaction_survey_flow',
+            language: {
+              code: 'es_CO',
+            },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: 'Adriana' },
+                  { type: 'text', text: 'MEDICINA GENERAL' },
+                  { type: 'text', text: '07:30' },
+                ],
+              },
+              {
+                type: 'button',
+                sub_type: 'flow',
+                index: '0',
+                parameters: [
+                  {
+                    type: 'action',
+                    action: {
+                      flow_token: 'survey_dispatch:21:2026-05-10',
+                      flow_action_data: {
+                        dispatch_id: '21',
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      }),
+    );
+  });
 });
 
 function createResponse(input: {

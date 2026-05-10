@@ -6,6 +6,7 @@ describe('SendWhatsappInteractiveButtonsMessageUseCase', () => {
   it('sends interactive buttons and records success audit', async () => {
     const sender = {
       sendInteractiveButtonsMessage: jest.fn().mockResolvedValue({ messageId: 'wamid-789' }),
+      sendFlowTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
 
@@ -33,7 +34,10 @@ describe('SendWhatsappInteractiveButtonsMessageUseCase', () => {
   });
 
   it('rejects duplicated button ids', async () => {
-    const sender = { sendInteractiveButtonsMessage: jest.fn() };
+    const sender = {
+      sendInteractiveButtonsMessage: jest.fn(),
+      sendFlowTemplateMessage: jest.fn(),
+    };
     const auditService = { record: jest.fn() } as unknown as AuditService;
     const useCase = new SendWhatsappInteractiveButtonsMessageUseCase(sender as any, auditService);
 
