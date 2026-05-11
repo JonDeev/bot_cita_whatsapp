@@ -542,6 +542,45 @@ Pruebas posteriores de integracion:
 - persistencia de respuestas del `Flow`
 - actualizacion de `agenda.notificacion_encuesta`
 
+## Observabilidad operativa
+
+Para operacion de produccion se expone un endpoint interno de metricas por franja:
+
+- `GET /internal/surveys/metrics`
+- header opcional por ambiente: `x-internal-token` (controlado por `INTERNAL_SURVEYS_METRICS_TOKEN`)
+- filtros:
+  - `date=YYYY-MM-DD`
+  - `windowStart=HH:MM`
+  - `windowEnd=HH:MM`
+
+Metricas por franja de 30 minutos:
+
+- `eligible`
+- `sent`
+- `failed`
+- `completed`
+- `declined`
+- `blocked`
+- `sendRate = sent/eligible`
+- `completionRate = completed/sent`
+
+Definicion de `sent` para observabilidad:
+
+- cuenta despachos en estados `SENT`, `STARTED`, `COMPLETED`, `DECLINED`, `EXPIRED` y `BLOCKED_CONTACT`
+- esto evita subcontar envios reales que ya cambiaron de estado posterior
+
+Evento de auditoria asociado:
+
+- `survey.metrics.queried`
+
+Alertas operativas iniciales recomendadas:
+
+- warning si `sendRate < 0.85` en una franja
+- critical si `sendRate < 0.70` en 2 franjas consecutivas
+- warning si `completionRate < 0.30` diario
+- warning si `failed >= 3` por franja
+- critical si `failed >= 5` en 2 franjas consecutivas
+
 ## Fases recomendadas
 
 ### Fase 1
@@ -565,3 +604,9 @@ Pruebas posteriores de integracion:
 - persistencia de respuestas en `bot_survey_answers`
 - bloqueo automatizado por `No conozco a la persona`
 - metricas y conciliacion de resultados
+
+### Fase 4
+
+- endpoint interno de metricas por franja
+- token interno por ambiente para consulta operativa
+- runbook de monitoreo y respuesta a incidentes
