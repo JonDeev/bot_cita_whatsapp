@@ -46,6 +46,9 @@ describe('ConversationOrchestratorService', () => {
     const whatsappConfig = {
       isAutoReplyEnabled: jest.fn().mockReturnValue(true),
     } as unknown as WhatsappConfigService;
+    const recordSatisfactionSurveyFlowSubmission = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
 
     const service = new ConversationOrchestratorService(
       handleIncomingConversationMessage,
@@ -53,6 +56,7 @@ describe('ConversationOrchestratorService', () => {
       sendWhatsappInteractiveListMessage,
       sendWhatsappInteractiveButtonsMessage,
       sendWhatsappTextMessage,
+      recordSatisfactionSurveyFlowSubmission as any,
       whatsappConfig,
     );
 
@@ -104,6 +108,9 @@ describe('ConversationOrchestratorService', () => {
     const whatsappConfig = {
       isAutoReplyEnabled: jest.fn().mockReturnValue(true),
     } as unknown as WhatsappConfigService;
+    const recordSatisfactionSurveyFlowSubmission = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
 
     const service = new ConversationOrchestratorService(
       handleIncomingConversationMessage,
@@ -111,6 +118,7 @@ describe('ConversationOrchestratorService', () => {
       sendWhatsappInteractiveListMessage,
       sendWhatsappInteractiveButtonsMessage,
       sendWhatsappTextMessage,
+      recordSatisfactionSurveyFlowSubmission as any,
       whatsappConfig,
     );
 
@@ -133,5 +141,44 @@ describe('ConversationOrchestratorService', () => {
         whatsappMessageId: 'wamid-btn-1',
       }),
     );
+  });
+
+  it('skips conversation state handling when survey flow submission was handled', async () => {
+    const handleIncomingConversationMessage = {
+      execute: jest.fn().mockResolvedValue({
+        outboundMessages: [],
+      }),
+    } as unknown as HandleIncomingConversationMessageUseCase;
+
+    const service = new ConversationOrchestratorService(
+      handleIncomingConversationMessage,
+      {
+        saveInbound: jest.fn(),
+        saveOutbound: jest.fn(),
+        hasKnownOutboundMessage: jest.fn(),
+      },
+      { execute: jest.fn() } as unknown as SendWhatsappInteractiveListMessageUseCase,
+      { execute: jest.fn() } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
+      { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
+      { execute: jest.fn().mockResolvedValue({ handled: true }) } as any,
+      {
+        isAutoReplyEnabled: jest.fn().mockReturnValue(true),
+      } as unknown as WhatsappConfigService,
+    );
+
+    await service.handleEvents([
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-flow-1',
+        from: '573001112233',
+        timestamp: '1711111111',
+        messageType: 'interactive',
+        interactiveFlowToken: 'survey_dispatch:99:2026-05-11',
+        interactiveFlowResponse: { survey_decision: '1' },
+        phoneNumberId: '123',
+      },
+    ]);
+
+    expect(handleIncomingConversationMessage.execute).not.toHaveBeenCalled();
   });
 });

@@ -76,6 +76,7 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
     });
 
     const nowIso = new Date().toISOString();
+    const relatedAgendaIds = dispatch.appointments.map((appointment) => appointment.legacyAgendaId);
 
     if (dispatch.status === SATISFACTION_SURVEY_DISPATCH_STATUSES.SENT) {
       await this.surveyDispatchRepository.markStarted({
@@ -89,7 +90,10 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
 
     if (decision === UNKNOWN_PERSON_VALUE) {
       await this.handleUnknownPerson(dispatch.id, dispatch.patientLegacyUserId, dispatch.patientPhone);
-      await this.markRelatedAgendas(dispatch.id, SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE);
+      await this.markRelatedAgendas(
+        relatedAgendaIds,
+        SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
+      );
       await this.auditService.record('survey.phone_suppressed', {
         dispatchId: dispatch.id,
         patientLegacyUserId: dispatch.patientLegacyUserId,
@@ -104,7 +108,7 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
         declinedAtIso: nowIso,
       });
       await this.markRelatedAgendas(
-        dispatch.id,
+        relatedAgendaIds,
         SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
       );
       await this.auditService.record('survey.declined', {
@@ -148,7 +152,7 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
     });
 
     await this.markRelatedAgendas(
-      dispatch.id,
+      relatedAgendaIds,
       SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.ANSWERED,
     );
 
@@ -237,15 +241,9 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
   }
 
   private async markRelatedAgendas(
-    dispatchId: number,
+    agendaIds: readonly number[],
     status: typeof SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES[keyof typeof SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES],
   ): Promise<void> {
-    const dispatch = await this.surveyDispatchRepository.findById(dispatchId);
-    if (!dispatch) {
-      return;
-    }
-
-    const agendaIds = dispatch.appointments.map((appointment) => appointment.legacyAgendaId);
     if (agendaIds.length === 0) {
       return;
     }

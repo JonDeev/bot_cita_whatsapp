@@ -155,4 +155,61 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       }),
     );
   });
+
+  it('accepts old interactive flow submissions even when interactive max age is configured', async () => {
+    const event: NormalizedWhatsappEvent = {
+      kind: 'incoming_message_received',
+      messageId: 'wamid-flow-stale',
+      from: '573001112233',
+      timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
+      messageType: 'interactive',
+      interactiveFlowToken: 'survey_dispatch:44:2026-05-07',
+      interactiveFlowResponse: {
+        survey_decision: '1',
+      },
+      phoneNumberId: '123',
+    };
+
+    const signatureVerifier = { verifySignature: jest.fn().mockReturnValue(true) };
+    const payloadParser = { parse: jest.fn().mockReturnValue([event]) };
+    const webhookInboxRepository = {
+      saveIfFirstSeen: jest.fn().mockResolvedValue({ created: true }),
+      updateStatus: jest.fn().mockResolvedValue(undefined),
+    };
+    const idempotencyStore = { tryAcquire: jest.fn().mockResolvedValue(true) };
+    const whatsappConfig = {
+      shouldStoreWebhookPayloads: jest.fn().mockReturnValue(false),
+      getInteractiveEventMaxAgeSeconds: jest.fn().mockReturnValue(60),
+      getTextEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
+    };
+    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const orchestrator = {
+      handleEvents: jest.fn().mockResolvedValue(undefined),
+    } as unknown as ConversationOrchestratorService;
+
+    const useCase = new ProcessWhatsappWebhookUseCase(
+      signatureVerifier,
+      payloadParser,
+      webhookInboxRepository as any,
+      idempotencyStore,
+      new WebhookIdempotencyKeyFactory(),
+      whatsappConfig as any,
+      auditService,
+      orchestrator,
+    );
+
+    await useCase.execute({
+      rawBody: Buffer.from('{}'),
+      signatureHeader: 'sha256=test',
+      payload: {},
+    });
+
+    expect(orchestrator.handleEvents).toHaveBeenCalledWith([event]);
+    expect(webhookInboxRepository.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        processingStatus: 'PROCESSED',
+      }),
+    );
+  });
 });
