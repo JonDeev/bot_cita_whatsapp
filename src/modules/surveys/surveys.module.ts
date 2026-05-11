@@ -11,6 +11,10 @@ import { SendSatisfactionSurveyFlowInvitationUseCase } from './application/use-c
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from './application/use-cases/record-satisfaction-survey-flow-submission.use-case';
 import { GetSatisfactionSurveyMetricsUseCase } from './application/use-cases/get-satisfaction-survey-metrics.use-case';
 import { SatisfactionSurveyDispatchWindowService } from './application/services/satisfaction-survey-dispatch-window.service';
+import {
+  SatisfactionSurveyEligibilitySourceConfigService,
+  SURVEY_ELIGIBILITY_SOURCES,
+} from './application/services/satisfaction-survey-eligibility-source-config.service';
 import { SatisfactionSurveyFlowSubmissionFieldMapService } from './application/services/satisfaction-survey-flow-submission-field-map.service';
 import { SatisfactionSurveyMetricsAccessConfigService } from './application/services/satisfaction-survey-metrics-access-config.service';
 import { SurveyFlowTemplateConfigService } from './application/services/survey-flow-template-config.service';
@@ -29,6 +33,7 @@ import { PrismaBotSurveyRecipientPolicyRepository } from './infrastructure/persi
 import { PrismaLegacySatisfactionSurveyEligibilityRepository } from './infrastructure/persistence/mysql/prisma-legacy-satisfaction-survey-eligibility.repository';
 import { PrismaLegacySatisfactionSurveyLegacyStatusRepository } from './infrastructure/persistence/mysql/prisma-legacy-satisfaction-survey-legacy-status.repository';
 import { PrismaBotSurveyDispatchRepository } from './infrastructure/persistence/mysql/prisma-bot-survey-dispatch.repository';
+import { JsonFileSatisfactionSurveyEligibilityRepository } from './infrastructure/persistence/json/json-file-satisfaction-survey-eligibility.repository';
 import { SatisfactionSurveyDispatchSchedulerConfigService } from './infrastructure/scheduling/satisfaction-survey-dispatch-scheduler-config.service';
 import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling/satisfaction-survey-dispatch.scheduler';
 
@@ -45,9 +50,12 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     SatisfactionSurveyDispatchWindowService,
     SurveyFlowTemplateConfigService,
     SatisfactionSurveyFlowSubmissionFieldMapService,
+    SatisfactionSurveyEligibilitySourceConfigService,
     SatisfactionSurveyMetricsAccessConfigService,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,
+    PrismaLegacySatisfactionSurveyEligibilityRepository,
+    JsonFileSatisfactionSurveyEligibilityRepository,
     SatisfactionSurveyDispatchSchedulerConfigService,
     SatisfactionSurveyDispatchScheduler,
     DispatchHalfHourlySatisfactionSurveysUseCase,
@@ -61,7 +69,22 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     },
     {
       provide: SATISFACTION_SURVEY_ELIGIBILITY_REPOSITORY,
-      useClass: PrismaLegacySatisfactionSurveyEligibilityRepository,
+      useFactory: (
+        sourceConfig: SatisfactionSurveyEligibilitySourceConfigService,
+        legacyRepository: PrismaLegacySatisfactionSurveyEligibilityRepository,
+        jsonRepository: JsonFileSatisfactionSurveyEligibilityRepository,
+      ) => {
+        if (sourceConfig.getSource() === SURVEY_ELIGIBILITY_SOURCES.JSON) {
+          return jsonRepository;
+        }
+
+        return legacyRepository;
+      },
+      inject: [
+        SatisfactionSurveyEligibilitySourceConfigService,
+        PrismaLegacySatisfactionSurveyEligibilityRepository,
+        JsonFileSatisfactionSurveyEligibilityRepository,
+      ],
     },
     {
       provide: SATISFACTION_SURVEY_LEGACY_STATUS_REPOSITORY,

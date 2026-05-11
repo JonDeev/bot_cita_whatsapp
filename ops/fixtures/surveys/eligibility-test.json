@@ -1,0 +1,13 @@
+[
+  {
+    "legacyAgendaId": 900001,
+    "patientLegacyUserId": 700001,
+    "patientName": "Paciente Prueba",
+    "patientPhone": "3043477809",
+    "appointmentDateIso": "2026-05-11",
+    "appointmentTimeHhmm": "15:00",
+    "specialtyName": "Medicina General",
+    "doctorName": "Dr. Prueba",
+    "siteName": "Sede Central"
+  }
+]
