@@ -1,0 +1,126 @@
+import { AuditService } from '../../../audit/application/services/audit.service';
+import { SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES } from '../../domain/ports/satisfaction-survey-legacy-status.repository';
+import { DispatchHalfHourlySatisfactionSurveysUseCase } from './dispatch-half-hourly-satisfaction-surveys.use-case';
+import { CreateSatisfactionSurveyDispatchUseCase } from './create-satisfaction-survey-dispatch.use-case';
+import { SendSatisfactionSurveyFlowInvitationUseCase } from './send-satisfaction-survey-flow-invitation.use-case';
+import { SatisfactionSurveyDispatchWindowService } from '../services/satisfaction-survey-dispatch-window.service';
+import { SurveyWhatsappPhoneNormalizerService } from '../services/survey-whatsapp-phone-normalizer.service';
+
+describe('DispatchHalfHourlySatisfactionSurveysUseCase', () => {
+  it('skips execution outside the configured half-hour schedule', async () => {
+    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+
+    const useCase = new DispatchHalfHourlySatisfactionSurveysUseCase(
+      { findEligibleAppointmentsByWindow: jest.fn() } as any,
+      { updateAgendaSurveyNotificationStatus: jest.fn() } as any,
+      {
+        hasGrantedSatisfactionSurveyConsent: jest.fn(),
+        isPhoneSuppressedForSatisfactionSurveys: jest.fn(),
+      } as any,
+      new SatisfactionSurveyDispatchWindowService(),
+      { execute: jest.fn() } as unknown as CreateSatisfactionSurveyDispatchUseCase,
+      { execute: jest.fn() } as unknown as SendSatisfactionSurveyFlowInvitationUseCase,
+      new SurveyWhatsappPhoneNormalizerService(),
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      runAtIso: '2026-05-11T12:45:00.000Z',
+    });
+
+    expect(result.skipped).toBe(true);
+    expect(result.skipReason).toContain('half-hour execution schedule');
+  });
+
+  it('creates and sends dispatches while marking non-applicable agendas', async () => {
+    const eligibilityRepository = {
+      findEligibleAppointmentsByWindow: jest.fn().mockResolvedValue([
+        {
+          legacyAgendaId: 101,
+          patientLegacyUserId: 11,
+          patientName: 'Adriana Romero',
+          patientPhone: '3001112233',
+          appointmentDateIso: '2026-05-11',
+          appointmentTimeHhmm: '07:20',
+          specialtyName: 'MEDICINA GENERAL',
+          doctorName: 'Carlos Perez',
+          siteName: 'Sede Norte',
+        },
+        {
+          legacyAgendaId: 102,
+          patientLegacyUserId: 12,
+          patientName: 'Paciente Sin Consentimiento',
+          patientPhone: '3009998888',
+          appointmentDateIso: '2026-05-11',
+          appointmentTimeHhmm: '07:25',
+          specialtyName: 'MEDICINA GENERAL',
+          doctorName: 'Carlos Perez',
+          siteName: 'Sede Norte',
+        },
+      ]),
+    };
+
+    const legacyStatusRepository = {
+      updateAgendaSurveyNotificationStatus: jest
+        .fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1),
+    };
+
+    const policyRepository = {
+      hasGrantedSatisfactionSurveyConsent: jest
+        .fn()
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false),
+      isPhoneSuppressedForSatisfactionSurveys: jest.fn().mockResolvedValue(false),
+    };
+
+    const createSurveyDispatch = {
+      execute: jest.fn().mockResolvedValue({
+        wasCreated: true,
+        dispatch: {
+          id: 55,
+          status: 'PENDING',
+          appointments: [{ legacyAgendaId: 101 }],
+        },
+      }),
+    } as unknown as CreateSatisfactionSurveyDispatchUseCase;
+
+    const sendSurveyFlowInvitation = {
+      execute: jest.fn().mockResolvedValue({ messageId: 'wamid-123' }),
+    } as unknown as SendSatisfactionSurveyFlowInvitationUseCase;
+
+    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+
+    const useCase = new DispatchHalfHourlySatisfactionSurveysUseCase(
+      eligibilityRepository as any,
+      legacyStatusRepository as any,
+      policyRepository as any,
+      new SatisfactionSurveyDispatchWindowService(),
+      createSurveyDispatch,
+      sendSurveyFlowInvitation,
+      new SurveyWhatsappPhoneNormalizerService(),
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      runAtIso: '2026-05-11T12:30:00.000Z',
+    });
+
+    expect(result.skipped).toBe(false);
+    expect(result.eligibleAppointments).toBe(2);
+    expect(result.createdDispatches).toBe(1);
+    expect(result.sentDispatches).toBe(1);
+    expect(result.markedAsNotApplicable).toBe(1);
+    expect(result.markedAsSent).toBe(1);
+
+    expect(legacyStatusRepository.updateAgendaSurveyNotificationStatus).toHaveBeenCalledWith({
+      legacyAgendaIds: [102],
+      status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
+    });
+    expect(legacyStatusRepository.updateAgendaSurveyNotificationStatus).toHaveBeenCalledWith({
+      legacyAgendaIds: [101],
+      status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.SENT,
+    });
+  });
+});
