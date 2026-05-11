@@ -4,6 +4,7 @@ import { ConversationsModule } from '../conversations/conversations.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
 import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
+import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
 import { CreateSatisfactionSurveyDispatchUseCase } from './application/use-cases/create-satisfaction-survey-dispatch.use-case';
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from './application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './application/use-cases/send-satisfaction-survey-flow-invitation.use-case';
@@ -21,14 +22,25 @@ import { PrismaBotSurveyRecipientPolicyRepository } from './infrastructure/persi
 import { PrismaLegacySatisfactionSurveyEligibilityRepository } from './infrastructure/persistence/mysql/prisma-legacy-satisfaction-survey-eligibility.repository';
 import { PrismaLegacySatisfactionSurveyLegacyStatusRepository } from './infrastructure/persistence/mysql/prisma-legacy-satisfaction-survey-legacy-status.repository';
 import { PrismaBotSurveyDispatchRepository } from './infrastructure/persistence/mysql/prisma-bot-survey-dispatch.repository';
+import { SatisfactionSurveyDispatchSchedulerConfigService } from './infrastructure/scheduling/satisfaction-survey-dispatch-scheduler-config.service';
+import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling/satisfaction-survey-dispatch.scheduler';
 
 @Module({
-  imports: [AuditModule, ConversationsModule, WhatsappModule, PrismaBotModule, PrismaModule],
+  imports: [
+    AuditModule,
+    ConversationsModule,
+    WhatsappModule,
+    PrismaBotModule,
+    PrismaModule,
+    RedisModule,
+  ],
   providers: [
     SatisfactionSurveyDispatchWindowService,
     SurveyFlowTemplateConfigService,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,
+    SatisfactionSurveyDispatchSchedulerConfigService,
+    SatisfactionSurveyDispatchScheduler,
     DispatchHalfHourlySatisfactionSurveysUseCase,
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
