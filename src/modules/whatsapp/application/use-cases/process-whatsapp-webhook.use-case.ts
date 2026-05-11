@@ -175,6 +175,11 @@ export class ProcessWhatsappWebhookUseCase {
         ? this.whatsappConfig.getInteractiveEventMaxAgeSeconds()
         : this.whatsappConfig.getTextEventMaxAgeSeconds();
 
+    // Flow submissions can legitimately arrive after longer user interactions.
+    if (event.messageType === 'interactive' && event.interactiveFlowToken) {
+      return null;
+    }
+
     if (!maxAgeSeconds) {
       return null;
     }

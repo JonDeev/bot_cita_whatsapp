@@ -80,6 +80,7 @@ describe('DispatchHalfHourlySatisfactionSurveysUseCase', () => {
         wasCreated: true,
         dispatch: {
           id: 55,
+          surveyDefinitionId: 1,
           status: 'PENDING',
           appointments: [{ legacyAgendaId: 101 }],
         },

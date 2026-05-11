@@ -24,6 +24,7 @@ export interface SurveyDispatchAppointmentSnapshot {
 
 export interface SatisfactionSurveyDispatchRecord {
   id: number;
+  surveyDefinitionId: number;
   patientLegacyUserId: number;
   patientName: string;
   patientPhone: string;
@@ -80,14 +81,59 @@ export interface MarkSurveyDispatchCancelledByHandoffCommand {
   cancellationReason: string;
 }
 
+export interface MarkSurveyDispatchStartedCommand {
+  dispatchId: number;
+  startedAtIso: string;
+}
+
+export interface MarkSurveyDispatchCompletedCommand {
+  dispatchId: number;
+  completedAtIso: string;
+}
+
+export interface MarkSurveyDispatchDeclinedCommand {
+  dispatchId: number;
+  declinedAtIso: string;
+}
+
+export interface MarkSurveyDispatchBlockedContactCommand {
+  dispatchId: number;
+  blockedAtIso: string;
+}
+
+export interface SaveSurveyAnswerByQuestionKeyCommand {
+  dispatchId: number;
+  surveyDefinitionId: number;
+  questionKey: string;
+  answerOrder: number;
+  selectedOptionValue?: string;
+  freeTextAnswer?: string;
+  sourceMessageId?: string;
+  answeredAtIso: string;
+}
+
+export interface UpsertSurveyContactSuppressionCommand {
+  patientLegacyUserId: number;
+  phone: string;
+  reason: 'UNKNOWN_PERSON' | 'OPT_OUT_SURVEY' | 'INVALID_PHONE' | 'MANUAL_BLOCK';
+  notes?: string;
+}
+
 export interface SurveyDispatchRepository {
   createOrGetDailyDispatch(
     command: CreateSurveyDispatchCommand,
   ): Promise<CreateSurveyDispatchResult>;
   findById(dispatchId: number): Promise<SatisfactionSurveyDispatchRecord | null>;
+  findByFlowToken(flowToken: string): Promise<SatisfactionSurveyDispatchRecord | null>;
   markSent(command: MarkSurveyDispatchSentCommand): Promise<void>;
   markFailed(command: MarkSurveyDispatchFailedCommand): Promise<void>;
   markCancelledByHandoff(
     command: MarkSurveyDispatchCancelledByHandoffCommand,
   ): Promise<void>;
+  markStarted(command: MarkSurveyDispatchStartedCommand): Promise<void>;
+  markCompleted(command: MarkSurveyDispatchCompletedCommand): Promise<void>;
+  markDeclined(command: MarkSurveyDispatchDeclinedCommand): Promise<void>;
+  markBlockedContact(command: MarkSurveyDispatchBlockedContactCommand): Promise<void>;
+  saveAnswerByQuestionKey(command: SaveSurveyAnswerByQuestionKeyCommand): Promise<void>;
+  upsertContactSuppression(command: UpsertSurveyContactSuppressionCommand): Promise<void>;
 }

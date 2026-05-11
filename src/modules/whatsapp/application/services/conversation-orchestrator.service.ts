@@ -8,6 +8,7 @@ import { SendWhatsappInteractiveButtonsMessageUseCase } from '../use-cases/outbo
 import { SendWhatsappTextMessageUseCase } from '../use-cases/outbound/send-whatsapp-text-message.use-case';
 import { WhatsappConfigService } from './whatsapp-config.service';
 import type { NormalizedWhatsappEvent } from '../../domain/events/normalized-whatsapp.event';
+import { RecordSatisfactionSurveyFlowSubmissionUseCase } from '../../../surveys/application/use-cases/record-satisfaction-survey-flow-submission.use-case';
 
 @Injectable()
 export class ConversationOrchestratorService {
@@ -20,6 +21,7 @@ export class ConversationOrchestratorService {
     private readonly sendWhatsappInteractiveListMessage: SendWhatsappInteractiveListMessageUseCase,
     private readonly sendWhatsappInteractiveButtonsMessage: SendWhatsappInteractiveButtonsMessageUseCase,
     private readonly sendWhatsappTextMessage: SendWhatsappTextMessageUseCase,
+    private readonly recordSatisfactionSurveyFlowSubmission: RecordSatisfactionSurveyFlowSubmissionUseCase,
     private readonly whatsappConfig: WhatsappConfigService,
   ) {}
 
@@ -34,6 +36,12 @@ export class ConversationOrchestratorService {
       }
 
       if (event.messageType !== 'text' && event.messageType !== 'interactive') {
+        continue;
+      }
+
+      const surveyFlowSubmissionResult =
+        await this.recordSatisfactionSurveyFlowSubmission.execute(event);
+      if (surveyFlowSubmissionResult.handled) {
         continue;
       }
 

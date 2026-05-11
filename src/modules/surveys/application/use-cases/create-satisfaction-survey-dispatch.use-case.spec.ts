@@ -9,6 +9,7 @@ describe('CreateSatisfactionSurveyDispatchUseCase', () => {
         wasCreated: true,
         dispatch: {
           id: 11,
+          surveyDefinitionId: 1,
           patientLegacyUserId: 91,
           patientName: 'Adriana',
           patientPhone: '3001112233',

@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ConversationsModule } from '../conversations/conversations.module';
+import { SurveysModule } from '../surveys/surveys.module';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
 import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
 import { ProcessWhatsappWebhookUseCase } from './application/use-cases/process-whatsapp-webhook.use-case';
@@ -27,7 +28,13 @@ import { MetaWhatsappCloudApiAdapter } from './infrastructure/whatsapp-cloud-api
 import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.controller';
 
 @Module({
-  imports: [AuditModule, ConversationsModule, PrismaBotModule, RedisModule],
+  imports: [
+    AuditModule,
+    ConversationsModule,
+    forwardRef(() => SurveysModule),
+    PrismaBotModule,
+    RedisModule,
+  ],
   controllers: [WhatsappWebhookController],
   providers: [
     WhatsappConfigService,

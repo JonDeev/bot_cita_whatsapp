@@ -136,4 +136,51 @@ describe('MetaWhatsappPayloadParser', () => {
 
     expect(parser.parse(payload, '2026-05-07T12:44:15.000Z')).toEqual([]);
   });
+
+  it('parses flow reply tokens and response payload from nfm_reply', () => {
+    const parser = new MetaWhatsappPayloadParser();
+
+    const payload = {
+      entry: [
+        {
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                metadata: { phone_number_id: '123' },
+                messages: [
+                  {
+                    id: 'wamid-flow-reply',
+                    from: '573001112233',
+                    timestamp: '1711111116',
+                    type: 'interactive',
+                    interactive: {
+                      type: 'nfm_reply',
+                      nfm_reply: {
+                        response_json:
+                          '{"flow_token":"survey_dispatch:99:2026-05-11","q1":"1","q5_comment":"Todo bien"}',
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const events = parser.parse(payload, '2026-05-07T12:44:15.000Z');
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      kind: 'incoming_message_received',
+      interactiveFlowToken: 'survey_dispatch:99:2026-05-11',
+      interactiveFlowResponse: {
+        flow_token: 'survey_dispatch:99:2026-05-11',
+        q1: '1',
+        q5_comment: 'Todo bien',
+      },
+    });
+  });
 });

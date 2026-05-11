@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ConversationsModule } from '../conversations/conversations.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
@@ -8,7 +8,9 @@ import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
 import { CreateSatisfactionSurveyDispatchUseCase } from './application/use-cases/create-satisfaction-survey-dispatch.use-case';
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from './application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './application/use-cases/send-satisfaction-survey-flow-invitation.use-case';
+import { RecordSatisfactionSurveyFlowSubmissionUseCase } from './application/use-cases/record-satisfaction-survey-flow-submission.use-case';
 import { SatisfactionSurveyDispatchWindowService } from './application/services/satisfaction-survey-dispatch-window.service';
+import { SatisfactionSurveyFlowSubmissionFieldMapService } from './application/services/satisfaction-survey-flow-submission-field-map.service';
 import { SurveyFlowTemplateConfigService } from './application/services/survey-flow-template-config.service';
 import { SurveyFlowTokenFactory } from './application/services/survey-flow-token.factory';
 import { SurveyWhatsappPhoneNormalizerService } from './application/services/survey-whatsapp-phone-normalizer.service';
@@ -29,7 +31,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
   imports: [
     AuditModule,
     ConversationsModule,
-    WhatsappModule,
+    forwardRef(() => WhatsappModule),
     PrismaBotModule,
     PrismaModule,
     RedisModule,
@@ -37,6 +39,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
   providers: [
     SatisfactionSurveyDispatchWindowService,
     SurveyFlowTemplateConfigService,
+    SatisfactionSurveyFlowSubmissionFieldMapService,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,
     SatisfactionSurveyDispatchSchedulerConfigService,
@@ -44,6 +47,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     DispatchHalfHourlySatisfactionSurveysUseCase,
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
+    RecordSatisfactionSurveyFlowSubmissionUseCase,
     {
       provide: SURVEY_DISPATCH_REPOSITORY,
       useClass: PrismaBotSurveyDispatchRepository,
@@ -65,6 +69,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     DispatchHalfHourlySatisfactionSurveysUseCase,
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
+    RecordSatisfactionSurveyFlowSubmissionUseCase,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,
   ],

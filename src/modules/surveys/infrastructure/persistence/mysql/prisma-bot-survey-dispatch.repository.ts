@@ -1,16 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { BotSurveyDispatchStatus, Prisma } from '@whatsapp-bot/prisma-client';
+import {
+  BotContactChannel,
+  BotContactSuppressionReason,
+  BotSurveyDispatchStatus,
+  Prisma,
+} from '@whatsapp-bot/prisma-client';
 import { PrismaBotService } from '../../../../../shared/infrastructure/prisma-bot/prisma-bot.service';
 import {
   SATISFACTION_SURVEY_DISPATCH_STATUSES,
   type CreateSurveyDispatchCommand,
   type CreateSurveyDispatchResult,
   type MarkSurveyDispatchCancelledByHandoffCommand,
+  type MarkSurveyDispatchCompletedCommand,
+  type MarkSurveyDispatchDeclinedCommand,
   type MarkSurveyDispatchFailedCommand,
+  type MarkSurveyDispatchBlockedContactCommand,
+  type MarkSurveyDispatchStartedCommand,
   type MarkSurveyDispatchSentCommand,
+  type SaveSurveyAnswerByQuestionKeyCommand,
   type SatisfactionSurveyDispatchRecord,
   type SurveyDispatchAppointmentSnapshot,
   type SurveyDispatchRepository,
+  type UpsertSurveyContactSuppressionCommand,
 } from '../../../domain/ports/survey-dispatch.repository';
 
 @Injectable()
@@ -162,6 +173,34 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     return this.mapDispatch(dispatch);
   }
 
+  async findByFlowToken(flowToken: string): Promise<SatisfactionSurveyDispatchRecord | null> {
+    const normalizedToken = flowToken.trim();
+    if (!normalizedToken) {
+      return null;
+    }
+
+    const dispatch = await this.prismaBot.botSurveyDispatch.findFirst({
+      where: {
+        flowToken: normalizedToken,
+      },
+      include: {
+        appointments: {
+          orderBy: [
+            { appointmentDate: 'asc' },
+            { appointmentTimeHhmm: 'asc' },
+            { legacyAgendaId: 'asc' },
+          ],
+        },
+      },
+    });
+
+    if (!dispatch) {
+      return null;
+    }
+
+    return this.mapDispatch(dispatch);
+  }
+
   async markSent(command: MarkSurveyDispatchSentCommand): Promise<void> {
     await this.prismaBot.botSurveyDispatch.update({
       where: { id: command.dispatchId },
@@ -201,6 +240,166 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
+  async markStarted(command: MarkSurveyDispatchStartedCommand): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BotSurveyDispatchStatus.STARTED,
+        flowOpenedAt: new Date(command.startedAtIso),
+        startedAt: new Date(command.startedAtIso),
+      },
+    });
+  }
+
+  async markCompleted(command: MarkSurveyDispatchCompletedCommand): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BotSurveyDispatchStatus.COMPLETED,
+        completedAt: new Date(command.completedAtIso),
+      },
+    });
+  }
+
+  async markDeclined(command: MarkSurveyDispatchDeclinedCommand): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BotSurveyDispatchStatus.DECLINED,
+        declinedAt: new Date(command.declinedAtIso),
+      },
+    });
+  }
+
+  async markBlockedContact(command: MarkSurveyDispatchBlockedContactCommand): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BotSurveyDispatchStatus.BLOCKED_CONTACT,
+        declinedAt: new Date(command.blockedAtIso),
+      },
+    });
+  }
+
+  async saveAnswerByQuestionKey(command: SaveSurveyAnswerByQuestionKeyCommand): Promise<void> {
+    await this.prismaBot.$transaction(async (tx) => {
+      const question = await tx.botSurveyQuestion.findUnique({
+        where: {
+          surveyDefinitionId_questionKey: {
+            surveyDefinitionId: command.surveyDefinitionId,
+            questionKey: command.questionKey,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!question) {
+        throw new Error(
+          `Survey question ${command.questionKey} was not found for definition ${command.surveyDefinitionId}.`,
+        );
+      }
+
+      let selectedOptionLabelSnapshot: string | null = null;
+      if (command.selectedOptionValue?.trim()) {
+        const option = await tx.botSurveyQuestionOption.findUnique({
+          where: {
+            surveyQuestionId_optionValue: {
+              surveyQuestionId: question.id,
+              optionValue: command.selectedOptionValue.trim(),
+            },
+          },
+          select: {
+            optionLabel: true,
+          },
+        });
+
+        if (option) {
+          selectedOptionLabelSnapshot = option.optionLabel;
+        }
+      }
+
+      await tx.botSurveyAnswer.upsert({
+        where: {
+          surveyDispatchId_surveyQuestionId: {
+            surveyDispatchId: command.dispatchId,
+            surveyQuestionId: question.id,
+          },
+        },
+        create: {
+          surveyDispatchId: command.dispatchId,
+          surveyQuestionId: question.id,
+          answerOrder: command.answerOrder,
+          selectedOptionValue: command.selectedOptionValue?.trim() || null,
+          selectedOptionLabelSnapshot,
+          freeTextAnswer: command.freeTextAnswer?.trim() || null,
+          sourceMessageId: command.sourceMessageId?.trim() || null,
+          answeredAt: new Date(command.answeredAtIso),
+        },
+        update: {
+          answerOrder: command.answerOrder,
+          selectedOptionValue: command.selectedOptionValue?.trim() || null,
+          selectedOptionLabelSnapshot,
+          freeTextAnswer: command.freeTextAnswer?.trim() || null,
+          sourceMessageId: command.sourceMessageId?.trim() || null,
+          answeredAt: new Date(command.answeredAtIso),
+        },
+      });
+    });
+  }
+
+  async upsertContactSuppression(command: UpsertSurveyContactSuppressionCommand): Promise<void> {
+    const reasonByValue: Record<
+      UpsertSurveyContactSuppressionCommand['reason'],
+      BotContactSuppressionReason
+    > = {
+      UNKNOWN_PERSON: BotContactSuppressionReason.UNKNOWN_PERSON,
+      OPT_OUT_SURVEY: BotContactSuppressionReason.OPT_OUT_SURVEY,
+      INVALID_PHONE: BotContactSuppressionReason.INVALID_PHONE,
+      MANUAL_BLOCK: BotContactSuppressionReason.MANUAL_BLOCK,
+    };
+
+    const existing = await this.prismaBot.botContactSuppression.findFirst({
+      where: {
+        phone: command.phone,
+        channel: BotContactChannel.WHATSAPP,
+        reason: reasonByValue[command.reason],
+        scope: 'SURVEYS',
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existing) {
+      await this.prismaBot.botContactSuppression.update({
+        where: {
+          id: existing.id,
+        },
+        data: {
+          patientLegacyUserId: command.patientLegacyUserId,
+          active: true,
+          notes: command.notes?.trim() || null,
+          expiresAt: null,
+        },
+      });
+      return;
+    }
+
+    await this.prismaBot.botContactSuppression.create({
+      data: {
+        patientLegacyUserId: command.patientLegacyUserId,
+        phone: command.phone,
+        channel: BotContactChannel.WHATSAPP,
+        reason: reasonByValue[command.reason],
+        scope: 'SURVEYS',
+        active: true,
+        notes: command.notes?.trim() || null,
+      },
+    });
+  }
+
   private mapDispatch(
     dispatch: Prisma.BotSurveyDispatchGetPayload<{
       include: {
@@ -210,6 +409,7 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
   ): SatisfactionSurveyDispatchRecord {
     return {
       id: dispatch.id,
+      surveyDefinitionId: dispatch.surveyDefinitionId,
       patientLegacyUserId: dispatch.patientLegacyUserId,
       patientName: dispatch.patientName,
       patientPhone: dispatch.patientPhone,

@@ -19,6 +19,7 @@ interface MetaChangeValue {
       body?: string;
     };
     interactive?: {
+      type?: string;
       list_reply?: {
         id?: string;
         title?: string;
@@ -26,6 +27,9 @@ interface MetaChangeValue {
       button_reply?: {
         id?: string;
         title?: string;
+      };
+      nfm_reply?: {
+        response_json?: string | Record<string, unknown>;
       };
     };
     context?: {
@@ -92,6 +96,10 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
               interactiveReplyTitle:
                 message.interactive?.list_reply?.title ??
                 message.interactive?.button_reply?.title,
+              interactiveFlowToken: this.extractFlowToken(message.interactive?.nfm_reply?.response_json),
+              interactiveFlowResponse: this.extractFlowResponse(
+                message.interactive?.nfm_reply?.response_json,
+              ),
               contextMessageId: message.context?.id,
               phoneNumberId,
             };
@@ -123,5 +131,49 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
     }
 
     return events;
+  }
+
+  private extractFlowToken(
+    responseJson: string | Record<string, unknown> | undefined,
+  ): string | undefined {
+    const response = this.extractFlowResponse(responseJson);
+    if (!response) {
+      return undefined;
+    }
+
+    const rawToken = response.flow_token;
+    if (typeof rawToken !== 'string') {
+      return undefined;
+    }
+
+    const token = rawToken.trim();
+    return token.length > 0 ? token : undefined;
+  }
+
+  private extractFlowResponse(
+    responseJson: string | Record<string, unknown> | undefined,
+  ): Record<string, unknown> | undefined {
+    if (!responseJson) {
+      return undefined;
+    }
+
+    if (typeof responseJson === 'object' && !Array.isArray(responseJson)) {
+      return responseJson;
+    }
+
+    if (typeof responseJson !== 'string' || !responseJson.trim()) {
+      return undefined;
+    }
+
+    try {
+      const parsed = JSON.parse(responseJson) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return undefined;
+      }
+
+      return parsed as Record<string, unknown>;
+    } catch {
+      return undefined;
+    }
   }
 }

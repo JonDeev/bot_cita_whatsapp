@@ -12,6 +12,8 @@ export interface IncomingMessageReceivedEvent {
   textBody?: string;
   interactiveReplyId?: string;
   interactiveReplyTitle?: string;
+  interactiveFlowToken?: string;
+  interactiveFlowResponse?: Record<string, unknown>;
   contextMessageId?: string;
   phoneNumberId?: string;
 }

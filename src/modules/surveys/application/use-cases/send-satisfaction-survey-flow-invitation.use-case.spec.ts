@@ -11,6 +11,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
     const repository = {
       findById: jest.fn().mockResolvedValue({
         id: 22,
+        surveyDefinitionId: 1,
         patientLegacyUserId: 91,
         patientName: 'Adriana',
         patientPhone: '3001112233',
@@ -102,6 +103,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
     const repository = {
       findById: jest.fn().mockResolvedValue({
         id: 22,
+        surveyDefinitionId: 1,
         patientLegacyUserId: 91,
         patientName: 'Adriana',
         patientPhone: '3001112233',
