@@ -78,7 +78,9 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
       };
     }
 
-    const cutoff = this.appointmentAvailabilityCutoffService.build(input.now ?? new Date());
+    const cutoff = this.appointmentAvailabilityCutoffService.build(
+      input.now ?? new Date(),
+    );
     if (appointmentDateIso < cutoff.cutoffDateIso) {
       return {
         hasAvailability: false,
@@ -91,17 +93,21 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
       appointmentDateIso === cutoff.cutoffDateIso
         ? cutoff.cutoffTimeHHmm
         : ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.DAY_START_TIME;
-    const paginationCursorTime = this.normalizeTimeHHmm(input.afterTimeHHmmExclusive);
+    const paginationCursorTime = this.normalizeTimeHHmm(
+      input.afterTimeHHmmExclusive,
+    );
     const doctorEmployeeCode = input.doctorEmployeeCode?.trim() || undefined;
 
-    const candidates = await this.appointmentAvailabilityRepository.findAvailableTimesByDate({
-      specialtyCups,
-      dateIso: appointmentDateIso,
-      minimumTimeHHmm,
-      afterTimeHHmmExclusive: paginationCursorTime ?? undefined,
-      doctorEmployeeCode,
-      maxResults: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.QUERY_LIMIT,
-    });
+    const candidates =
+      await this.appointmentAvailabilityRepository.findAvailableTimesByDate({
+        specialtyCups,
+        dateIso: appointmentDateIso,
+        minimumTimeHHmm,
+        afterTimeHHmmExclusive: paginationCursorTime ?? undefined,
+        doctorEmployeeCode,
+        maxResults:
+          ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.QUERY_LIMIT,
+      });
 
     const uniqueTimes = this.pickUniqueTimes(candidates);
     if (uniqueTimes.length === 0) {
@@ -116,8 +122,13 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
       ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.PAGE_SIZE +
       ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.LOOKAHEAD_SIZE;
     const pagedTimes = uniqueTimes.slice(0, pageBoundary);
-    const times = pagedTimes.slice(0, ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.PAGE_SIZE);
-    const hasMore = pagedTimes.length > ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.PAGE_SIZE;
+    const times = pagedTimes.slice(
+      0,
+      ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.PAGE_SIZE,
+    );
+    const hasMore =
+      pagedTimes.length >
+      ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.PAGE_SIZE;
     const nextCursorTimeHHmm = times.at(-1)?.timeHHmm;
 
     return {
@@ -128,7 +139,9 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
     };
   }
 
-  private pickUniqueTimes(candidates: AvailableAppointmentTimeCandidate[]): AvailableAppointmentTime[] {
+  private pickUniqueTimes(
+    candidates: AvailableAppointmentTimeCandidate[],
+  ): AvailableAppointmentTime[] {
     const includedTimes = new Set<string>();
     const selectedTimes: AvailableAppointmentTime[] = [];
 
@@ -143,7 +156,8 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
       selectedTimes.push({
         slotRef,
         timeHHmm,
-        displayTime: this.appointmentTimePresenterService.formatHHmmAsTwelveHour(timeHHmm),
+        displayTime:
+          this.appointmentTimePresenterService.formatHHmmAsTwelveHour(timeHHmm),
       });
 
       if (
@@ -159,7 +173,9 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
   }
 
   private isIsoDate(value: string): boolean {
-    return ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.ISO_DATE_PATTERN.test(value);
+    return ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.ISO_DATE_PATTERN.test(
+      value,
+    );
   }
 
   private normalizeTimeHHmm(value: string | null | undefined): string | null {
@@ -168,7 +184,11 @@ export class ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase {
       return null;
     }
 
-    if (!ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.TIME_HHMM_PATTERN.test(normalized)) {
+    if (
+      !ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase.TIME_HHMM_PATTERN.test(
+        normalized,
+      )
+    ) {
       return null;
     }
 

@@ -11,7 +11,8 @@ export interface PatientValidationSessionContext {
 export type ConversationFlowIntent =
   | 'REQUEST_APPOINTMENT'
   | 'CANCEL_OR_RESCHEDULE'
-  | 'CHECK_APPOINTMENTS';
+  | 'CHECK_APPOINTMENTS'
+  | 'CHECK_DISPENSARY';
 
 export interface OfferedSpecialtySessionContext {
   code: string;

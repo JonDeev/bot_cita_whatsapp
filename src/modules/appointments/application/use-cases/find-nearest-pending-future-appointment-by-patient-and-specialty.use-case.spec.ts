@@ -7,10 +7,11 @@ describe('FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase', () =
     const repository: PendingAppointmentCheckRepository = {
       findNearestPendingFutureAppointmentByPatientAndSpecialty: jest.fn(),
     };
-    const useCase = new FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase(
-      repository,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase(
+        repository,
+        new AppointmentTimePresenterService(),
+      );
 
     const result = await useCase.execute({
       patientId: null,
@@ -28,24 +29,27 @@ describe('FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase', () =
 
   it('returns nearest pending appointment details when repository finds a match', async () => {
     const repository: PendingAppointmentCheckRepository = {
-      findNearestPendingFutureAppointmentByPatientAndSpecialty: jest.fn().mockResolvedValue({
-        slotRef: '101',
-        appointmentDateIso: '2026-05-30',
-        appointmentTimeHHmm: '11:40',
-        modalityId: 0,
-        professionalName: 'ALICAN MARIA ZAMBRANO PIZARRO',
-        siteName: 'Santa Marta',
-        siteAddress: 'Carrera 19',
-        patientFirstName: 'MARIA',
-        patientSecondName: 'FERNANDA',
-        patientFirstLastName: 'PEREZ',
-        patientSecondLastName: 'LOPEZ',
-      }),
+      findNearestPendingFutureAppointmentByPatientAndSpecialty: jest
+        .fn()
+        .mockResolvedValue({
+          slotRef: '101',
+          appointmentDateIso: '2026-05-30',
+          appointmentTimeHHmm: '11:40',
+          modalityId: 0,
+          professionalName: 'ALICAN MARIA ZAMBRANO PIZARRO',
+          siteName: 'Santa Marta',
+          siteAddress: 'Carrera 19',
+          patientFirstName: 'MARIA',
+          patientSecondName: 'FERNANDA',
+          patientFirstLastName: 'PEREZ',
+          patientSecondLastName: 'LOPEZ',
+        }),
     };
-    const useCase = new FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase(
-      repository,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase(
+        repository,
+        new AppointmentTimePresenterService(),
+      );
 
     const result = await useCase.execute({
       patientId: 77,
@@ -78,10 +82,11 @@ describe('FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase', () =
         .fn()
         .mockRejectedValue(new Error('DB timeout')),
     };
-    const useCase = new FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase(
-      repository,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase(
+        repository,
+        new AppointmentTimePresenterService(),
+      );
 
     const result = await useCase.execute({
       patientId: 77,

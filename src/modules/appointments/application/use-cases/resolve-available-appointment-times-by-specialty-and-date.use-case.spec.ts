@@ -23,11 +23,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
         cutoffTimeHHmm: '07:30',
       }),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     const result = await useCase.execute({
       specialtyCups: '890201',
@@ -81,11 +82,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
         cutoffTimeHHmm: '07:30',
       }),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     const result = await useCase.execute({
       specialtyCups: '890201',
@@ -112,35 +114,37 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
 
   it('keeps hasMore on second page when more unique times still exist', async () => {
     const repository = {
-      findAvailableTimesByDate: jest.fn().mockImplementation((filters: { afterTimeHHmmExclusive?: string }) => {
-        if (!filters.afterTimeHHmmExclusive) {
-          return Promise.resolve([
-            { slotRef: '001', timeHHmm: '00:00' },
-            { slotRef: '002', timeHHmm: '01:00' },
-            { slotRef: '003', timeHHmm: '02:00' },
-            { slotRef: '004', timeHHmm: '03:00' },
-            { slotRef: '005', timeHHmm: '04:00' },
-            { slotRef: '006', timeHHmm: '05:00' },
-            { slotRef: '007', timeHHmm: '06:00' },
-            { slotRef: '008', timeHHmm: '07:00' },
-            { slotRef: '009', timeHHmm: '08:00' },
-            { slotRef: '010', timeHHmm: '09:00' },
-          ]);
-        }
+      findAvailableTimesByDate: jest
+        .fn()
+        .mockImplementation((filters: { afterTimeHHmmExclusive?: string }) => {
+          if (!filters.afterTimeHHmmExclusive) {
+            return Promise.resolve([
+              { slotRef: '001', timeHHmm: '00:00' },
+              { slotRef: '002', timeHHmm: '01:00' },
+              { slotRef: '003', timeHHmm: '02:00' },
+              { slotRef: '004', timeHHmm: '03:00' },
+              { slotRef: '005', timeHHmm: '04:00' },
+              { slotRef: '006', timeHHmm: '05:00' },
+              { slotRef: '007', timeHHmm: '06:00' },
+              { slotRef: '008', timeHHmm: '07:00' },
+              { slotRef: '009', timeHHmm: '08:00' },
+              { slotRef: '010', timeHHmm: '09:00' },
+            ]);
+          }
 
-        return Promise.resolve([
-          { slotRef: '011', timeHHmm: '09:00' },
-          { slotRef: '012', timeHHmm: '10:00' },
-          { slotRef: '013', timeHHmm: '11:00' },
-          { slotRef: '014', timeHHmm: '12:00' },
-          { slotRef: '015', timeHHmm: '13:00' },
-          { slotRef: '016', timeHHmm: '14:00' },
-          { slotRef: '017', timeHHmm: '15:00' },
-          { slotRef: '018', timeHHmm: '16:00' },
-          { slotRef: '019', timeHHmm: '17:00' },
-          { slotRef: '020', timeHHmm: '18:00' },
-        ]);
-      }),
+          return Promise.resolve([
+            { slotRef: '011', timeHHmm: '09:00' },
+            { slotRef: '012', timeHHmm: '10:00' },
+            { slotRef: '013', timeHHmm: '11:00' },
+            { slotRef: '014', timeHHmm: '12:00' },
+            { slotRef: '015', timeHHmm: '13:00' },
+            { slotRef: '016', timeHHmm: '14:00' },
+            { slotRef: '017', timeHHmm: '15:00' },
+            { slotRef: '018', timeHHmm: '16:00' },
+            { slotRef: '019', timeHHmm: '17:00' },
+            { slotRef: '020', timeHHmm: '18:00' },
+          ]);
+        }),
     };
     const cutoffService = {
       build: jest.fn().mockReturnValue({
@@ -148,11 +152,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
         cutoffTimeHHmm: '00:00',
       }),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     const firstPage = await useCase.execute({
       specialtyCups: '890201',
@@ -161,8 +166,9 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
     const secondPage = await useCase.execute({
       specialtyCups: '890201',
       appointmentDateIso: '2026-05-06',
-      afterTimeHHmmExclusive:
-        firstPage.hasAvailability ? firstPage.nextCursorTimeHHmm ?? null : null,
+      afterTimeHHmmExclusive: firstPage.hasAvailability
+        ? (firstPage.nextCursorTimeHHmm ?? null)
+        : null,
     });
 
     expect(firstPage).toMatchObject({
@@ -179,7 +185,9 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
 
   it('uses midnight threshold when selected date is after the cutoff date', async () => {
     const repository = {
-      findAvailableTimesByDate: jest.fn().mockResolvedValue([{ slotRef: '201', timeHHmm: '06:00' }]),
+      findAvailableTimesByDate: jest
+        .fn()
+        .mockResolvedValue([{ slotRef: '201', timeHHmm: '06:00' }]),
     };
     const cutoffService = {
       build: jest.fn().mockReturnValue({
@@ -187,11 +195,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
         cutoffTimeHHmm: '18:30',
       }),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     await useCase.execute({
       specialtyCups: '890201',
@@ -220,11 +229,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
         cutoffTimeHHmm: '07:30',
       }),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     const result = await useCase.execute({
       specialtyCups: '890201',
@@ -257,11 +267,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
     const cutoffService = {
       build: jest.fn(),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     const missingSpecialty = await useCase.execute({
       specialtyCups: '  ',
@@ -287,7 +298,9 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
 
   it('passes doctor filter when requesting times for a selected doctor', async () => {
     const repository = {
-      findAvailableTimesByDate: jest.fn().mockResolvedValue([{ slotRef: '301', timeHHmm: '16:30' }]),
+      findAvailableTimesByDate: jest
+        .fn()
+        .mockResolvedValue([{ slotRef: '301', timeHHmm: '16:30' }]),
     };
     const cutoffService = {
       build: jest.fn().mockReturnValue({
@@ -295,11 +308,12 @@ describe('ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase', () => {
         cutoffTimeHHmm: '07:30',
       }),
     };
-    const useCase = new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
-      repository as any,
-      cutoffService as any,
-      new AppointmentTimePresenterService(),
-    );
+    const useCase =
+      new ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase(
+        repository as any,
+        cutoffService as any,
+        new AppointmentTimePresenterService(),
+      );
 
     await useCase.execute({
       specialtyCups: '890201',

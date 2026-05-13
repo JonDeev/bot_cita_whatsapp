@@ -81,9 +81,10 @@ export class FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase {
           patientFullName: this.buildPatientFullName(candidate),
           appointmentDateIso: candidate.appointmentDateIso,
           appointmentTimeHHmm: candidate.appointmentTimeHHmm,
-          appointmentDisplayTime: this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
-            candidate.appointmentTimeHHmm,
-          ),
+          appointmentDisplayTime:
+            this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
+              candidate.appointmentTimeHHmm,
+            ),
           modality: candidate.modalityId === 0 ? 'PRESENCIAL' : '',
           professionalName: candidate.professionalName?.trim() ?? '',
           siteName: candidate.siteName?.trim() ?? '',
@@ -123,7 +124,8 @@ export class FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase {
 
   private formatNowInBogota(now: Date): { dateIso: string; timeHHmm: string } {
     const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase.TIMEZONE,
+      timeZone:
+        FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase.TIMEZONE,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -160,14 +162,12 @@ export class FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase {
     return { dateIso, timeHHmm };
   }
 
-  private buildPatientFullName(
-    candidate: {
-      patientFirstName: string | null;
-      patientSecondName: string | null;
-      patientFirstLastName: string | null;
-      patientSecondLastName: string | null;
-    },
-  ): string {
+  private buildPatientFullName(candidate: {
+    patientFirstName: string | null;
+    patientSecondName: string | null;
+    patientFirstLastName: string | null;
+    patientSecondLastName: string | null;
+  }): string {
     const fullName = [
       candidate.patientFirstName,
       candidate.patientSecondName,
@@ -179,6 +179,9 @@ export class FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase {
       .join(' ')
       .trim();
 
-    return fullName || FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase.DEFAULT_PATIENT_NAME;
+    return (
+      fullName ||
+      FindNearestPendingFutureAppointmentByPatientAndSpecialtyUseCase.DEFAULT_PATIENT_NAME
+    );
   }
 }

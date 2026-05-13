@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CONTRACTED_EPS_REPOSITORY, PATIENT_SPECIALTY_ELIGIBILITY_REPOSITORY } from '../../domain/patients.tokens';
+import {
+  CONTRACTED_EPS_REPOSITORY,
+  PATIENT_SPECIALTY_ELIGIBILITY_REPOSITORY,
+} from '../../domain/patients.tokens';
 import type { ContractedEpsRepository } from '../../domain/ports/contracted-eps.repository';
 import type {
   EligibleSpecialtyRecord,
@@ -47,16 +50,18 @@ export class ResolveEligibleSpecialtiesByPatientUseCase {
       return { isEligible: false, reason: 'INVALID_PATIENT_PROFILE' };
     }
 
-    const isAllowedEps = await this.contractedEpsRepository.isCodeAllowed(epsCode);
+    const isAllowedEps =
+      await this.contractedEpsRepository.isCodeAllowed(epsCode);
     if (!isAllowedEps) {
       return { isEligible: false, reason: 'EPS_NOT_ALLOWED' };
     }
 
-    const specialties = await this.patientSpecialtyEligibilityRepository.findEligibleSpecialties({
-      epsCode,
-      userType,
-      sex,
-    });
+    const specialties =
+      await this.patientSpecialtyEligibilityRepository.findEligibleSpecialties({
+        epsCode,
+        userType,
+        sex,
+      });
 
     if (specialties.length === 0) {
       return { isEligible: false, reason: 'NO_SPECIALTIES_AVAILABLE' };

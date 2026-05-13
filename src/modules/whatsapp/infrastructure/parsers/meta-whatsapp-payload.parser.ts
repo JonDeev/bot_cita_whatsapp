@@ -79,7 +79,12 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
 
         if (Array.isArray(value.messages)) {
           for (const message of value.messages) {
-            if (!message.id || !message.from || !message.timestamp || !message.type) {
+            if (
+              !message.id ||
+              !message.from ||
+              !message.timestamp ||
+              !message.type
+            ) {
               continue;
             }
 
@@ -92,11 +97,14 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
               messageType: message.type,
               textBody: message.text?.body,
               interactiveReplyId:
-                message.interactive?.list_reply?.id ?? message.interactive?.button_reply?.id,
+                message.interactive?.list_reply?.id ??
+                message.interactive?.button_reply?.id,
               interactiveReplyTitle:
                 message.interactive?.list_reply?.title ??
                 message.interactive?.button_reply?.title,
-              interactiveFlowToken: this.extractFlowToken(message.interactive?.nfm_reply?.response_json),
+              interactiveFlowToken: this.extractFlowToken(
+                message.interactive?.nfm_reply?.response_json,
+              ),
               interactiveFlowResponse: this.extractFlowResponse(
                 message.interactive?.nfm_reply?.response_json,
               ),
@@ -110,7 +118,12 @@ export class MetaWhatsappPayloadParser implements WhatsappPayloadParserPort {
 
         if (Array.isArray(value.statuses)) {
           for (const status of value.statuses) {
-            if (!status.id || !status.recipient_id || !status.status || !status.timestamp) {
+            if (
+              !status.id ||
+              !status.recipient_id ||
+              !status.status ||
+              !status.timestamp
+            ) {
               continue;
             }
 

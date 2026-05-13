@@ -49,7 +49,8 @@ export class ConversationOrchestratorService {
         continue;
       }
 
-      const result = await this.handleIncomingConversationMessage.execute(event);
+      const result =
+        await this.handleIncomingConversationMessage.execute(event);
 
       for (const outboundMessage of result.outboundMessages) {
         await this.dispatchOutboundMessage(
@@ -93,12 +94,13 @@ export class ConversationOrchestratorService {
       }
 
       if (outboundMessage.type === 'interactive_buttons') {
-        const response = await this.sendWhatsappInteractiveButtonsMessage.execute({
-          to: input.to,
-          body: outboundMessage.body,
-          buttons: outboundMessage.buttons,
-          trigger: 'conversation_state_response',
-        });
+        const response =
+          await this.sendWhatsappInteractiveButtonsMessage.execute({
+            to: input.to,
+            body: outboundMessage.body,
+            buttons: outboundMessage.buttons,
+            trigger: 'conversation_state_response',
+          });
         await this.conversationMessageRepository.saveOutbound({
           conversationKey: input.conversationKey,
           messageType: 'interactive',

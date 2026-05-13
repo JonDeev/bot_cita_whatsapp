@@ -8,6 +8,8 @@ describe('PatientIdentityInputNormalizerService', () => {
   });
 
   it('parses DD-MM-YYYY dates into ISO format', () => {
-    expect(service.parseWhatsappBirthDate('05-11-1990')).toEqual({ isoDate: '1990-11-05' });
+    expect(service.parseWhatsappBirthDate('05-11-1990')).toEqual({
+      isoDate: '1990-11-05',
+    });
   });
 });

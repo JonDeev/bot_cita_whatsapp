@@ -7,9 +7,7 @@ import type {
 } from '../../../domain/ports/appointment-cancellation.repository';
 
 @Injectable()
-export class PrismaLegacyAppointmentCancellationRepository
-  implements AppointmentCancellationRepository
-{
+export class PrismaLegacyAppointmentCancellationRepository implements AppointmentCancellationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async cancelAssignedFutureAppointmentByPatient(

@@ -23,7 +23,9 @@ describe('SelectingSpecialtyHandler', () => {
         patientId: 77,
       },
       specialtySelection: {
-        offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+        offeredSpecialties: [
+          { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+        ],
       },
     },
     createdAt: '2026-05-04T10:00:00.000Z',
@@ -64,13 +66,12 @@ describe('SelectingSpecialtyHandler', () => {
       } as unknown as AuditService,
     );
 
-    const result = await handler.handle(
-      baseSession as any,
-      baseEvent as any,
-    );
+    const result = await handler.handle(baseSession as any, baseEvent);
 
     expect(result.nextState).toBe('SELECTING_APPOINTMENT_DATE');
-    expect(result.outboundMessages[0]).toMatchObject({ type: 'interactive_list' });
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_list',
+    });
     expect(pendingUseCase.execute).toHaveBeenCalledWith({
       patientId: 77,
       specialtyCups: '890201',
@@ -83,10 +84,12 @@ describe('SelectingSpecialtyHandler', () => {
     expect(result.nextContext?.appointmentDateSelection?.offeredDates).toEqual([
       { isoDate: '2026-05-06', displayDate: '06/05/2026' },
     ]);
-    expect(result.nextContext?.appointmentDateSelection?.scope).toBe('SPECIALTY');
-    expect(result.nextContext?.appointmentDateSelection?.specialtyOfferedDates).toEqual([
-      { isoDate: '2026-05-06', displayDate: '06/05/2026' },
-    ]);
+    expect(result.nextContext?.appointmentDateSelection?.scope).toBe(
+      'SPECIALTY',
+    );
+    expect(
+      result.nextContext?.appointmentDateSelection?.specialtyOfferedDates,
+    ).toEqual([{ isoDate: '2026-05-06', displayDate: '06/05/2026' }]);
     expect(result.outboundMessages[0]).toMatchObject({
       sections: [
         {
@@ -123,14 +126,11 @@ describe('SelectingSpecialtyHandler', () => {
       } as unknown as AuditService,
     );
 
-    const result = await handler.handle(
-      baseSession as any,
-      {
-        ...baseEvent,
-        messageId: 'wamid-7',
-        timestamp: '1711111117',
-      } as any,
-    );
+    const result = await handler.handle(baseSession as any, {
+      ...baseEvent,
+      messageId: 'wamid-7',
+      timestamp: '1711111117',
+    });
 
     expect(result.nextState).toBe('SELECTING_SPECIALTY');
     expect(result.outboundMessages[0]).toMatchObject({
@@ -176,13 +176,10 @@ describe('SelectingSpecialtyHandler', () => {
       } as unknown as AuditService,
     );
 
-    const result = await handler.handle(
-      baseSession as any,
-      {
-        ...baseEvent,
-        messageId: 'wamid-8',
-      } as any,
-    );
+    const result = await handler.handle(baseSession as any, {
+      ...baseEvent,
+      messageId: 'wamid-8',
+    });
 
     expect(result.nextState).toBe('SELECTING_SPECIALTY');
     expect(result.outboundMessages[0]).toMatchObject({
@@ -215,13 +212,11 @@ describe('SelectingSpecialtyHandler', () => {
       } as unknown as AuditService,
     );
 
-    const result = await handler.handle(
-      baseSession as any,
-      {
-        ...baseEvent,
-        interactiveReplyId: PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES,
-      } as any,
-    );
+    const result = await handler.handle(baseSession as any, {
+      ...baseEvent,
+      interactiveReplyId:
+        PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES,
+    });
 
     expect(result.nextState).toBe('SELECTING_SPECIALTY');
     expect(result.outboundMessages[0]).toMatchObject({
@@ -247,13 +242,10 @@ describe('SelectingSpecialtyHandler', () => {
       } as unknown as AuditService,
     );
 
-    const result = await handler.handle(
-      baseSession as any,
-      {
-        ...baseEvent,
-        interactiveReplyId: NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES,
-      } as any,
-    );
+    const result = await handler.handle(baseSession as any, {
+      ...baseEvent,
+      interactiveReplyId: NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES,
+    });
 
     expect(result.nextState).toBe('SELECTING_SPECIALTY');
     expect(result.outboundMessages[0]).toMatchObject({

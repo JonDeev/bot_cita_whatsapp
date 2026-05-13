@@ -2,7 +2,10 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../../../../audit/application/services/audit.service';
 import { WHATSAPP_MESSAGE_SENDER } from '../../../domain/whatsapp.tokens';
 import type { WhatsappMessageSenderPort } from '../../../domain/ports/whatsapp-message-sender.port';
-import type { OutboundWhatsappFlowTemplateMessage, OutboundWhatsappSendResult } from '../../../domain/value-objects/outbound-whatsapp-message';
+import type {
+  OutboundWhatsappFlowTemplateMessage,
+  OutboundWhatsappSendResult,
+} from '../../../domain/value-objects/outbound-whatsapp-message';
 
 export interface SendWhatsappFlowTemplateMessageInput {
   to: string;
@@ -23,14 +26,19 @@ export class SendWhatsappFlowTemplateMessageUseCase {
     private readonly auditService: AuditService,
   ) {}
 
-  async execute(input: SendWhatsappFlowTemplateMessageInput): Promise<OutboundWhatsappSendResult> {
+  async execute(
+    input: SendWhatsappFlowTemplateMessageInput,
+  ): Promise<OutboundWhatsappSendResult> {
     this.validateInput(input);
 
-    await this.auditService.record('whatsapp.outbound.flow_template.attempted', {
-      to: input.to,
-      trigger: input.trigger,
-      templateName: input.templateName,
-    });
+    await this.auditService.record(
+      'whatsapp.outbound.flow_template.attempted',
+      {
+        to: input.to,
+        trigger: input.trigger,
+        templateName: input.templateName,
+      },
+    );
 
     try {
       const result = await this.messageSender.sendFlowTemplateMessage({
@@ -52,7 +60,8 @@ export class SendWhatsappFlowTemplateMessageUseCase {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       await this.auditService.record('whatsapp.outbound.flow_template.failed', {
         to: input.to,
         trigger: input.trigger,
@@ -82,7 +91,9 @@ export class SendWhatsappFlowTemplateMessageUseCase {
     }
 
     if (!/^\d+$/.test(input.buttonIndex)) {
-      throw new BadRequestException('Flow template button index must be numeric.');
+      throw new BadRequestException(
+        'Flow template button index must be numeric.',
+      );
     }
 
     if (!input.flowToken?.trim()) {

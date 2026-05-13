@@ -35,7 +35,8 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
     session: ConversationSession,
     event: NormalizedWhatsappEvent,
   ): Promise<ConversationStateHandlerResult> {
-    const offeredSpecialties = session.context?.specialtySelection?.offeredSpecialties ?? [];
+    const offeredSpecialties =
+      session.context?.specialtySelection?.offeredSpecialties ?? [];
 
     if (event.kind !== 'incoming_message_received') {
       return {
@@ -58,7 +59,8 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
 
     if (
       event.messageType === 'interactive' &&
-      event.interactiveReplyId === PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES
+      event.interactiveReplyId ===
+        PENDING_APPOINTMENT_BLOCK_OPTION_IDS.BACK_TO_SPECIALTIES
     ) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
@@ -68,11 +70,15 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
 
     if (
       event.messageType === 'interactive' &&
-      event.interactiveReplyId === NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES
+      event.interactiveReplyId ===
+        NO_AVAILABILITY_OPTION_IDS.BACK_TO_SPECIALTIES
     ) {
-      await this.auditService.record('conversation.no_availability.back_to_specialties.selected', {
-        conversationKey: session.conversationKey,
-      });
+      await this.auditService.record(
+        'conversation.no_availability.back_to_specialties.selected',
+        {
+          conversationKey: session.conversationKey,
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
@@ -80,7 +86,9 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
       };
     }
 
-    const specialtyCode = parseSpecialtyOptionId(event.interactiveReplyId ?? '');
+    const specialtyCode = parseSpecialtyOptionId(
+      event.interactiveReplyId ?? '',
+    );
     if (!specialtyCode) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
@@ -88,7 +96,9 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
       };
     }
 
-    const selectedSpecialty = offeredSpecialties.find((specialty) => specialty.code === specialtyCode);
+    const selectedSpecialty = offeredSpecialties.find(
+      (specialty) => specialty.code === specialtyCode,
+    );
     if (!selectedSpecialty) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
@@ -102,27 +112,35 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
       specialtyName: selectedSpecialty.name,
     });
 
-    await this.auditService.record('appointment.pending_by_specialty.check.started', {
-      conversationKey: session.conversationKey,
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      specialtyCode: selectedSpecialty.code,
-      specialtyCups: selectedSpecialty.cups ?? null,
-    });
-
-    const pendingAppointmentResult =
-      await this.findNearestPendingFutureAppointmentByPatientAndSpecialty.execute({
-        patientId: session.context?.patientValidation?.patientId ?? null,
-        specialtyCups: selectedSpecialty.cups ?? null,
-      });
-
-    if (pendingAppointmentResult.status === 'TECHNICAL_FAILURE') {
-      await this.auditService.record('appointment.pending_by_specialty.check.failed', {
+    await this.auditService.record(
+      'appointment.pending_by_specialty.check.started',
+      {
         conversationKey: session.conversationKey,
         patientId: session.context?.patientValidation?.patientId ?? null,
         specialtyCode: selectedSpecialty.code,
         specialtyCups: selectedSpecialty.cups ?? null,
-        errorMessage: pendingAppointmentResult.reason,
-      });
+      },
+    );
+
+    const pendingAppointmentResult =
+      await this.findNearestPendingFutureAppointmentByPatientAndSpecialty.execute(
+        {
+          patientId: session.context?.patientValidation?.patientId ?? null,
+          specialtyCups: selectedSpecialty.cups ?? null,
+        },
+      );
+
+    if (pendingAppointmentResult.status === 'TECHNICAL_FAILURE') {
+      await this.auditService.record(
+        'appointment.pending_by_specialty.check.failed',
+        {
+          conversationKey: session.conversationKey,
+          patientId: session.context?.patientValidation?.patientId ?? null,
+          specialtyCode: selectedSpecialty.code,
+          specialtyCups: selectedSpecialty.cups ?? null,
+          errorMessage: pendingAppointmentResult.reason,
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
@@ -137,20 +155,27 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
           appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+        outboundMessages: [
+          this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+        ],
       };
     }
 
     if (pendingAppointmentResult.status === 'FOUND') {
-      await this.auditService.record('appointment.pending_by_specialty.check.blocked', {
-        conversationKey: session.conversationKey,
-        patientId: session.context?.patientValidation?.patientId ?? null,
-        specialtyCode: selectedSpecialty.code,
-        specialtyCups: selectedSpecialty.cups ?? null,
-        slotRef: pendingAppointmentResult.appointment.slotRef,
-        appointmentDate: pendingAppointmentResult.appointment.appointmentDateIso,
-        appointmentTime: pendingAppointmentResult.appointment.appointmentTimeHHmm,
-      });
+      await this.auditService.record(
+        'appointment.pending_by_specialty.check.blocked',
+        {
+          conversationKey: session.conversationKey,
+          patientId: session.context?.patientValidation?.patientId ?? null,
+          specialtyCode: selectedSpecialty.code,
+          specialtyCups: selectedSpecialty.cups ?? null,
+          slotRef: pendingAppointmentResult.appointment.slotRef,
+          appointmentDate:
+            pendingAppointmentResult.appointment.appointmentDateIso,
+          appointmentTime:
+            pendingAppointmentResult.appointment.appointmentTimeHHmm,
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.SELECTING_SPECIALTY,
@@ -170,9 +195,12 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
             patientName: pendingAppointmentResult.appointment.patientFullName,
             specialtyName: selectedSpecialty.name,
             modality: pendingAppointmentResult.appointment.modality,
-            appointmentDateIso: pendingAppointmentResult.appointment.appointmentDateIso,
-            appointmentDisplayTime: pendingAppointmentResult.appointment.appointmentDisplayTime,
-            professionalName: pendingAppointmentResult.appointment.professionalName,
+            appointmentDateIso:
+              pendingAppointmentResult.appointment.appointmentDateIso,
+            appointmentDisplayTime:
+              pendingAppointmentResult.appointment.appointmentDisplayTime,
+            professionalName:
+              pendingAppointmentResult.appointment.professionalName,
             siteName: pendingAppointmentResult.appointment.siteName,
             siteAddress: pendingAppointmentResult.appointment.siteAddress,
           }),
@@ -180,17 +208,21 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
       };
     }
 
-    await this.auditService.record('appointment.pending_by_specialty.check.clear', {
-      conversationKey: session.conversationKey,
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      specialtyCode: selectedSpecialty.code,
-      specialtyCups: selectedSpecialty.cups ?? null,
-    });
+    await this.auditService.record(
+      'appointment.pending_by_specialty.check.clear',
+      {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        specialtyCode: selectedSpecialty.code,
+        specialtyCups: selectedSpecialty.cups ?? null,
+      },
+    );
 
     try {
-      const availabilityResult = await this.resolveAvailableAppointmentDatesBySpecialty.execute({
-        specialtyCups: selectedSpecialty.cups ?? null,
-      });
+      const availabilityResult =
+        await this.resolveAvailableAppointmentDatesBySpecialty.execute({
+          specialtyCups: selectedSpecialty.cups ?? null,
+        });
 
       if (!availabilityResult.hasAvailability) {
         await this.auditService.record('appointment.availability.empty', {
@@ -213,7 +245,9 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
             appointmentDateSelection: undefined,
             appointmentTimeSelection: undefined,
           },
-          outboundMessages: [this.appointmentAvailabilityMessageFactory.buildNoAvailability()],
+          outboundMessages: [
+            this.appointmentAvailabilityMessageFactory.buildNoAvailability(),
+          ],
         };
       }
 
@@ -268,7 +302,9 @@ export class SelectingSpecialtyHandler implements ConversationStateHandler {
           appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+        outboundMessages: [
+          this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+        ],
       };
     }
   }

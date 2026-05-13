@@ -20,9 +20,13 @@ describe('PrismaBotConversationPersistenceRepository', () => {
       },
     } as unknown as PrismaBotService;
 
-    const repository = new PrismaBotConversationPersistenceRepository(prismaBot);
+    const repository = new PrismaBotConversationPersistenceRepository(
+      prismaBot,
+    );
 
-    await expect(repository.findByKey('whatsapp:123:573001112233')).resolves.toMatchObject({
+    await expect(
+      repository.findByKey('whatsapp:123:573001112233'),
+    ).resolves.toMatchObject({
       state: 'WAITING_DOCUMENT',
       context: {
         flowIntent: 'REQUEST_APPOINTMENT',
@@ -38,7 +42,9 @@ describe('PrismaBotConversationPersistenceRepository', () => {
       },
     } as unknown as PrismaBotService;
 
-    const repository = new PrismaBotConversationPersistenceRepository(prismaBot);
+    const repository = new PrismaBotConversationPersistenceRepository(
+      prismaBot,
+    );
 
     await repository.upsert({
       conversationKey: 'whatsapp:123:573001112233',

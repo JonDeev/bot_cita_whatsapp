@@ -4,15 +4,17 @@ import { ResolveAvailableAppointmentDatesBySpecialtyUseCase } from './resolve-av
 describe('ResolveAvailableAppointmentDatesBySpecialtyUseCase', () => {
   it('returns up to five unique dates ordered by repository results', async () => {
     const repository = {
-      findAvailableDates: jest.fn().mockResolvedValue([
-        { dateIso: '2026-05-06' },
-        { dateIso: '2026-05-06' },
-        { dateIso: '2026-05-07' },
-        { dateIso: '2026-05-08' },
-        { dateIso: '2026-05-09' },
-        { dateIso: '2026-05-10' },
-        { dateIso: '2026-05-11' },
-      ]),
+      findAvailableDates: jest
+        .fn()
+        .mockResolvedValue([
+          { dateIso: '2026-05-06' },
+          { dateIso: '2026-05-06' },
+          { dateIso: '2026-05-07' },
+          { dateIso: '2026-05-08' },
+          { dateIso: '2026-05-09' },
+          { dateIso: '2026-05-10' },
+          { dateIso: '2026-05-11' },
+        ]),
     };
     const cutoffService = {
       build: jest.fn().mockReturnValue({
@@ -77,7 +79,9 @@ describe('ResolveAvailableAppointmentDatesBySpecialtyUseCase', () => {
 
   it('passes doctor filter when provided', async () => {
     const repository = {
-      findAvailableDates: jest.fn().mockResolvedValue([{ dateIso: '2026-05-06' }]),
+      findAvailableDates: jest
+        .fn()
+        .mockResolvedValue([{ dateIso: '2026-05-06' }]),
     };
     const cutoffService = {
       build: jest.fn().mockReturnValue({

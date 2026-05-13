@@ -12,7 +12,9 @@ import type {
 export class PrismaBotWebhookInboxRepository implements WebhookInboxRepositoryPort {
   constructor(private readonly prismaBot: PrismaBotService) {}
 
-  async saveIfFirstSeen(input: SaveWebhookInboxEventInput): Promise<SaveWebhookInboxEventResult> {
+  async saveIfFirstSeen(
+    input: SaveWebhookInboxEventInput,
+  ): Promise<SaveWebhookInboxEventResult> {
     try {
       await this.prismaBot.botWebhookEvent.create({
         data: {

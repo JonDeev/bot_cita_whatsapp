@@ -58,12 +58,21 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
     ) {
       return {
         nextState: CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_ACTIONS,
-        outboundMessages: [this.buildDetailsMessage(selection, selectedAppointment)],
+        outboundMessages: [
+          this.buildDetailsMessage(selection, selectedAppointment),
+        ],
       };
     }
 
-    if (event.interactiveReplyId === ASSIGNED_APPOINTMENT_ACTION_OPTION_IDS.REPROGRAM) {
-      return this.handleReprogramSelection(session, selection, selectedAppointment);
+    if (
+      event.interactiveReplyId ===
+      ASSIGNED_APPOINTMENT_ACTION_OPTION_IDS.REPROGRAM
+    ) {
+      return this.handleReprogramSelection(
+        session,
+        selection,
+        selectedAppointment,
+      );
     }
 
     await this.auditService.record('appointment.cancellation.attempted', {
@@ -72,10 +81,11 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
       slotRef: selectedAppointment.slotRef,
     });
 
-    const cancellationResult = await this.cancelAssignedAppointmentByPatient.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      slotRef: selectedAppointment.slotRef,
-    });
+    const cancellationResult =
+      await this.cancelAssignedAppointmentByPatient.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        slotRef: selectedAppointment.slotRef,
+      });
 
     if (cancellationResult.status === 'CANCELLED') {
       await this.auditService.record('appointment.cancellation.succeeded', {
@@ -171,13 +181,15 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
     session: ConversationSession,
     prefixMessage?: string,
   ): Promise<ConversationStateHandlerResult> {
-    const listResult = await this.listFutureAssignedAppointmentsByPatient.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      offset: 0,
-    });
+    const listResult =
+      await this.listFutureAssignedAppointmentsByPatient.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        offset: 0,
+      });
 
     if (listResult.status === 'FOUND') {
-      const outboundMessages: ConversationStateHandlerResult['outboundMessages'] = [];
+      const outboundMessages: ConversationStateHandlerResult['outboundMessages'] =
+        [];
       if (prefixMessage) {
         outboundMessages.push({ type: 'text', body: prefixMessage });
       }
@@ -250,7 +262,9 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
 
   private buildDetailsMessage(
     selection: AssignedAppointmentSelectionSessionContext | undefined,
-    selectedAppointment: NonNullable<AssignedAppointmentSelectionSessionContext['selectedAppointment']>,
+    selectedAppointment: NonNullable<
+      AssignedAppointmentSelectionSessionContext['selectedAppointment']
+    >,
   ) {
     return this.assignedAppointmentDetailsMessageFactory.build({
       patientFullName: selection?.patientFullName ?? 'PACIENTE',
@@ -264,18 +278,24 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
   private async handleReprogramSelection(
     session: ConversationSession,
     selection: AssignedAppointmentSelectionSessionContext | undefined,
-    selectedAppointment: NonNullable<AssignedAppointmentSelectionSessionContext['selectedAppointment']>,
+    selectedAppointment: NonNullable<
+      AssignedAppointmentSelectionSessionContext['selectedAppointment']
+    >,
   ): Promise<ConversationStateHandlerResult> {
     const patientId = session.context?.patientValidation?.patientId ?? null;
     const specialtyCups = selectedAppointment.specialtyCups?.trim() ?? '';
-    const specialtyName = selectedAppointment.specialtyName?.trim() || 'ESPECIALIDAD POR CONFIRMAR';
+    const specialtyName =
+      selectedAppointment.specialtyName?.trim() || 'ESPECIALIDAD POR CONFIRMAR';
 
-    await this.auditService.record('conversation.assigned_appointment.reprogramming.started', {
-      conversationKey: session.conversationKey,
-      patientId,
-      slotRef: selectedAppointment.slotRef,
-      specialtyCups: specialtyCups || null,
-    });
+    await this.auditService.record(
+      'conversation.assigned_appointment.reprogramming.started',
+      {
+        conversationKey: session.conversationKey,
+        patientId,
+        slotRef: selectedAppointment.slotRef,
+        specialtyCups: specialtyCups || null,
+      },
+    );
 
     if (!specialtyCups) {
       await this.auditService.record('appointment.rescheduling.rejected', {
@@ -315,9 +335,10 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
           dates: Array<{ isoDate: string; displayDate: string }>;
         };
     try {
-      availabilityResult = await this.resolveAvailableAppointmentDatesBySpecialty.execute({
-        specialtyCups,
-      });
+      availabilityResult =
+        await this.resolveAvailableAppointmentDatesBySpecialty.execute({
+          specialtyCups,
+        });
     } catch (error) {
       await this.auditService.record('appointment.rescheduling.failed', {
         conversationKey: session.conversationKey,
@@ -376,13 +397,16 @@ export class ReviewingAssignedAppointmentActionsHandler implements ConversationS
       };
     }
 
-    await this.auditService.record('appointment.rescheduling.availability.resolved', {
-      conversationKey: session.conversationKey,
-      patientId,
-      originalSlotRef: selectedAppointment.slotRef,
-      specialtyCups,
-      availableDateCount: availabilityResult.dates.length,
-    });
+    await this.auditService.record(
+      'appointment.rescheduling.availability.resolved',
+      {
+        conversationKey: session.conversationKey,
+        patientId,
+        originalSlotRef: selectedAppointment.slotRef,
+        specialtyCups,
+        availableDateCount: availabilityResult.dates.length,
+      },
+    );
 
     const selectedSpecialty = {
       code: specialtyCups,

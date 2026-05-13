@@ -10,7 +10,9 @@ describe('SelectingAppointmentDoctorHandler', () => {
     resolveDates: ResolveAvailableAppointmentDatesBySpecialtyUseCase,
   ): SelectingAppointmentDoctorHandler {
     return new SelectingAppointmentDoctorHandler(
-      new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
+      new AppointmentDoctorListFactory(
+        new AppointmentDoctorListPresenterService(),
+      ),
       new AppointmentDateListFactory(),
       resolveDates,
       {
@@ -28,7 +30,9 @@ describe('SelectingAppointmentDoctorHandler', () => {
     status: 'BOT_ACTIVE',
     context: {
       specialtySelection: {
-        offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+        offeredSpecialties: [
+          { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+        ],
         selectedSpecialty: {
           code: '890201',
           name: 'MEDICINA GENERAL',
@@ -40,7 +44,9 @@ describe('SelectingAppointmentDoctorHandler', () => {
       },
       appointmentDateSelection: {
         scope: 'SPECIALTY' as const,
-        specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+        specialtyOfferedDates: [
+          { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+        ],
         offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
       },
     },
@@ -75,27 +81,29 @@ describe('SelectingAppointmentDoctorHandler', () => {
       doctorEmployeeCode: 'M001',
     });
     expect(result.nextState).toBe('SELECTING_APPOINTMENT_DATE');
-    expect(result.nextContext?.appointmentDoctorSelection?.selectedDoctor).toEqual({
+    expect(
+      result.nextContext?.appointmentDoctorSelection?.selectedDoctor,
+    ).toEqual({
       employeeCode: 'M001',
       displayName: 'ANA GARCIA',
     });
     expect(result.nextContext?.appointmentDateSelection).toEqual({
       scope: 'DOCTOR',
-      specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+      specialtyOfferedDates: [
+        { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+      ],
       offeredDates: [{ isoDate: '2026-05-08', displayDate: '08/05/2026' }],
     });
   });
 
   it('stays in doctor selection when chosen doctor has no dates available', async () => {
-    const handler = buildHandler(
-      {
-        execute: jest.fn().mockResolvedValue({
-          hasAvailability: false,
-          reason: 'NO_AVAILABILITY',
-          dates: [],
-        }),
-      } as unknown as ResolveAvailableAppointmentDatesBySpecialtyUseCase,
-    );
+    const handler = buildHandler({
+      execute: jest.fn().mockResolvedValue({
+        hasAvailability: false,
+        reason: 'NO_AVAILABILITY',
+        dates: [],
+      }),
+    } as unknown as ResolveAvailableAppointmentDatesBySpecialtyUseCase);
 
     const result = await handler.handle(baseSession as any, {
       kind: 'incoming_message_received',

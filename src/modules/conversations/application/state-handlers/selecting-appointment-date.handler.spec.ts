@@ -15,7 +15,9 @@ describe('SelectingAppointmentDateHandler', () => {
   ): SelectingAppointmentDateHandler {
     return new SelectingAppointmentDateHandler(
       new AppointmentDateListFactory(),
-      new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
+      new AppointmentDoctorListFactory(
+        new AppointmentDoctorListPresenterService(),
+      ),
       new AppointmentTimeListFactory(),
       new AppointmentAvailabilityMessageFactory(),
       resolveDoctors,
@@ -35,7 +37,9 @@ describe('SelectingAppointmentDateHandler', () => {
     status: 'BOT_ACTIVE',
     context: {
       specialtySelection: {
-        offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+        offeredSpecialties: [
+          { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+        ],
         selectedSpecialty: {
           code: '890201',
           name: 'MEDICINA GENERAL',
@@ -44,7 +48,9 @@ describe('SelectingAppointmentDateHandler', () => {
       },
       appointmentDateSelection: {
         scope: 'SPECIALTY' as const,
-        specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+        specialtyOfferedDates: [
+          { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+        ],
         offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
       },
     },
@@ -62,7 +68,9 @@ describe('SelectingAppointmentDateHandler', () => {
       }),
     };
     const handler = buildHandler(
-      { execute: jest.fn() } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
       resolveTimes as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     );
 
@@ -83,7 +91,9 @@ describe('SelectingAppointmentDateHandler', () => {
       doctorEmployeeCode: null,
     });
     expect(result.nextState).toBe('SELECTING_APPOINTMENT_TIME');
-    expect(result.nextContext?.appointmentDateSelection?.selectedDateIso).toBe('2026-05-06');
+    expect(result.nextContext?.appointmentDateSelection?.selectedDateIso).toBe(
+      '2026-05-06',
+    );
     expect(result.nextContext?.appointmentTimeSelection?.offeredTimes).toEqual([
       { slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' },
     ]);
@@ -98,7 +108,9 @@ describe('SelectingAppointmentDateHandler', () => {
     };
     const handler = buildHandler(
       resolveDoctors as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
-      { execute: jest.fn() } as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     );
 
     const result = await handler.handle(baseSession as any, {
@@ -113,9 +125,9 @@ describe('SelectingAppointmentDateHandler', () => {
     });
 
     expect(result.nextState).toBe('SELECTING_APPOINTMENT_DOCTOR');
-    expect(result.nextContext?.appointmentDoctorSelection?.offeredDoctors).toEqual([
-      { employeeCode: 'M001', displayName: 'ANA GARCIA' },
-    ]);
+    expect(
+      result.nextContext?.appointmentDoctorSelection?.offeredDoctors,
+    ).toEqual([{ employeeCode: 'M001', displayName: 'ANA GARCIA' }]);
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_list',
       body: 'Selecciona el medico con quien deseas agendar.',
@@ -124,7 +136,9 @@ describe('SelectingAppointmentDateHandler', () => {
 
   it('adds show more row when use case reports additional times', async () => {
     const handler = buildHandler(
-      { execute: jest.fn() } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
       {
         execute: jest.fn().mockResolvedValue({
           hasAvailability: true,
@@ -161,8 +175,12 @@ describe('SelectingAppointmentDateHandler', () => {
 
   it('rebuilds the list when the selected date option is invalid', async () => {
     const handler = buildHandler(
-      { execute: jest.fn() } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
-      { execute: jest.fn() } as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     );
 
     const result = await handler.handle(baseSession as any, {
@@ -184,7 +202,9 @@ describe('SelectingAppointmentDateHandler', () => {
 
   it('stays in date selection when selected day has no available times', async () => {
     const handler = buildHandler(
-      { execute: jest.fn() } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentDoctorsBySpecialtyUseCase,
       {
         execute: jest.fn().mockResolvedValue({
           hasAvailability: false,

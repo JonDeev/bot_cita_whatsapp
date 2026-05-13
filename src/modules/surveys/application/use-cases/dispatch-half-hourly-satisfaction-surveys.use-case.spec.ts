@@ -8,18 +8,24 @@ import { SurveyWhatsappPhoneNormalizerService } from '../services/survey-whatsap
 
 describe('DispatchHalfHourlySatisfactionSurveysUseCase', () => {
   it('skips execution outside the configured half-hour schedule', async () => {
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new DispatchHalfHourlySatisfactionSurveysUseCase(
-      { findEligibleAppointmentsByWindow: jest.fn() } as any,
-      { updateAgendaSurveyNotificationStatus: jest.fn() } as any,
+      { findEligibleAppointmentsByWindow: jest.fn() },
+      { updateAgendaSurveyNotificationStatus: jest.fn() },
       {
         hasGrantedSatisfactionSurveyConsent: jest.fn(),
         isPhoneSuppressedForSatisfactionSurveys: jest.fn(),
-      } as any,
+      },
       new SatisfactionSurveyDispatchWindowService(),
-      { execute: jest.fn() } as unknown as CreateSatisfactionSurveyDispatchUseCase,
-      { execute: jest.fn() } as unknown as SendSatisfactionSurveyFlowInvitationUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as CreateSatisfactionSurveyDispatchUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as SendSatisfactionSurveyFlowInvitationUseCase,
       new SurveyWhatsappPhoneNormalizerService(),
       auditService,
     );
@@ -72,7 +78,9 @@ describe('DispatchHalfHourlySatisfactionSurveysUseCase', () => {
         .fn()
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false),
-      isPhoneSuppressedForSatisfactionSurveys: jest.fn().mockResolvedValue(false),
+      isPhoneSuppressedForSatisfactionSurveys: jest
+        .fn()
+        .mockResolvedValue(false),
     };
 
     const createSurveyDispatch = {
@@ -91,12 +99,14 @@ describe('DispatchHalfHourlySatisfactionSurveysUseCase', () => {
       execute: jest.fn().mockResolvedValue({ messageId: 'wamid-123' }),
     } as unknown as SendSatisfactionSurveyFlowInvitationUseCase;
 
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new DispatchHalfHourlySatisfactionSurveysUseCase(
-      eligibilityRepository as any,
-      legacyStatusRepository as any,
-      policyRepository as any,
+      eligibilityRepository,
+      legacyStatusRepository,
+      policyRepository,
       new SatisfactionSurveyDispatchWindowService(),
       createSurveyDispatch,
       sendSurveyFlowInvitation,
@@ -115,11 +125,15 @@ describe('DispatchHalfHourlySatisfactionSurveysUseCase', () => {
     expect(result.markedAsNotApplicable).toBe(1);
     expect(result.markedAsSent).toBe(1);
 
-    expect(legacyStatusRepository.updateAgendaSurveyNotificationStatus).toHaveBeenCalledWith({
+    expect(
+      legacyStatusRepository.updateAgendaSurveyNotificationStatus,
+    ).toHaveBeenCalledWith({
       legacyAgendaIds: [102],
       status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
     });
-    expect(legacyStatusRepository.updateAgendaSurveyNotificationStatus).toHaveBeenCalledWith({
+    expect(
+      legacyStatusRepository.updateAgendaSurveyNotificationStatus,
+    ).toHaveBeenCalledWith({
       legacyAgendaIds: [101],
       status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.SENT,
     });

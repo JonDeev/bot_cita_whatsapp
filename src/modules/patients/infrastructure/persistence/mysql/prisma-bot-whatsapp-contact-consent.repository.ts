@@ -11,12 +11,12 @@ import type {
 } from '../../../domain/ports/whatsapp-contact-consent.repository';
 
 @Injectable()
-export class PrismaBotWhatsappContactConsentRepository
-  implements WhatsappContactConsentRepository
-{
+export class PrismaBotWhatsappContactConsentRepository implements WhatsappContactConsentRepository {
   constructor(private readonly prismaBot: PrismaBotService) {}
 
-  async recordConsent(command: RecordWhatsappContactConsentCommand): Promise<void> {
+  async recordConsent(
+    command: RecordWhatsappContactConsentCommand,
+  ): Promise<void> {
     const respondedAt = new Date(command.respondedAtIso);
     const response = this.toConsentResponse(command.response);
     const channel = this.toChannel(command.channel);
@@ -80,7 +80,8 @@ export class PrismaBotWhatsappContactConsentRepository
 
   private toPurpose(value: string): BotContactConsentPurpose {
     const byValue: Record<string, BotContactConsentPurpose> = {
-      APPOINTMENT_NOTIFICATIONS: BotContactConsentPurpose.APPOINTMENT_NOTIFICATIONS,
+      APPOINTMENT_NOTIFICATIONS:
+        BotContactConsentPurpose.APPOINTMENT_NOTIFICATIONS,
       SATISFACTION_SURVEYS: BotContactConsentPurpose.SATISFACTION_SURVEYS,
     };
 

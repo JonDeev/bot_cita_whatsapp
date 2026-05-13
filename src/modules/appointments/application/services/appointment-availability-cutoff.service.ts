@@ -13,7 +13,10 @@ export class AppointmentAvailabilityCutoffService {
   build(now: Date): AppointmentAvailabilityCutoff {
     const cutoff = new Date(
       now.getTime() +
-        AppointmentAvailabilityCutoffService.CUT_OFF_OFFSET_HOURS * 60 * 60 * 1000,
+        AppointmentAvailabilityCutoffService.CUT_OFF_OFFSET_HOURS *
+          60 *
+          60 *
+          1000,
     );
     const parts = this.formatToParts(cutoff);
 
@@ -23,7 +26,9 @@ export class AppointmentAvailabilityCutoffService {
     };
   }
 
-  private formatToParts(value: Date): Record<'year' | 'month' | 'day' | 'hour' | 'minute', string> {
+  private formatToParts(
+    value: Date,
+  ): Record<'year' | 'month' | 'day' | 'hour' | 'minute', string> {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: AppointmentAvailabilityCutoffService.TIMEZONE,
       year: 'numeric',

@@ -1,7 +1,9 @@
 import { ListFutureAssignedAppointmentsByPatientUseCase } from '../../../appointments/application/use-cases/list-future-assigned-appointments-by-patient.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { ResolveAssignedDispensaryByPatientUseCase } from '../../../patients/application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from '../../../patients/application/use-cases/resolve-eligible-specialties-by-patient.use-case';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
+import { AssignedDispensaryMessageFactory } from '../services/assigned-dispensary-message.factory';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
 import { PatientValidatedHandler } from './patient-validated.handler';
 
@@ -18,12 +20,18 @@ describe('PatientValidatedHandler', () => {
         execute: jest.fn(),
       } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
       {
+        execute: jest.fn(),
+      } as unknown as ResolveAssignedDispensaryByPatientUseCase,
+      {
         execute: jest.fn().mockResolvedValue({
           isEligible: true,
-          specialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+          specialties: [
+            { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+          ],
         }),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
       new AssignedAppointmentListFactory(),
+      new AssignedDispensaryMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -92,8 +100,12 @@ describe('PatientValidatedHandler', () => {
       } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
       {
         execute: jest.fn(),
+      } as unknown as ResolveAssignedDispensaryByPatientUseCase,
+      {
+        execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
       new AssignedAppointmentListFactory(),
+      new AssignedDispensaryMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -160,8 +172,12 @@ describe('PatientValidatedHandler', () => {
       } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
       {
         execute: jest.fn(),
+      } as unknown as ResolveAssignedDispensaryByPatientUseCase,
+      {
+        execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
       new AssignedAppointmentListFactory(),
+      new AssignedDispensaryMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -215,8 +231,12 @@ describe('PatientValidatedHandler', () => {
       } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
       {
         execute: jest.fn(),
+      } as unknown as ResolveAssignedDispensaryByPatientUseCase,
+      {
+        execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
       new AssignedAppointmentListFactory(),
+      new AssignedDispensaryMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -254,6 +274,139 @@ describe('PatientValidatedHandler', () => {
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_buttons',
       body: 'Hola DANIEL CASTANO No tienes citas agendadas',
+      buttons: [
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
+    });
+  });
+
+  it('returns assigned dispensary buttons when flow intent is check dispensary', async () => {
+    const handler = new PatientValidatedHandler(
+      {
+        execute: jest.fn(),
+      } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientFullName: 'DANIEL CASTANO',
+          dispensary: {
+            id: 4,
+            name: 'DISPENSARIO SUPLYMEDICAL',
+            address: "CLL 29 CRA 13 FRENTE A MCDONALD'S",
+            city: 'SANTA MARTA',
+            schedule: 'Lunes a viernes 8:00 - 12:00 y 2:00 a 6:00',
+          },
+        }),
+      } as unknown as ResolveAssignedDispensaryByPatientUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      new AssignedAppointmentListFactory(),
+      new AssignedDispensaryMessageFactory(),
+      new SpecialtyListFactory(),
+      buildAuditService(),
+    );
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'PATIENT_VALIDATED',
+        status: 'BOT_ACTIVE',
+        context: {
+          flowIntent: 'CHECK_DISPENSARY',
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 10,
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-7',
+        from: '573001112233',
+        timestamp: '1711111116',
+        messageType: 'text',
+        textBody: 'ok',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('MAIN_MENU');
+    const outboundMessage = result.outboundMessages[0];
+    expect(outboundMessage).toMatchObject({
+      type: 'interactive_buttons',
+      buttons: [
+        { id: 'nav_main_menu', title: 'Menu principal' },
+        { id: 'nav_finish', title: 'Finalizar' },
+      ],
+    });
+
+    if (outboundMessage.type !== 'interactive_buttons') {
+      throw new Error('Expected interactive buttons outbound message');
+    }
+
+    expect(outboundMessage.body).toContain('DISPENSARIO SUPLYMEDICAL');
+  });
+
+  it('returns not-assigned dispensary copy when flow intent is check dispensary and no assignment exists', async () => {
+    const handler = new PatientValidatedHandler(
+      {
+        execute: jest.fn(),
+      } as unknown as ListFutureAssignedAppointmentsByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'NOT_ASSIGNED',
+          patientFullName: 'DANIEL CASTANO',
+        }),
+      } as unknown as ResolveAssignedDispensaryByPatientUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      new AssignedAppointmentListFactory(),
+      new AssignedDispensaryMessageFactory(),
+      new SpecialtyListFactory(),
+      buildAuditService(),
+    );
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'PATIENT_VALIDATED',
+        status: 'BOT_ACTIVE',
+        context: {
+          flowIntent: 'CHECK_DISPENSARY',
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 10,
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-8',
+        from: '573001112233',
+        timestamp: '1711111117',
+        messageType: 'text',
+        textBody: 'ok',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_buttons',
+      body: 'hola DANIEL CASTANO, no tenemos informacion de tu dispensario asignado aun comunicate con tu EPS',
       buttons: [
         { id: 'nav_main_menu', title: 'Menu principal' },
         { id: 'nav_finish', title: 'Finalizar' },

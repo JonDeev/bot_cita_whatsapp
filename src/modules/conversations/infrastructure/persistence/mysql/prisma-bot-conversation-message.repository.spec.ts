@@ -75,7 +75,10 @@ describe('PrismaBotConversationMessageRepository', () => {
     const repository = new PrismaBotConversationMessageRepository(prismaBot);
 
     await expect(
-      repository.hasKnownOutboundMessage('whatsapp:123:573001112233', 'wamid.out.1'),
+      repository.hasKnownOutboundMessage(
+        'whatsapp:123:573001112233',
+        'wamid.out.1',
+      ),
     ).resolves.toBe(true);
   });
 });

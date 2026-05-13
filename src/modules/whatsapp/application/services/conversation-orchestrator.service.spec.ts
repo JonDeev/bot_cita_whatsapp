@@ -17,7 +17,12 @@ describe('ConversationOrchestratorService', () => {
             sections: [
               {
                 title: 'Menú principal',
-                rows: [{ id: 'main_menu_request_appointment', title: '⚕️ Solicitar cita' }],
+                rows: [
+                  {
+                    id: 'main_menu_request_appointment',
+                    title: '⚕️ Solicitar cita',
+                  },
+                ],
               },
             ],
           },
@@ -134,7 +139,9 @@ describe('ConversationOrchestratorService', () => {
       },
     ]);
 
-    expect(sendWhatsappInteractiveButtonsMessage.execute).toHaveBeenCalledTimes(1);
+    expect(sendWhatsappInteractiveButtonsMessage.execute).toHaveBeenCalledTimes(
+      1,
+    );
     expect(conversationMessageRepository.saveOutbound).toHaveBeenCalledWith(
       expect.objectContaining({
         messageType: 'interactive',
@@ -157,8 +164,12 @@ describe('ConversationOrchestratorService', () => {
         saveOutbound: jest.fn(),
         hasKnownOutboundMessage: jest.fn(),
       },
-      { execute: jest.fn() } as unknown as SendWhatsappInteractiveListMessageUseCase,
-      { execute: jest.fn() } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as SendWhatsappInteractiveListMessageUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
       { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
       { execute: jest.fn().mockResolvedValue({ handled: true }) } as any,
       {

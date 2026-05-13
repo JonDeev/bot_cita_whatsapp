@@ -1,7 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { SATISFACTION_SURVEY_DISPATCH_STATUSES } from '../../domain/ports/survey-dispatch.repository';
-import { SATISFACTION_SURVEY_ELIGIBILITY_REPOSITORY, SATISFACTION_SURVEY_LEGACY_STATUS_REPOSITORY, SURVEY_RECIPIENT_POLICY_REPOSITORY } from '../../domain/surveys.tokens';
+import {
+  SATISFACTION_SURVEY_ELIGIBILITY_REPOSITORY,
+  SATISFACTION_SURVEY_LEGACY_STATUS_REPOSITORY,
+  SURVEY_RECIPIENT_POLICY_REPOSITORY,
+} from '../../domain/surveys.tokens';
 import type {
   SatisfactionSurveyEligibilityRepository,
   SatisfactionSurveyEligibleAppointment,
@@ -45,7 +49,9 @@ export interface DispatchHalfHourlySatisfactionSurveysResult {
 
 @Injectable()
 export class DispatchHalfHourlySatisfactionSurveysUseCase {
-  private readonly logger = new Logger(DispatchHalfHourlySatisfactionSurveysUseCase.name);
+  private readonly logger = new Logger(
+    DispatchHalfHourlySatisfactionSurveysUseCase.name,
+  );
 
   constructor(
     @Inject(SATISFACTION_SURVEY_ELIGIBILITY_REPOSITORY)
@@ -90,11 +96,12 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
     }
 
     const window = windowResult.window;
-    const appointments = await this.eligibilityRepository.findEligibleAppointmentsByWindow({
-      surveyDateIso: window.surveyDateIso,
-      windowStartHHmm: window.windowStartHHmm,
-      windowEndHHmm: window.windowEndHHmm,
-    });
+    const appointments =
+      await this.eligibilityRepository.findEligibleAppointmentsByWindow({
+        surveyDateIso: window.surveyDateIso,
+        windowStartHHmm: window.windowStartHHmm,
+        windowEndHHmm: window.windowEndHHmm,
+      });
 
     await this.auditService.record('survey.eligibility.found', {
       runAtIso,
@@ -108,10 +115,12 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
 
     let markedAsNotApplicable = 0;
     if (classification.noApplicableAgendaIds.length > 0) {
-      markedAsNotApplicable = await this.legacyStatusRepository.updateAgendaSurveyNotificationStatus({
-        legacyAgendaIds: classification.noApplicableAgendaIds,
-        status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
-      });
+      markedAsNotApplicable =
+        await this.legacyStatusRepository.updateAgendaSurveyNotificationStatus({
+          legacyAgendaIds: classification.noApplicableAgendaIds,
+          status:
+            SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
+        });
     }
 
     let createdDispatches = 0;
@@ -148,7 +157,9 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
         }
 
         const dispatchStatus = dispatchResult.dispatch.status;
-        const agendaIds = candidate.appointments.map((appointment) => appointment.legacyAgendaId);
+        const agendaIds = candidate.appointments.map(
+          (appointment) => appointment.legacyAgendaId,
+        );
 
         if (
           dispatchStatus === SATISFACTION_SURVEY_DISPATCH_STATUSES.SENT ||
@@ -156,13 +167,19 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
           dispatchStatus === SATISFACTION_SURVEY_DISPATCH_STATUSES.COMPLETED ||
           dispatchStatus === SATISFACTION_SURVEY_DISPATCH_STATUSES.DECLINED ||
           dispatchStatus === SATISFACTION_SURVEY_DISPATCH_STATUSES.EXPIRED ||
-          dispatchStatus === SATISFACTION_SURVEY_DISPATCH_STATUSES.CANCELLED_BY_HANDOFF ||
-          dispatchStatus === SATISFACTION_SURVEY_DISPATCH_STATUSES.BLOCKED_CONTACT
+          dispatchStatus ===
+            SATISFACTION_SURVEY_DISPATCH_STATUSES.CANCELLED_BY_HANDOFF ||
+          dispatchStatus ===
+            SATISFACTION_SURVEY_DISPATCH_STATUSES.BLOCKED_CONTACT
         ) {
-          const updated = await this.legacyStatusRepository.updateAgendaSurveyNotificationStatus({
-            legacyAgendaIds: agendaIds,
-            status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
-          });
+          const updated =
+            await this.legacyStatusRepository.updateAgendaSurveyNotificationStatus(
+              {
+                legacyAgendaIds: agendaIds,
+                status:
+                  SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
+              },
+            );
           markedAsNotApplicable += updated;
           continue;
         }
@@ -172,10 +189,13 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
         });
 
         sentDispatches += 1;
-        const updated = await this.legacyStatusRepository.updateAgendaSurveyNotificationStatus({
-          legacyAgendaIds: agendaIds,
-          status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.SENT,
-        });
+        const updated =
+          await this.legacyStatusRepository.updateAgendaSurveyNotificationStatus(
+            {
+              legacyAgendaIds: agendaIds,
+              status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.SENT,
+            },
+          );
         markedAsSent += updated;
       } catch (error) {
         failedDispatches += 1;
@@ -187,7 +207,8 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
         await this.auditService.record('survey.dispatch.batch.patient_failed', {
           runAtIso,
           patientLegacyUserId: candidate.patientLegacyUserId,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
@@ -250,22 +271,30 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
     const grouped = new Map<number, DispatchCandidate>();
 
     for (const appointment of appointments) {
-      const sanitizedPhone = this.phoneNormalizer.sanitize(appointment.patientPhone ?? '');
+      const sanitizedPhone = this.phoneNormalizer.sanitize(
+        appointment.patientPhone ?? '',
+      );
       if (!this.phoneNormalizer.isValidLegacyColombianMobile(sanitizedPhone)) {
         noApplicableAgendaIds.push(appointment.legacyAgendaId);
-        await this.auditService.record('survey.eligibility.skipped.invalid_phone', {
-          legacyAgendaId: appointment.legacyAgendaId,
-          patientLegacyUserId: appointment.patientLegacyUserId,
-        });
+        await this.auditService.record(
+          'survey.eligibility.skipped.invalid_phone',
+          {
+            legacyAgendaId: appointment.legacyAgendaId,
+            patientLegacyUserId: appointment.patientLegacyUserId,
+          },
+        );
         continue;
       }
 
       const suppressionKey = sanitizedPhone;
       let isSuppressed = suppressionCache.get(suppressionKey);
       if (isSuppressed === undefined) {
-        isSuppressed = await this.recipientPolicyRepository.isPhoneSuppressedForSatisfactionSurveys({
-          phone: sanitizedPhone,
-        });
+        isSuppressed =
+          await this.recipientPolicyRepository.isPhoneSuppressedForSatisfactionSurveys(
+            {
+              phone: sanitizedPhone,
+            },
+          );
         suppressionCache.set(suppressionKey, isSuppressed);
       }
 
@@ -277,19 +306,25 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
       const consentKey = `${appointment.patientLegacyUserId}:${sanitizedPhone}`;
       let hasConsent = consentCache.get(consentKey);
       if (hasConsent === undefined) {
-        hasConsent = await this.recipientPolicyRepository.hasGrantedSatisfactionSurveyConsent({
-          patientLegacyUserId: appointment.patientLegacyUserId,
-          phone: sanitizedPhone,
-        });
+        hasConsent =
+          await this.recipientPolicyRepository.hasGrantedSatisfactionSurveyConsent(
+            {
+              patientLegacyUserId: appointment.patientLegacyUserId,
+              phone: sanitizedPhone,
+            },
+          );
         consentCache.set(consentKey, hasConsent);
       }
 
       if (!hasConsent) {
         noApplicableAgendaIds.push(appointment.legacyAgendaId);
-        await this.auditService.record('survey.eligibility.skipped.missing_opt_in', {
-          legacyAgendaId: appointment.legacyAgendaId,
-          patientLegacyUserId: appointment.patientLegacyUserId,
-        });
+        await this.auditService.record(
+          'survey.eligibility.skipped.missing_opt_in',
+          {
+            legacyAgendaId: appointment.legacyAgendaId,
+            patientLegacyUserId: appointment.patientLegacyUserId,
+          },
+        );
         continue;
       }
 

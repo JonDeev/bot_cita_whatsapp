@@ -20,10 +20,10 @@ interface JsonEligibilityRow {
 }
 
 @Injectable()
-export class JsonFileSatisfactionSurveyEligibilityRepository
-  implements SatisfactionSurveyEligibilityRepository
-{
-  private readonly logger = new Logger(JsonFileSatisfactionSurveyEligibilityRepository.name);
+export class JsonFileSatisfactionSurveyEligibilityRepository implements SatisfactionSurveyEligibilityRepository {
+  private readonly logger = new Logger(
+    JsonFileSatisfactionSurveyEligibilityRepository.name,
+  );
 
   constructor(
     private readonly configService: SatisfactionSurveyEligibilitySourceConfigService,
@@ -38,13 +38,21 @@ export class JsonFileSatisfactionSurveyEligibilityRepository
 
     return rows
       .map((row) => this.toAppointment(row))
-      .filter((appointment): appointment is SatisfactionSurveyEligibleAppointment =>
-        Boolean(appointment),
+      .filter(
+        (appointment): appointment is SatisfactionSurveyEligibleAppointment =>
+          Boolean(appointment),
       )
-      .filter((appointment) => appointment.appointmentDateIso === filters.surveyDateIso)
+      .filter(
+        (appointment) =>
+          appointment.appointmentDateIso === filters.surveyDateIso,
+      )
       .filter((appointment) => {
-        const appointmentMinutes = this.toTotalMinutes(appointment.appointmentTimeHhmm);
-        return appointmentMinutes >= windowStart && appointmentMinutes < windowEnd;
+        const appointmentMinutes = this.toTotalMinutes(
+          appointment.appointmentTimeHhmm,
+        );
+        return (
+          appointmentMinutes >= windowStart && appointmentMinutes < windowEnd
+        );
       })
       .sort((left, right) => {
         if (left.patientLegacyUserId !== right.patientLegacyUserId) {
@@ -52,7 +60,9 @@ export class JsonFileSatisfactionSurveyEligibilityRepository
         }
 
         if (left.appointmentTimeHhmm !== right.appointmentTimeHhmm) {
-          return left.appointmentTimeHhmm.localeCompare(right.appointmentTimeHhmm);
+          return left.appointmentTimeHhmm.localeCompare(
+            right.appointmentTimeHhmm,
+          );
         }
 
         return left.legacyAgendaId - right.legacyAgendaId;
@@ -65,15 +75,21 @@ export class JsonFileSatisfactionSurveyEligibilityRepository
     const parsed = JSON.parse(raw) as unknown;
 
     if (!Array.isArray(parsed)) {
-      throw new Error(`Eligibility JSON file must contain an array. path=${path}`);
+      throw new Error(
+        `Eligibility JSON file must contain an array. path=${path}`,
+      );
     }
 
-    this.logger.log(`Loaded ${parsed.length} test eligibility rows from ${path}.`);
+    this.logger.log(
+      `Loaded ${parsed.length} test eligibility rows from ${path}.`,
+    );
 
     return parsed as JsonEligibilityRow[];
   }
 
-  private toAppointment(row: JsonEligibilityRow): SatisfactionSurveyEligibleAppointment | null {
+  private toAppointment(
+    row: JsonEligibilityRow,
+  ): SatisfactionSurveyEligibleAppointment | null {
     const legacyAgendaId = Number(row.legacyAgendaId);
     const patientLegacyUserId = Number(row.patientLegacyUserId);
     const patientName = (row.patientName ?? '').trim();

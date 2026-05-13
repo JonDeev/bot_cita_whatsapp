@@ -59,7 +59,9 @@ describe('AssignedAppointmentListFactory', () => {
       },
     );
 
-    expect(message.body).toBe('Hola DANIEL CASTANO Estas son tus citas agendadas');
+    expect(message.body).toBe(
+      'Hola DANIEL CASTANO Estas son tus citas agendadas',
+    );
     expect(message.sections[0].rows).toHaveLength(1);
   });
 });

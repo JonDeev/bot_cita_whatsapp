@@ -3,7 +3,9 @@ import { WaitingDocumentHandler } from './waiting-document.handler';
 
 describe('WaitingDocumentHandler', () => {
   it('moves to birth date state when document is valid', async () => {
-    const handler = new WaitingDocumentHandler(new PatientIdentityInputNormalizerService());
+    const handler = new WaitingDocumentHandler(
+      new PatientIdentityInputNormalizerService(),
+    );
 
     const result = await handler.handle(
       {
@@ -28,6 +30,8 @@ describe('WaitingDocumentHandler', () => {
     );
 
     expect(result.nextState).toBe('WAITING_BIRTH_DATE');
-    expect(result.nextContext?.patientValidation?.documentNumber).toBe('1234567');
+    expect(result.nextContext?.patientValidation?.documentNumber).toBe(
+      '1234567',
+    );
   });
 });

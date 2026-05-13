@@ -14,8 +14,12 @@ export class RedisConversationSessionRepository implements ConversationSessionRe
     private readonly conversationConfigService: ConversationConfigService,
   ) {}
 
-  async findByKey(conversationKey: string): Promise<ConversationSession | null> {
-    const payload = await this.redisService.get(this.buildStorageKey(conversationKey));
+  async findByKey(
+    conversationKey: string,
+  ): Promise<ConversationSession | null> {
+    const payload = await this.redisService.get(
+      this.buildStorageKey(conversationKey),
+    );
     if (!payload) {
       return null;
     }

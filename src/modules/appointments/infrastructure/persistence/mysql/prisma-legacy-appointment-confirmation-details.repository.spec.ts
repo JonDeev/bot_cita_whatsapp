@@ -17,7 +17,9 @@ describe('PrismaLegacyAppointmentConfirmationDetailsRepository', () => {
       $queryRaw: jest.fn(),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyAppointmentConfirmationDetailsRepository(prisma);
+    const repository = new PrismaLegacyAppointmentConfirmationDetailsRepository(
+      prisma,
+    );
     const patient = await repository.findPatientById(98);
 
     expect(patient).toEqual({
@@ -47,7 +49,9 @@ describe('PrismaLegacyAppointmentConfirmationDetailsRepository', () => {
       ]),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyAppointmentConfirmationDetailsRepository(prisma);
+    const repository = new PrismaLegacyAppointmentConfirmationDetailsRepository(
+      prisma,
+    );
     const details = await repository.findAssignedAppointmentBySlotRef('101');
 
     expect(details).toEqual({

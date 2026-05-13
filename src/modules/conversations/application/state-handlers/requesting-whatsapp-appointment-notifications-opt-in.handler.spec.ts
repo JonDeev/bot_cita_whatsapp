@@ -96,12 +96,17 @@ describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
       },
     );
 
-    expect(result.nextState).toBe('REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN');
+    expect(result.nextState).toBe(
+      'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+    );
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_buttons',
       buttons: [
         { id: 'appointment_notifications_opt_in:accept', title: 'Si autorizo' },
-        { id: 'appointment_notifications_opt_in:decline', title: 'No autorizo' },
+        {
+          id: 'appointment_notifications_opt_in:decline',
+          title: 'No autorizo',
+        },
       ],
     });
   });

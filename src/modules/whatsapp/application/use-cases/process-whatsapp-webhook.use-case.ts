@@ -55,28 +55,43 @@ export class ProcessWhatsappWebhookUseCase {
     }
 
     const receivedAt = new Date().toISOString();
-    const normalizedEvents = this.payloadParser.parse(input.payload, receivedAt);
-    const payloadHash = createHash('sha256').update(input.rawBody).digest('hex');
+    const normalizedEvents = this.payloadParser.parse(
+      input.payload,
+      receivedAt,
+    );
+    const payloadHash = createHash('sha256')
+      .update(input.rawBody)
+      .digest('hex');
 
     for (const event of normalizedEvents) {
       const idempotencyKey = this.idempotencyKeyFactory.create(event);
-      const providerOccurredAt = this.resolveProviderOccurredAt(event, receivedAt);
+      const providerOccurredAt = this.resolveProviderOccurredAt(
+        event,
+        receivedAt,
+      );
       const persistedEvent = await this.webhookInboxRepository.saveIfFirstSeen({
         deduplicationKey: idempotencyKey,
         providerMessageId: event.messageId,
         eventKind: event.kind,
         phoneNumberId: event.phoneNumberId ?? null,
         participantPhone: this.resolveParticipantPhone(event),
-        messageType: event.kind === 'incoming_message_received' ? event.messageType : null,
+        messageType:
+          event.kind === 'incoming_message_received' ? event.messageType : null,
         interactiveReplyId:
-          event.kind === 'incoming_message_received' ? event.interactiveReplyId ?? null : null,
+          event.kind === 'incoming_message_received'
+            ? (event.interactiveReplyId ?? null)
+            : null,
         contextMessageId:
-          event.kind === 'incoming_message_received' ? event.contextMessageId ?? null : null,
+          event.kind === 'incoming_message_received'
+            ? (event.contextMessageId ?? null)
+            : null,
         providerOccurredAt,
         receivedAt: event.receivedAt ?? receivedAt,
         signatureValid: true,
         payloadHash,
-        payload: this.whatsappConfig.shouldStoreWebhookPayloads() ? input.payload : null,
+        payload: this.whatsappConfig.shouldStoreWebhookPayloads()
+          ? input.payload
+          : null,
       });
 
       if (!persistedEvent.created) {
@@ -118,14 +133,20 @@ export class ProcessWhatsappWebhookUseCase {
 
       try {
         await this.orchestrator.handleEvents([event]);
-        await this.markWebhookEvent(idempotencyKey, 'PROCESSED', new Date().toISOString());
+        await this.markWebhookEvent(
+          idempotencyKey,
+          'PROCESSED',
+          new Date().toISOString(),
+        );
       } catch (error) {
         await this.markWebhookEvent(
           idempotencyKey,
           'FAILED',
           new Date().toISOString(),
           null,
-          error instanceof Error ? error.message : 'Unknown webhook processing failure.',
+          error instanceof Error
+            ? error.message
+            : 'Unknown webhook processing failure.',
         );
         throw error;
       }
@@ -148,7 +169,10 @@ export class ProcessWhatsappWebhookUseCase {
     });
   }
 
-  private resolveProviderOccurredAt(event: NormalizedWhatsappEvent, fallback: string): string {
+  private resolveProviderOccurredAt(
+    event: NormalizedWhatsappEvent,
+    fallback: string,
+  ): string {
     const milliseconds = Number(event.timestamp) * 1000;
     if (!Number.isFinite(milliseconds)) {
       return fallback;
@@ -157,7 +181,9 @@ export class ProcessWhatsappWebhookUseCase {
     return new Date(milliseconds).toISOString();
   }
 
-  private resolveParticipantPhone(event: NormalizedWhatsappEvent): string | null {
+  private resolveParticipantPhone(
+    event: NormalizedWhatsappEvent,
+  ): string | null {
     if (event.kind === 'incoming_message_received') {
       return event.from;
     }
@@ -165,7 +191,9 @@ export class ProcessWhatsappWebhookUseCase {
     return event.recipientId;
   }
 
-  private resolveStaleRejectionReason(event: NormalizedWhatsappEvent): string | null {
+  private resolveStaleRejectionReason(
+    event: NormalizedWhatsappEvent,
+  ): string | null {
     if (event.kind !== 'incoming_message_received') {
       return null;
     }
@@ -190,7 +218,10 @@ export class ProcessWhatsappWebhookUseCase {
       return null;
     }
 
-    const ageSeconds = Math.max(0, Math.floor((receivedAt - providerOccurredAt) / 1000));
+    const ageSeconds = Math.max(
+      0,
+      Math.floor((receivedAt - providerOccurredAt) / 1000),
+    );
     if (ageSeconds <= maxAgeSeconds) {
       return null;
     }

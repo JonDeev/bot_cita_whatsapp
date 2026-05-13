@@ -28,7 +28,9 @@ describe('AppointmentReschedulingTimeSelectionService', () => {
           originalAppointmentTimeHHmm: '11:40',
         },
         specialtySelection: {
-          offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+          offeredSpecialties: [
+            { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+          ],
           selectedSpecialty: {
             code: '890201',
             name: 'MEDICINA GENERAL',
@@ -37,7 +39,9 @@ describe('AppointmentReschedulingTimeSelectionService', () => {
         },
         appointmentDateSelection: {
           scope: 'SPECIALTY',
-          specialtyOfferedDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
+          specialtyOfferedDates: [
+            { isoDate: '2026-05-30', displayDate: '30/05/2026' },
+          ],
           offeredDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
           selectedDateIso: '2026-05-30',
         },
@@ -56,7 +60,9 @@ describe('AppointmentReschedulingTimeSelectionService', () => {
   it('returns TIME_NO_LONGER_AVAILABLE when selected time is exhausted', async () => {
     const service = new AppointmentReschedulingTimeSelectionService(
       {
-        execute: jest.fn().mockResolvedValue({ status: 'TIME_NO_LONGER_AVAILABLE' }),
+        execute: jest
+          .fn()
+          .mockResolvedValue({ status: 'TIME_NO_LONGER_AVAILABLE' }),
       } as unknown as RescheduleAssignedAppointmentByPatientUseCase,
       {
         execute: jest.fn(),

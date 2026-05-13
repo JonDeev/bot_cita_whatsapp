@@ -1,4 +1,10 @@
-import { Controller, Get, Headers, Query, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  Query,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   GetSatisfactionSurveyMetricsResult,
   GetSatisfactionSurveyMetricsUseCase,

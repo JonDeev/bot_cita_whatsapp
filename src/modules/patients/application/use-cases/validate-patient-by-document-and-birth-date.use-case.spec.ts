@@ -18,8 +18,8 @@ describe('ValidatePatientByDocumentAndBirthDateUseCase', () => {
     };
 
     const useCase = new ValidatePatientByDocumentAndBirthDateUseCase(
-      patientValidationRepository as any,
-      contractedEpsRepository as any,
+      patientValidationRepository,
+      contractedEpsRepository,
     );
 
     const result = await useCase.execute({
@@ -53,8 +53,8 @@ describe('ValidatePatientByDocumentAndBirthDateUseCase', () => {
     };
 
     const useCase = new ValidatePatientByDocumentAndBirthDateUseCase(
-      patientValidationRepository as any,
-      contractedEpsRepository as any,
+      patientValidationRepository,
+      contractedEpsRepository,
     );
 
     const result = await useCase.execute({

@@ -4,10 +4,10 @@
     "patientLegacyUserId": 700001,
     "patientName": "Paciente Prueba",
     "patientPhone": "3043477809",
-    "appointmentDateIso": "2026-05-11",
-    "appointmentTimeHhmm": "15:00",
+    "appointmentDateIso": "2026-05-12",
+    "appointmentTimeHhmm": "07:40",
     "specialtyName": "Medicina General",
-    "doctorName": "Dr. Prueba",
+    "doctorName": "Dr. Tiburcio Prueba",
     "siteName": "Sede Central"
   }
 ]

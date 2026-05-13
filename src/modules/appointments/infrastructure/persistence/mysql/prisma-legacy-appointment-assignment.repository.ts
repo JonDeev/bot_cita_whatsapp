@@ -9,12 +9,12 @@ import type {
 } from '../../../domain/ports/appointment-assignment.repository';
 
 @Injectable()
-export class PrismaLegacyAppointmentAssignmentRepository
-  implements AppointmentAssignmentRepository
-{
+export class PrismaLegacyAppointmentAssignmentRepository implements AppointmentAssignmentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async assignSlotIfAvailable(command: AssignAvailableSlotCommand): Promise<boolean> {
+  async assignSlotIfAvailable(
+    command: AssignAvailableSlotCommand,
+  ): Promise<boolean> {
     const slotId = this.parseSlotRef(command.slotRef);
     if (slotId === null) {
       return false;
@@ -43,9 +43,13 @@ export class PrismaLegacyAppointmentAssignmentRepository
   ): Promise<AppointmentSlotCandidate | null> {
     const excludedSlotId = this.parseSlotRef(filters.excludeSlotRef);
     const excludeCondition =
-      excludedSlotId === null ? Prisma.empty : Prisma.sql`AND a.idagenda <> ${excludedSlotId}`;
+      excludedSlotId === null
+        ? Prisma.empty
+        : Prisma.sql`AND a.idagenda <> ${excludedSlotId}`;
 
-    const rows = await this.prisma.$queryRaw<Array<{ slotRef: number | null }>>(Prisma.sql`
+    const rows = await this.prisma.$queryRaw<
+      Array<{ slotRef: number | null }>
+    >(Prisma.sql`
       SELECT a.idagenda AS slotRef
       FROM agenda a
       INNER JOIN especialidad_empleados ee

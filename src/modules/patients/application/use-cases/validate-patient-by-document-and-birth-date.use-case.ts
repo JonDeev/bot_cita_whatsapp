@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CONTRACTED_EPS_REPOSITORY, PATIENT_VALIDATION_REPOSITORY } from '../../domain/patients.tokens';
+import {
+  CONTRACTED_EPS_REPOSITORY,
+  PATIENT_VALIDATION_REPOSITORY,
+} from '../../domain/patients.tokens';
 import type { ContractedEpsRepository } from '../../domain/ports/contracted-eps.repository';
 import type { PatientValidationRepository } from '../../domain/ports/patient-validation.repository';
 
@@ -38,10 +41,11 @@ export class ValidatePatientByDocumentAndBirthDateUseCase {
   async execute(
     input: ValidatePatientByDocumentAndBirthDateInput,
   ): Promise<ValidatePatientByDocumentAndBirthDateResult> {
-    const patientRecord = await this.patientValidationRepository.findByDocumentAndBirthDate(
-      input.documentNumber,
-      input.birthDateIso,
-    );
+    const patientRecord =
+      await this.patientValidationRepository.findByDocumentAndBirthDate(
+        input.documentNumber,
+        input.birthDateIso,
+      );
 
     if (!patientRecord) {
       return { isValid: false, reason: 'NOT_FOUND_OR_MISMATCH' };
@@ -63,7 +67,8 @@ export class ValidatePatientByDocumentAndBirthDateUseCase {
       return { isValid: false, reason: 'NOT_FOUND_OR_MISMATCH' };
     }
 
-    const isAllowedEps = await this.contractedEpsRepository.isCodeAllowed(epsCode);
+    const isAllowedEps =
+      await this.contractedEpsRepository.isCodeAllowed(epsCode);
     if (!isAllowedEps) {
       return { isValid: false, reason: 'EPS_NOT_ALLOWED' };
     }

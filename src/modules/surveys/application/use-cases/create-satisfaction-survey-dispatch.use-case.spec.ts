@@ -33,7 +33,9 @@ describe('CreateSatisfactionSurveyDispatchUseCase', () => {
         },
       }),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new CreateSatisfactionSurveyDispatchUseCase(
       repository as any,
@@ -67,14 +69,17 @@ describe('CreateSatisfactionSurveyDispatchUseCase', () => {
         dedupeKey: 'survey:91:2026-05-10',
       }),
     );
-    expect(auditService.record).toHaveBeenCalledWith('survey.dispatch.created', {
-      dispatchId: 11,
-      patientLegacyUserId: 91,
-      surveyDate: '2026-05-10',
-      appointmentCount: 1,
-      status: 'PENDING',
-      wasCreated: true,
-    });
+    expect(auditService.record).toHaveBeenCalledWith(
+      'survey.dispatch.created',
+      {
+        dispatchId: 11,
+        patientLegacyUserId: 91,
+        surveyDate: '2026-05-10',
+        appointmentCount: 1,
+        status: 'PENDING',
+        wasCreated: true,
+      },
+    );
     expect(result.dispatch.id).toBe(11);
   });
 });

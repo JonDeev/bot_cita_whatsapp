@@ -22,7 +22,10 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       findByKey: jest.Mock;
       save: jest.Mock;
     },
-    conversationPersistenceRepository: { findByKey: jest.Mock; upsert: jest.Mock },
+    conversationPersistenceRepository: {
+      findByKey: jest.Mock;
+      upsert: jest.Mock;
+    },
     conversationMessageRepository: {
       saveInbound: jest.Mock;
       saveOutbound: jest.Mock;
@@ -32,9 +35,9 @@ describe('HandleIncomingConversationMessageUseCase', () => {
     auditService: AuditService,
   ): HandleIncomingConversationMessageUseCase {
     return new HandleIncomingConversationMessageUseCase(
-      repository as any,
-      conversationPersistenceRepository as any,
-      conversationMessageRepository as any,
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
       new ConversationKeyFactory(),
       conversationStateHandlerResolver as any,
       new ConversationNavigationService(),
@@ -44,7 +47,9 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         new AssignedAppointmentListFactory(),
         new AssignedAppointmentConsultationDetailsMessageFactory(),
         new AssignedAppointmentDetailsMessageFactory(),
-        new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
+        new AppointmentDoctorListFactory(
+          new AppointmentDoctorListPresenterService(),
+        ),
         new AppointmentDateListFactory(),
         new AppointmentTimeListFactory(),
         new AppointmentNotificationOptInMessageFactory(),
@@ -100,7 +105,9 @@ describe('HandleIncomingConversationMessageUseCase', () => {
     expect(conversationPersistenceRepository.upsert).toHaveBeenCalledTimes(1);
     expect(conversationMessageRepository.saveInbound).toHaveBeenCalledTimes(1);
     expect(result.outboundMessages).toHaveLength(1);
-    expect(result.outboundMessages[0]).toMatchObject({ type: 'interactive_list' });
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_list',
+    });
   });
 
   it('does not append navigation buttons for birth date prompt step', async () => {
@@ -277,7 +284,9 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       phoneNumberId: '123',
     });
 
-    expect(result.outboundMessages[0]).toMatchObject({ type: 'interactive_list' });
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_list',
+    });
     expect(repository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'BOT_ACTIVE',
@@ -297,12 +306,18 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         status: 'BOT_ACTIVE',
         context: {
           specialtySelection: {
-            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
           },
           appointmentDateSelection: {
             scope: 'SPECIALTY',
-            specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
-            offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+            specialtyOfferedDates: [
+              { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
+            offeredDates: [
+              { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
           },
         },
         createdAt: '2026-05-04T10:00:00.000Z',
@@ -444,7 +459,9 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         state: 'WAITING_BIRTH_DATE',
       }),
     );
-    expect(conversationPersistenceRepository.findByKey).toHaveBeenCalledTimes(1);
+    expect(conversationPersistenceRepository.findByKey).toHaveBeenCalledTimes(
+      1,
+    );
     expect(result.outboundMessages[0]).toMatchObject({ type: 'text' });
   });
 

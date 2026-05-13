@@ -19,7 +19,10 @@ describe('PrismaPatientSpecialtyEligibilityRepository', () => {
       },
     } as unknown as PrismaBotService;
 
-    const repository = new PrismaPatientSpecialtyEligibilityRepository(prisma, prismaBot);
+    const repository = new PrismaPatientSpecialtyEligibilityRepository(
+      prisma,
+      prismaBot,
+    );
     const specialties = await repository.findEligibleSpecialties({
       epsCode: 'EPS042',
       userType: '01',

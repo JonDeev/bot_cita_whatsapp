@@ -14,7 +14,9 @@ export function buildAppointmentTimeOptionId(slotRef: string): string {
   return `${APPOINTMENT_TIME_OPTION_PREFIX}${slotRef}`;
 }
 
-export function parseAppointmentTimeOptionId(optionId: string): ParsedAppointmentTimeOption | null {
+export function parseAppointmentTimeOptionId(
+  optionId: string,
+): ParsedAppointmentTimeOption | null {
   if (optionId === APPOINTMENT_TIME_SHOW_MORE_OPTION_ID) {
     return { kind: 'show_more' };
   }

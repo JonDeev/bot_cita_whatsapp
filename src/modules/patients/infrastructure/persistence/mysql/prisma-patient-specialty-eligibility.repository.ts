@@ -10,9 +10,7 @@ import type {
 } from '../../../domain/ports/patient-specialty-eligibility.repository';
 
 @Injectable()
-export class PrismaPatientSpecialtyEligibilityRepository
-  implements PatientSpecialtyEligibilityRepository
-{
+export class PrismaPatientSpecialtyEligibilityRepository implements PatientSpecialtyEligibilityRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly prismaBot: PrismaBotService,
@@ -27,7 +25,10 @@ export class PrismaPatientSpecialtyEligibilityRepository
         userTypeCode: filters.userType,
         isActive: true,
         sexRule: {
-          in: [BotSexRule.ANY, filters.sex === 'H' ? BotSexRule.H : BotSexRule.M],
+          in: [
+            BotSexRule.ANY,
+            filters.sex === 'H' ? BotSexRule.H : BotSexRule.M,
+          ],
         },
       },
       select: {
@@ -36,7 +37,9 @@ export class PrismaPatientSpecialtyEligibilityRepository
     });
 
     const specialtyCodes = Array.from(
-      new Set(specialtyRules.map((rule) => rule.specialtyCode.trim()).filter(Boolean)),
+      new Set(
+        specialtyRules.map((rule) => rule.specialtyCode.trim()).filter(Boolean),
+      ),
     );
 
     if (specialtyCodes.length === 0) {
@@ -59,7 +62,10 @@ export class PrismaPatientSpecialtyEligibilityRepository
          OR TRIM(CUPS) IN (${Prisma.join(specialtyCodes)})
     `);
 
-    const specialtyByCode = new Map<string, (typeof specialtyCatalog)[number]>();
+    const specialtyByCode = new Map<
+      string,
+      (typeof specialtyCatalog)[number]
+    >();
     for (const specialty of specialtyCatalog) {
       const codeKey = specialty.codigoEspecialidad?.trim();
       const cupsKey = specialty.cups?.trim();
@@ -90,7 +96,9 @@ export class PrismaPatientSpecialtyEligibilityRepository
       });
     }
 
-    return eligibleSpecialties.sort((left, right) => left.name.localeCompare(right.name, 'es'));
+    return eligibleSpecialties.sort((left, right) =>
+      left.name.localeCompare(right.name, 'es'),
+    );
   }
 
   private buildDisplayName(rawName: string | null): string {

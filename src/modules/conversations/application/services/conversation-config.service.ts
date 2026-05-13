@@ -14,7 +14,9 @@ export class ConversationConfigService {
   }
 
   shouldRestoreSessionFromPersistence(): boolean {
-    const rawValue = (process.env.WHATSAPP_RESTORE_SESSION_FROM_PERSISTENCE ?? '').trim();
+    const rawValue = (
+      process.env.WHATSAPP_RESTORE_SESSION_FROM_PERSISTENCE ?? ''
+    ).trim();
     if (!rawValue) {
       return true;
     }

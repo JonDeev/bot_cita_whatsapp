@@ -5,12 +5,19 @@ import { SendWhatsappInteractiveButtonsMessageUseCase } from './send-whatsapp-in
 describe('SendWhatsappInteractiveButtonsMessageUseCase', () => {
   it('sends interactive buttons and records success audit', async () => {
     const sender = {
-      sendInteractiveButtonsMessage: jest.fn().mockResolvedValue({ messageId: 'wamid-789' }),
+      sendInteractiveButtonsMessage: jest
+        .fn()
+        .mockResolvedValue({ messageId: 'wamid-789' }),
       sendFlowTemplateMessage: jest.fn(),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
-    const useCase = new SendWhatsappInteractiveButtonsMessageUseCase(sender as any, auditService);
+    const useCase = new SendWhatsappInteractiveButtonsMessageUseCase(
+      sender as any,
+      auditService,
+    );
 
     const result = await useCase.execute({
       to: '573001112233',
@@ -39,7 +46,10 @@ describe('SendWhatsappInteractiveButtonsMessageUseCase', () => {
       sendFlowTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
-    const useCase = new SendWhatsappInteractiveButtonsMessageUseCase(sender as any, auditService);
+    const useCase = new SendWhatsappInteractiveButtonsMessageUseCase(
+      sender as any,
+      auditService,
+    );
 
     await expect(
       useCase.execute({

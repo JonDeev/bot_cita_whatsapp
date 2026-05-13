@@ -17,11 +17,11 @@ describe('RescheduleAssignedAppointmentByPatientUseCase', () => {
     const useCase = new RescheduleAssignedAppointmentByPatientUseCase(
       {
         rescheduleAssignedFutureAppointmentByPatient: jest.fn(),
-      } as unknown as AppointmentReschedulingRepository,
+      },
       {
         findPatientById: jest.fn(),
         findAssignedAppointmentBySlotRef: jest.fn(),
-      } as unknown as AppointmentConfirmationDetailsRepository,
+      },
       new AppointmentTimePresenterService(),
     );
 
@@ -70,11 +70,13 @@ describe('RescheduleAssignedAppointmentByPatientUseCase', () => {
 
   it('returns rescheduled details when repository succeeds', async () => {
     const reschedulingRepository: AppointmentReschedulingRepository = {
-      rescheduleAssignedFutureAppointmentByPatient: jest.fn().mockResolvedValue({
-        status: 'RESCHEDULED',
-        assignedSlotRef: '202',
-        usedFallbackSlot: true,
-      }),
+      rescheduleAssignedFutureAppointmentByPatient: jest
+        .fn()
+        .mockResolvedValue({
+          status: 'RESCHEDULED',
+          assignedSlotRef: '202',
+          usedFallbackSlot: true,
+        }),
     };
     const confirmationRepository: AppointmentConfirmationDetailsRepository = {
       findPatientById: jest.fn().mockResolvedValue(patient),
@@ -116,11 +118,13 @@ describe('RescheduleAssignedAppointmentByPatientUseCase', () => {
   it('returns assigned slot not found when confirmation details query fails', async () => {
     const useCase = new RescheduleAssignedAppointmentByPatientUseCase(
       {
-        rescheduleAssignedFutureAppointmentByPatient: jest.fn().mockResolvedValue({
-          status: 'RESCHEDULED',
-          assignedSlotRef: '202',
-          usedFallbackSlot: false,
-        }),
+        rescheduleAssignedFutureAppointmentByPatient: jest
+          .fn()
+          .mockResolvedValue({
+            status: 'RESCHEDULED',
+            assignedSlotRef: '202',
+            usedFallbackSlot: false,
+          }),
       },
       {
         findPatientById: jest.fn().mockResolvedValue(patient),

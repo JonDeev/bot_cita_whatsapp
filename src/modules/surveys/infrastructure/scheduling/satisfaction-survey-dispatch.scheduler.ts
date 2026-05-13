@@ -1,12 +1,21 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { RedisService } from '../../../../shared/infrastructure/redis/redis.service';
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from '../../application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
 import { SatisfactionSurveyDispatchWindowService } from '../../application/services/satisfaction-survey-dispatch-window.service';
 import { SatisfactionSurveyDispatchSchedulerConfigService } from './satisfaction-survey-dispatch-scheduler-config.service';
 
 @Injectable()
-export class SatisfactionSurveyDispatchScheduler implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(SatisfactionSurveyDispatchScheduler.name);
+export class SatisfactionSurveyDispatchScheduler
+  implements OnModuleInit, OnModuleDestroy
+{
+  private readonly logger = new Logger(
+    SatisfactionSurveyDispatchScheduler.name,
+  );
   private timer: NodeJS.Timeout | null = null;
 
   constructor(
@@ -18,7 +27,9 @@ export class SatisfactionSurveyDispatchScheduler implements OnModuleInit, OnModu
 
   onModuleInit(): void {
     if (!this.configService.isEnabled()) {
-      this.logger.log('Half-hourly satisfaction survey dispatcher is disabled by configuration.');
+      this.logger.log(
+        'Half-hourly satisfaction survey dispatcher is disabled by configuration.',
+      );
       return;
     }
 

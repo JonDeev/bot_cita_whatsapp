@@ -50,7 +50,8 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
   private static readonly TIME_HHMM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
   private static readonly TIMEZONE = 'America/Bogota';
   private static readonly DEFAULT_PATIENT_PHONE = '0000';
-  private static readonly DEFAULT_PROFESSIONAL_NAME = 'PROFESIONAL POR CONFIRMAR';
+  private static readonly DEFAULT_PROFESSIONAL_NAME =
+    'PROFESIONAL POR CONFIRMAR';
   private static readonly DEFAULT_SITE_NAME = 'Santa Marta';
   private static readonly DEFAULT_SITE_ADDRESS = 'Direccion por confirmar';
 
@@ -74,9 +75,10 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
     }
 
     try {
-      const patientDetails = await this.appointmentConfirmationDetailsRepository.findPatientById(
-        normalizedInput.patientId,
-      );
+      const patientDetails =
+        await this.appointmentConfirmationDetailsRepository.findPatientById(
+          normalizedInput.patientId,
+        );
       if (!patientDetails) {
         return {
           status: 'TECHNICAL_FAILURE',
@@ -86,21 +88,24 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
 
       const nowParts = this.formatNowInBogota(normalizedInput.now);
       const rescheduleResult =
-        await this.appointmentReschedulingRepository.rescheduleAssignedFutureAppointmentByPatient({
-          patientUserId: String(patientDetails.userId),
-          patientPhone: this.normalizePhone(patientDetails.phone),
-          originalSlotRef: normalizedInput.originalSlotRef,
-          preferredNewSlotRef: normalizedInput.preferredNewSlotRef,
-          specialtyCups: normalizedInput.specialtyCups,
-          appointmentDateIso: normalizedInput.appointmentDateIso,
-          appointmentTimeHHmm: normalizedInput.appointmentTimeHHmm,
-          currentDateIso: nowParts.dateIso,
-          currentTimeHHmm: nowParts.timeHHmm,
-          requestDateIso: nowParts.dateIso,
-          canceledDateIso: nowParts.dateIso,
-          requiredSiteId: RescheduleAssignedAppointmentByPatientUseCase.BOT_ENABLED_SITE_ID,
-          doctorEmployeeCode: normalizedInput.doctorEmployeeCode,
-        });
+        await this.appointmentReschedulingRepository.rescheduleAssignedFutureAppointmentByPatient(
+          {
+            patientUserId: String(patientDetails.userId),
+            patientPhone: this.normalizePhone(patientDetails.phone),
+            originalSlotRef: normalizedInput.originalSlotRef,
+            preferredNewSlotRef: normalizedInput.preferredNewSlotRef,
+            specialtyCups: normalizedInput.specialtyCups,
+            appointmentDateIso: normalizedInput.appointmentDateIso,
+            appointmentTimeHHmm: normalizedInput.appointmentTimeHHmm,
+            currentDateIso: nowParts.dateIso,
+            currentTimeHHmm: nowParts.timeHHmm,
+            requestDateIso: nowParts.dateIso,
+            canceledDateIso: nowParts.dateIso,
+            requiredSiteId:
+              RescheduleAssignedAppointmentByPatientUseCase.BOT_ENABLED_SITE_ID,
+            doctorEmployeeCode: normalizedInput.doctorEmployeeCode,
+          },
+        );
 
       if (rescheduleResult.status === 'TIME_NO_LONGER_AVAILABLE') {
         return { status: 'TIME_NO_LONGER_AVAILABLE' };
@@ -150,9 +155,10 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
         patientFullName: this.buildPatientFullName(patientDetails),
         appointmentDateIso: assignedAppointment.appointmentDateIso,
         appointmentTimeHHmm: assignedAppointment.appointmentTimeHHmm,
-        appointmentDisplayTime: this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
-          assignedAppointment.appointmentTimeHHmm,
-        ),
+        appointmentDisplayTime:
+          this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
+            assignedAppointment.appointmentTimeHHmm,
+          ),
         professionalName:
           assignedAppointment.professionalName?.trim() ||
           RescheduleAssignedAppointmentByPatientUseCase.DEFAULT_PROFESSIONAL_NAME,
@@ -167,21 +173,17 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
     };
   }
 
-  private normalizeInput(
-    input: RescheduleAssignedAppointmentByPatientInput,
-  ):
-    | {
-        patientId: number;
-        originalSlotRef: string;
-        specialtyName: string;
-        specialtyCups: string;
-        appointmentDateIso: string;
-        appointmentTimeHHmm: string;
-        preferredNewSlotRef: string;
-        doctorEmployeeCode?: string;
-        now: Date;
-      }
-    | null {
+  private normalizeInput(input: RescheduleAssignedAppointmentByPatientInput): {
+    patientId: number;
+    originalSlotRef: string;
+    specialtyName: string;
+    specialtyCups: string;
+    appointmentDateIso: string;
+    appointmentTimeHHmm: string;
+    preferredNewSlotRef: string;
+    doctorEmployeeCode?: string;
+    now: Date;
+  } | null {
     const patientId = input.patientId ?? null;
     const originalSlotRef = input.originalSlotRef?.trim() ?? '';
     const specialtyName = input.specialtyName?.trim() ?? '';
@@ -200,7 +202,9 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
       !specialtyName ||
       !specialtyCups ||
       !preferredNewSlotRef ||
-      !RescheduleAssignedAppointmentByPatientUseCase.ISO_DATE_PATTERN.test(appointmentDateIso) ||
+      !RescheduleAssignedAppointmentByPatientUseCase.ISO_DATE_PATTERN.test(
+        appointmentDateIso,
+      ) ||
       !RescheduleAssignedAppointmentByPatientUseCase.TIME_HHMM_PATTERN.test(
         appointmentTimeHHmm,
       )
@@ -247,8 +251,12 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
     const timeHHmm = `${normalizedParts.hour}:${normalizedParts.minute}`;
 
     if (
-      !RescheduleAssignedAppointmentByPatientUseCase.ISO_DATE_PATTERN.test(dateIso) ||
-      !RescheduleAssignedAppointmentByPatientUseCase.TIME_HHMM_PATTERN.test(timeHHmm)
+      !RescheduleAssignedAppointmentByPatientUseCase.ISO_DATE_PATTERN.test(
+        dateIso,
+      ) ||
+      !RescheduleAssignedAppointmentByPatientUseCase.TIME_HHMM_PATTERN.test(
+        timeHHmm,
+      )
     ) {
       throw new Error('Failed to compute valid Bogota date/time.');
     }
@@ -261,10 +269,15 @@ export class RescheduleAssignedAppointmentByPatientUseCase {
 
   private normalizePhone(phone: string | null): string {
     const normalizedPhone = phone?.trim() ?? '';
-    return normalizedPhone || RescheduleAssignedAppointmentByPatientUseCase.DEFAULT_PATIENT_PHONE;
+    return (
+      normalizedPhone ||
+      RescheduleAssignedAppointmentByPatientUseCase.DEFAULT_PATIENT_PHONE
+    );
   }
 
-  private buildPatientFullName(patientDetails: PatientAppointmentConfirmationDetails): string {
+  private buildPatientFullName(
+    patientDetails: PatientAppointmentConfirmationDetails,
+  ): string {
     const fullName = [
       patientDetails.firstName,
       patientDetails.secondName,

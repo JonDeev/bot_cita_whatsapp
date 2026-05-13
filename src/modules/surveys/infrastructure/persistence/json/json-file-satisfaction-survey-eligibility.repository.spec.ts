@@ -36,10 +36,14 @@ describe('JsonFileSatisfactionSurveyEligibilityRepository', () => {
     );
 
     const configService = {
-      getJsonFilePath: jest.fn(() => 'ops/fixtures/surveys/eligibility-test.json'),
+      getJsonFilePath: jest.fn(
+        () => 'ops/fixtures/surveys/eligibility-test.json',
+      ),
     } as unknown as SatisfactionSurveyEligibilitySourceConfigService;
 
-    const repository = new JsonFileSatisfactionSurveyEligibilityRepository(configService);
+    const repository = new JsonFileSatisfactionSurveyEligibilityRepository(
+      configService,
+    );
     const rows = await repository.findEligibleAppointmentsByWindow({
       surveyDateIso: '2026-05-11',
       windowStartHHmm: '15:00',

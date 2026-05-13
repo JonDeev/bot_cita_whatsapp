@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ListFutureAssignedAppointmentsByPatientUseCase } from '../../../appointments/application/use-cases/list-future-assigned-appointments-by-patient.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { ResolveAssignedDispensaryByPatientUseCase } from '../../../patients/application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from '../../../patients/application/use-cases/resolve-eligible-specialties-by-patient.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
+import { AssignedDispensaryMessageFactory } from '../services/assigned-dispensary-message.factory';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { NAVIGATION_OPTION_IDS } from '../services/conversation-navigation.service';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
@@ -19,22 +21,30 @@ export class PatientValidatedHandler implements ConversationStateHandler {
 
   constructor(
     private readonly listFutureAssignedAppointmentsByPatient: ListFutureAssignedAppointmentsByPatientUseCase,
+    private readonly resolveAssignedDispensaryByPatient: ResolveAssignedDispensaryByPatientUseCase,
     private readonly resolveEligibleSpecialtiesByPatient: ResolveEligibleSpecialtiesByPatientUseCase,
     private readonly assignedAppointmentListFactory: AssignedAppointmentListFactory,
+    private readonly assignedDispensaryMessageFactory: AssignedDispensaryMessageFactory,
     private readonly specialtyListFactory: SpecialtyListFactory,
     private readonly auditService: AuditService,
   ) {}
 
   async handle(
     session: ConversationSession,
-    _event: NormalizedWhatsappEvent,
+    event: NormalizedWhatsappEvent,
   ): Promise<ConversationStateHandlerResult> {
+    void event;
+
     if (session.context?.flowIntent === 'CHECK_APPOINTMENTS') {
       return this.handleCheckAppointmentsIntent(session);
     }
 
     if (session.context?.flowIntent === 'CANCEL_OR_RESCHEDULE') {
       return this.handleCancelOrRescheduleIntent(session);
+    }
+
+    if (session.context?.flowIntent === 'CHECK_DISPENSARY') {
+      return this.handleCheckDispensaryIntent(session);
     }
 
     const patientValidationContext = session.context?.patientValidation;
@@ -58,11 +68,12 @@ export class PatientValidatedHandler implements ConversationStateHandler {
       };
     }
 
-    const specialtyResult = await this.resolveEligibleSpecialtiesByPatient.execute({
-      epsCode,
-      userType,
-      sex,
-    });
+    const specialtyResult =
+      await this.resolveEligibleSpecialtiesByPatient.execute({
+        epsCode,
+        userType,
+        sex,
+      });
 
     if (!specialtyResult.isEligible) {
       await this.auditService.record('specialty.eligibility.empty', {
@@ -113,17 +124,22 @@ export class PatientValidatedHandler implements ConversationStateHandler {
         appointmentDateSelection: undefined,
         appointmentTimeSelection: undefined,
       },
-      outboundMessages: [this.specialtyListFactory.build(specialtyResult.specialties)],
+      outboundMessages: [
+        this.specialtyListFactory.build(specialtyResult.specialties),
+      ],
     };
   }
 
   private async handleCancelOrRescheduleIntent(
     session: ConversationSession,
   ): Promise<ConversationStateHandlerResult> {
-    await this.auditService.record('conversation.cancel_or_reschedule.started', {
-      conversationKey: session.conversationKey,
-      patientId: session.context?.patientValidation?.patientId ?? null,
-    });
+    await this.auditService.record(
+      'conversation.cancel_or_reschedule.started',
+      {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+      },
+    );
 
     await this.auditService.record('appointment.assigned_list.requested', {
       conversationKey: session.conversationKey,
@@ -131,10 +147,11 @@ export class PatientValidatedHandler implements ConversationStateHandler {
       offset: 0,
     });
 
-    const listResult = await this.listFutureAssignedAppointmentsByPatient.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      offset: 0,
-    });
+    const listResult =
+      await this.listFutureAssignedAppointmentsByPatient.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        offset: 0,
+      });
 
     if (listResult.status === 'FOUND') {
       await this.auditService.record('appointment.assigned_list.resolved', {
@@ -235,10 +252,11 @@ export class PatientValidatedHandler implements ConversationStateHandler {
       offset: 0,
     });
 
-    const listResult = await this.listFutureAssignedAppointmentsByPatient.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      offset: 0,
-    });
+    const listResult =
+      await this.listFutureAssignedAppointmentsByPatient.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        offset: 0,
+      });
 
     if (listResult.status === 'FOUND') {
       await this.auditService.record('appointment.check_list.resolved', {
@@ -332,6 +350,101 @@ export class PatientValidatedHandler implements ConversationStateHandler {
           type: 'text',
           body: 'En este momento no podemos consultar tus citas agendadas. Intenta nuevamente en unos minutos desde el menu principal.',
         },
+      ],
+    };
+  }
+
+  private async handleCheckDispensaryIntent(
+    session: ConversationSession,
+  ): Promise<ConversationStateHandlerResult> {
+    const patientId = session.context?.patientValidation?.patientId ?? null;
+    await this.auditService.record('conversation.check_dispensary.started', {
+      conversationKey: session.conversationKey,
+      patientId,
+    });
+
+    const dispensaryResult =
+      await this.resolveAssignedDispensaryByPatient.execute({
+        patientId,
+      });
+
+    if (dispensaryResult.status === 'FOUND') {
+      await this.auditService.record('patient.dispensary.resolved', {
+        conversationKey: session.conversationKey,
+        patientId,
+        dispensaryId: dispensaryResult.dispensary.id,
+      });
+
+      return {
+        nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextContext: {
+          ...session.context,
+          flowIntent: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
+        outboundMessages: [
+          this.assignedDispensaryMessageFactory.buildAssigned({
+            patientFullName: dispensaryResult.patientFullName,
+            dispensaryName: dispensaryResult.dispensary.name,
+            dispensaryAddress: dispensaryResult.dispensary.address,
+            dispensaryCity: dispensaryResult.dispensary.city,
+            dispensarySchedule: dispensaryResult.dispensary.schedule,
+          }),
+        ],
+      };
+    }
+
+    if (dispensaryResult.status === 'NOT_ASSIGNED') {
+      await this.auditService.record('patient.dispensary.not_assigned', {
+        conversationKey: session.conversationKey,
+        patientId,
+      });
+
+      return {
+        nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextContext: {
+          ...session.context,
+          flowIntent: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
+        outboundMessages: [
+          this.assignedDispensaryMessageFactory.buildNotAssigned(
+            dispensaryResult.patientFullName,
+          ),
+        ],
+      };
+    }
+
+    await this.auditService.record('patient.dispensary.failed', {
+      conversationKey: session.conversationKey,
+      patientId,
+      reason: dispensaryResult.reason,
+    });
+
+    return {
+      nextState: CONVERSATION_STATES.MAIN_MENU,
+      nextContext: {
+        ...session.context,
+        flowIntent: undefined,
+        assignedAppointmentSelection: undefined,
+        appointmentReschedule: undefined,
+        specialtySelection: undefined,
+        appointmentDoctorSelection: undefined,
+        appointmentDateSelection: undefined,
+        appointmentTimeSelection: undefined,
+      },
+      outboundMessages: [
+        this.assignedDispensaryMessageFactory.buildTechnicalFailure(),
       ],
     };
   }

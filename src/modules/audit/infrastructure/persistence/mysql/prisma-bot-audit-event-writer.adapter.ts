@@ -33,7 +33,9 @@ export class PrismaBotAuditEventWriterAdapter implements AuditEventWriterPort {
     return value;
   }
 
-  private async resolveConversationId(conversationKey: string): Promise<number | null> {
+  private async resolveConversationId(
+    conversationKey: string,
+  ): Promise<number | null> {
     const conversation = await this.prismaBot.botConversation.findUnique({
       where: { conversationKey },
       select: { id: true },

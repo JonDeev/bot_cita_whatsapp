@@ -12,9 +12,7 @@ import type {
 } from '../../../domain/ports/appointment-availability.repository';
 
 @Injectable()
-export class PrismaLegacyAppointmentAvailabilityRepository
-  implements AppointmentAvailabilityRepository
-{
+export class PrismaLegacyAppointmentAvailabilityRepository implements AppointmentAvailabilityRepository {
   private static readonly BOT_ENABLED_SITE_ID = 109;
 
   constructor(private readonly prisma: PrismaService) {}
@@ -66,7 +64,9 @@ export class PrismaLegacyAppointmentAvailabilityRepository
       ? Prisma.sql`AND TRIM(a.idmedico) = ${filters.doctorEmployeeCode.trim()}`
       : Prisma.empty;
 
-    const rows = await this.prisma.$queryRaw<Array<{ dateIso: string | null }>>(Prisma.sql`
+    const rows = await this.prisma.$queryRaw<
+      Array<{ dateIso: string | null }>
+    >(Prisma.sql`
       SELECT DISTINCT
         DATE_FORMAT(a.fecha_cita, '%Y-%m-%d') AS dateIso
       FROM agenda a
@@ -110,7 +110,9 @@ export class PrismaLegacyAppointmentAvailabilityRepository
       ? Prisma.sql`AND TRIM(a.idmedico) = ${filters.doctorEmployeeCode.trim()}`
       : Prisma.empty;
 
-    const rows = await this.prisma.$queryRaw<Array<{ slotRef: number | null; timeHHmm: string | null }>>(
+    const rows = await this.prisma.$queryRaw<
+      Array<{ slotRef: number | null; timeHHmm: string | null }>
+    >(
       Prisma.sql`
         SELECT
           MIN(a.idagenda) AS slotRef,

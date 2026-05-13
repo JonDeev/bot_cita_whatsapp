@@ -93,15 +93,16 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
             throw error;
           }
 
-          const conflictedDispatch = await tx.botSurveyDispatch.findUniqueOrThrow({
-            where: {
-              patientLegacyUserId_surveyDate: {
-                patientLegacyUserId: command.patientLegacyUserId,
-                surveyDate,
+          const conflictedDispatch =
+            await tx.botSurveyDispatch.findUniqueOrThrow({
+              where: {
+                patientLegacyUserId_surveyDate: {
+                  patientLegacyUserId: command.patientLegacyUserId,
+                  surveyDate,
+                },
               },
-            },
-            select: { id: true },
-          });
+              select: { id: true },
+            });
 
           dispatchId = conflictedDispatch.id;
         }
@@ -152,7 +153,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
-  async findById(dispatchId: number): Promise<SatisfactionSurveyDispatchRecord | null> {
+  async findById(
+    dispatchId: number,
+  ): Promise<SatisfactionSurveyDispatchRecord | null> {
     const dispatch = await this.prismaBot.botSurveyDispatch.findUnique({
       where: { id: dispatchId },
       include: {
@@ -173,7 +176,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     return this.mapDispatch(dispatch);
   }
 
-  async findByFlowToken(flowToken: string): Promise<SatisfactionSurveyDispatchRecord | null> {
+  async findByFlowToken(
+    flowToken: string,
+  ): Promise<SatisfactionSurveyDispatchRecord | null> {
     const normalizedToken = flowToken.trim();
     if (!normalizedToken) {
       return null;
@@ -251,7 +256,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
-  async markCompleted(command: MarkSurveyDispatchCompletedCommand): Promise<void> {
+  async markCompleted(
+    command: MarkSurveyDispatchCompletedCommand,
+  ): Promise<void> {
     await this.prismaBot.botSurveyDispatch.update({
       where: { id: command.dispatchId },
       data: {
@@ -261,7 +268,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
-  async markDeclined(command: MarkSurveyDispatchDeclinedCommand): Promise<void> {
+  async markDeclined(
+    command: MarkSurveyDispatchDeclinedCommand,
+  ): Promise<void> {
     await this.prismaBot.botSurveyDispatch.update({
       where: { id: command.dispatchId },
       data: {
@@ -271,7 +280,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
-  async markBlockedContact(command: MarkSurveyDispatchBlockedContactCommand): Promise<void> {
+  async markBlockedContact(
+    command: MarkSurveyDispatchBlockedContactCommand,
+  ): Promise<void> {
     await this.prismaBot.botSurveyDispatch.update({
       where: { id: command.dispatchId },
       data: {
@@ -281,7 +292,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
-  async saveAnswerByQuestionKey(command: SaveSurveyAnswerByQuestionKeyCommand): Promise<void> {
+  async saveAnswerByQuestionKey(
+    command: SaveSurveyAnswerByQuestionKeyCommand,
+  ): Promise<void> {
     await this.prismaBot.$transaction(async (tx) => {
       const question = await tx.botSurveyQuestion.findUnique({
         where: {
@@ -349,7 +362,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
-  async upsertContactSuppression(command: UpsertSurveyContactSuppressionCommand): Promise<void> {
+  async upsertContactSuppression(
+    command: UpsertSurveyContactSuppressionCommand,
+  ): Promise<void> {
     const reasonByValue: Record<
       UpsertSurveyContactSuppressionCommand['reason'],
       BotContactSuppressionReason
@@ -422,26 +437,37 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
       initialTemplateName: dispatch.initialTemplateName,
       initialTemplateLanguage: dispatch.initialTemplateLanguage,
       flowToken: dispatch.flowToken,
-      appointments: dispatch.appointments.map((appointment): SurveyDispatchAppointmentSnapshot => ({
-        legacyAgendaId: appointment.legacyAgendaId,
-        appointmentDateIso: appointment.appointmentDate.toISOString().slice(0, 10),
-        appointmentTimeHhmm: appointment.appointmentTimeHhmm,
-        specialtyName: appointment.specialtyName,
-        doctorName: appointment.doctorName,
-        siteName: appointment.siteName,
-      })),
+      appointments: dispatch.appointments.map(
+        (appointment): SurveyDispatchAppointmentSnapshot => ({
+          legacyAgendaId: appointment.legacyAgendaId,
+          appointmentDateIso: appointment.appointmentDate
+            .toISOString()
+            .slice(0, 10),
+          appointmentTimeHhmm: appointment.appointmentTimeHhmm,
+          specialtyName: appointment.specialtyName,
+          doctorName: appointment.doctorName,
+          siteName: appointment.siteName,
+        }),
+      ),
     };
   }
 
   private fromDispatchStatus(value: BotSurveyDispatchStatus) {
     const byValue = {
-      [BotSurveyDispatchStatus.PENDING]: SATISFACTION_SURVEY_DISPATCH_STATUSES.PENDING,
-      [BotSurveyDispatchStatus.SENT]: SATISFACTION_SURVEY_DISPATCH_STATUSES.SENT,
-      [BotSurveyDispatchStatus.STARTED]: SATISFACTION_SURVEY_DISPATCH_STATUSES.STARTED,
-      [BotSurveyDispatchStatus.COMPLETED]: SATISFACTION_SURVEY_DISPATCH_STATUSES.COMPLETED,
-      [BotSurveyDispatchStatus.DECLINED]: SATISFACTION_SURVEY_DISPATCH_STATUSES.DECLINED,
-      [BotSurveyDispatchStatus.EXPIRED]: SATISFACTION_SURVEY_DISPATCH_STATUSES.EXPIRED,
-      [BotSurveyDispatchStatus.FAILED]: SATISFACTION_SURVEY_DISPATCH_STATUSES.FAILED,
+      [BotSurveyDispatchStatus.PENDING]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.PENDING,
+      [BotSurveyDispatchStatus.SENT]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.SENT,
+      [BotSurveyDispatchStatus.STARTED]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.STARTED,
+      [BotSurveyDispatchStatus.COMPLETED]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.COMPLETED,
+      [BotSurveyDispatchStatus.DECLINED]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.DECLINED,
+      [BotSurveyDispatchStatus.EXPIRED]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.EXPIRED,
+      [BotSurveyDispatchStatus.FAILED]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.FAILED,
       [BotSurveyDispatchStatus.CANCELLED_BY_HANDOFF]:
         SATISFACTION_SURVEY_DISPATCH_STATUSES.CANCELLED_BY_HANDOFF,
       [BotSurveyDispatchStatus.BLOCKED_CONTACT]:
@@ -455,7 +481,9 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     return new Date(`${value}T00:00:00.000Z`);
   }
 
-  private isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
+  private isUniqueConstraintError(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
     if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
       return false;
     }

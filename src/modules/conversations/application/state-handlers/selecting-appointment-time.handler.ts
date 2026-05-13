@@ -38,9 +38,12 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     session: ConversationSession,
     event: NormalizedWhatsappEvent,
   ): Promise<ConversationStateHandlerResult> {
-    const offeredTimes = session.context?.appointmentTimeSelection?.offeredTimes ?? [];
-    const hasMoreTimes = session.context?.appointmentTimeSelection?.hasMoreTimes ?? false;
-    const nextCursorTimeHHmm = session.context?.appointmentTimeSelection?.nextCursorTimeHHmm;
+    const offeredTimes =
+      session.context?.appointmentTimeSelection?.offeredTimes ?? [];
+    const hasMoreTimes =
+      session.context?.appointmentTimeSelection?.hasMoreTimes ?? false;
+    const nextCursorTimeHHmm =
+      session.context?.appointmentTimeSelection?.nextCursorTimeHHmm;
 
     if (event.kind !== 'incoming_message_received') {
       return {
@@ -61,11 +64,15 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       };
     }
 
-    const selectedSlotRef = parseAppointmentTimeOptionId(event.interactiveReplyId ?? '');
+    const selectedSlotRef = parseAppointmentTimeOptionId(
+      event.interactiveReplyId ?? '',
+    );
     if (!selectedSlotRef) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
-        outboundMessages: [this.appointmentTimeListFactory.build(offeredTimes, hasMoreTimes)],
+        outboundMessages: [
+          this.appointmentTimeListFactory.build(offeredTimes, hasMoreTimes),
+        ],
       };
     }
 
@@ -78,21 +85,29 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       );
     }
 
-    const selectedTime = offeredTimes.find((time) => time.slotRef === selectedSlotRef.slotRef);
+    const selectedTime = offeredTimes.find(
+      (time) => time.slotRef === selectedSlotRef.slotRef,
+    );
     if (!selectedTime) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
-        outboundMessages: [this.appointmentTimeListFactory.build(offeredTimes, hasMoreTimes)],
+        outboundMessages: [
+          this.appointmentTimeListFactory.build(offeredTimes, hasMoreTimes),
+        ],
       };
     }
 
     await this.auditService.record('conversation.appointment_time.selected', {
       conversationKey: session.conversationKey,
-      specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-      specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+      specialtyCode:
+        session.context?.specialtySelection?.selectedSpecialty?.code,
+      specialtyCups:
+        session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
       doctorEmployeeCode:
-        session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-      appointmentDate: session.context?.appointmentDateSelection?.selectedDateIso,
+        session.context?.appointmentDoctorSelection?.selectedDoctor
+          ?.employeeCode ?? null,
+      appointmentDate:
+        session.context?.appointmentDateSelection?.selectedDateIso,
       appointmentTime: selectedTime.timeHHmm,
       slotRef: selectedTime.slotRef,
     });
@@ -117,38 +132,53 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     await this.auditService.record('appointment.assignment.attempted', {
       conversationKey: session.conversationKey,
       patientId: session.context?.patientValidation?.patientId ?? null,
-      specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-      specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+      specialtyCode:
+        session.context?.specialtySelection?.selectedSpecialty?.code,
+      specialtyCups:
+        session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
       doctorEmployeeCode:
-        session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-      appointmentDate: session.context?.appointmentDateSelection?.selectedDateIso ?? null,
+        session.context?.appointmentDoctorSelection?.selectedDoctor
+          ?.employeeCode ?? null,
+      appointmentDate:
+        session.context?.appointmentDateSelection?.selectedDateIso ?? null,
       appointmentTime: selectedTime.timeHHmm,
       preferredSlotRef: selectedTime.slotRef,
     });
 
-    const assignmentResult = await this.assignAppointmentSlotAfterTimeSelection.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      specialtyName: session.context?.specialtySelection?.selectedSpecialty?.name ?? null,
-      specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
-      appointmentDateIso: session.context?.appointmentDateSelection?.selectedDateIso ?? null,
-      appointmentTimeHHmm: selectedTime.timeHHmm,
-      preferredSlotRef: selectedTime.slotRef,
-      doctorEmployeeCode:
-        session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-    });
+    const assignmentResult =
+      await this.assignAppointmentSlotAfterTimeSelection.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        specialtyName:
+          session.context?.specialtySelection?.selectedSpecialty?.name ?? null,
+        specialtyCups:
+          session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+        appointmentDateIso:
+          session.context?.appointmentDateSelection?.selectedDateIso ?? null,
+        appointmentTimeHHmm: selectedTime.timeHHmm,
+        preferredSlotRef: selectedTime.slotRef,
+        doctorEmployeeCode:
+          session.context?.appointmentDoctorSelection?.selectedDoctor
+            ?.employeeCode ?? null,
+      });
 
     if (assignmentResult.status === 'ASSIGNED') {
       if (assignmentResult.appointment.usedFallbackSlot) {
-        await this.auditService.record('appointment.assignment.primary_slot_unavailable', {
-          conversationKey: session.conversationKey,
-          preferredSlotRef: selectedTime.slotRef,
-        });
+        await this.auditService.record(
+          'appointment.assignment.primary_slot_unavailable',
+          {
+            conversationKey: session.conversationKey,
+            preferredSlotRef: selectedTime.slotRef,
+          },
+        );
 
-        await this.auditService.record('appointment.assignment.fallback_slot_found', {
-          conversationKey: session.conversationKey,
-          preferredSlotRef: selectedTime.slotRef,
-          assignedSlotRef: assignmentResult.appointment.slotRef,
-        });
+        await this.auditService.record(
+          'appointment.assignment.fallback_slot_found',
+          {
+            conversationKey: session.conversationKey,
+            preferredSlotRef: selectedTime.slotRef,
+            assignedSlotRef: assignmentResult.appointment.slotRef,
+          },
+        );
       }
 
       await this.auditService.record('appointment.assignment.succeeded', {
@@ -187,7 +217,10 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         preferredSlotRef: selectedTime.slotRef,
       });
 
-      return this.rebuildTimeSelectionAfterSlotExhausted(session, selectedTime.displayTime);
+      return this.rebuildTimeSelectionAfterSlotExhausted(
+        session,
+        selectedTime.displayTime,
+      );
     }
 
     await this.auditService.record('appointment.assignment.failed', {
@@ -202,7 +235,9 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         ...session.context,
         appointmentTimeSelection: undefined,
       },
-      outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+      outboundMessages: [
+        this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+      ],
     };
   }
 
@@ -215,23 +250,31 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     if (!hasMoreTimes) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
-        outboundMessages: [this.appointmentTimeListFactory.build(offeredTimes, false)],
+        outboundMessages: [
+          this.appointmentTimeListFactory.build(offeredTimes, false),
+        ],
       };
     }
 
-    const selectedSpecialty = session.context?.specialtySelection?.selectedSpecialty;
-    const selectedDateIso = session.context?.appointmentDateSelection?.selectedDateIso;
+    const selectedSpecialty =
+      session.context?.specialtySelection?.selectedSpecialty;
+    const selectedDateIso =
+      session.context?.appointmentDateSelection?.selectedDateIso;
     const cursorTimeHHmm = nextCursorTimeHHmm ?? offeredTimes.at(-1)?.timeHHmm;
 
-    await this.auditService.record('conversation.appointment_time.show_more.selected', {
-      conversationKey: session.conversationKey,
-      specialtyCode: selectedSpecialty?.code,
-      specialtyCups: selectedSpecialty?.cups ?? null,
-      doctorEmployeeCode:
-        session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-      appointmentDate: selectedDateIso,
-      cursorTimeHHmm: cursorTimeHHmm ?? null,
-    });
+    await this.auditService.record(
+      'conversation.appointment_time.show_more.selected',
+      {
+        conversationKey: session.conversationKey,
+        specialtyCode: selectedSpecialty?.code,
+        specialtyCups: selectedSpecialty?.cups ?? null,
+        doctorEmployeeCode:
+          session.context?.appointmentDoctorSelection?.selectedDoctor
+            ?.employeeCode ?? null,
+        appointmentDate: selectedDateIso,
+        cursorTimeHHmm: cursorTimeHHmm ?? null,
+      },
+    );
 
     try {
       const availabilityResult =
@@ -240,20 +283,25 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
           appointmentDateIso: selectedDateIso ?? null,
           afterTimeHHmmExclusive: cursorTimeHHmm ?? null,
           doctorEmployeeCode:
-            session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
+            session.context?.appointmentDoctorSelection?.selectedDoctor
+              ?.employeeCode ?? null,
         });
 
       if (!availabilityResult.hasAvailability) {
-        await this.auditService.record('appointment.availability.times.page.empty', {
-          conversationKey: session.conversationKey,
-          specialtyCode: selectedSpecialty?.code,
-          specialtyCups: selectedSpecialty?.cups ?? null,
-          doctorEmployeeCode:
-            session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-          appointmentDate: selectedDateIso,
-          cursorTimeHHmm: cursorTimeHHmm ?? null,
-          reason: availabilityResult.reason,
-        });
+        await this.auditService.record(
+          'appointment.availability.times.page.empty',
+          {
+            conversationKey: session.conversationKey,
+            specialtyCode: selectedSpecialty?.code,
+            specialtyCups: selectedSpecialty?.cups ?? null,
+            doctorEmployeeCode:
+              session.context?.appointmentDoctorSelection?.selectedDoctor
+                ?.employeeCode ?? null,
+            appointmentDate: selectedDateIso,
+            cursorTimeHHmm: cursorTimeHHmm ?? null,
+            reason: availabilityResult.reason,
+          },
+        );
 
         return {
           nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
@@ -276,17 +324,21 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         };
       }
 
-      await this.auditService.record('appointment.availability.times.page.resolved', {
-        conversationKey: session.conversationKey,
-        specialtyCode: selectedSpecialty?.code,
-        specialtyCups: selectedSpecialty?.cups ?? null,
-        doctorEmployeeCode:
-          session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-        appointmentDate: selectedDateIso,
-        cursorTimeHHmm: cursorTimeHHmm ?? null,
-        availableTimeCount: availabilityResult.times.length,
-        hasMoreTimes: availabilityResult.hasMore,
-      });
+      await this.auditService.record(
+        'appointment.availability.times.page.resolved',
+        {
+          conversationKey: session.conversationKey,
+          specialtyCode: selectedSpecialty?.code,
+          specialtyCups: selectedSpecialty?.cups ?? null,
+          doctorEmployeeCode:
+            session.context?.appointmentDoctorSelection?.selectedDoctor
+              ?.employeeCode ?? null,
+          appointmentDate: selectedDateIso,
+          cursorTimeHHmm: cursorTimeHHmm ?? null,
+          availableTimeCount: availabilityResult.times.length,
+          hasMoreTimes: availabilityResult.hasMore,
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
@@ -306,16 +358,21 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         ],
       };
     } catch (error) {
-      await this.auditService.record('appointment.availability.times.page.failed', {
-        conversationKey: session.conversationKey,
-        specialtyCode: selectedSpecialty?.code,
-        specialtyCups: selectedSpecialty?.cups ?? null,
-        doctorEmployeeCode:
-          session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
-        appointmentDate: selectedDateIso,
-        cursorTimeHHmm: cursorTimeHHmm ?? null,
-        errorMessage: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
-      });
+      await this.auditService.record(
+        'appointment.availability.times.page.failed',
+        {
+          conversationKey: session.conversationKey,
+          specialtyCode: selectedSpecialty?.code,
+          specialtyCups: selectedSpecialty?.cups ?? null,
+          doctorEmployeeCode:
+            session.context?.appointmentDoctorSelection?.selectedDoctor
+              ?.employeeCode ?? null,
+          appointmentDate: selectedDateIso,
+          cursorTimeHHmm: cursorTimeHHmm ?? null,
+          errorMessage:
+            error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
@@ -323,7 +380,9 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
           ...session.context,
           appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+        outboundMessages: [
+          this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+        ],
       };
     }
   }
@@ -332,14 +391,19 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     session: ConversationSession,
     selectedDisplayTime: string,
   ): Promise<ConversationStateHandlerResult> {
-    const selectedSpecialty = session.context?.specialtySelection?.selectedSpecialty;
-    const selectedDoctor = session.context?.appointmentDoctorSelection?.selectedDoctor;
-    const selectedDateIso = session.context?.appointmentDateSelection?.selectedDateIso;
-    const offeredDates = session.context?.appointmentDateSelection?.offeredDates ?? [];
+    const selectedSpecialty =
+      session.context?.specialtySelection?.selectedSpecialty;
+    const selectedDoctor =
+      session.context?.appointmentDoctorSelection?.selectedDoctor;
+    const selectedDateIso =
+      session.context?.appointmentDateSelection?.selectedDateIso;
+    const offeredDates =
+      session.context?.appointmentDateSelection?.offeredDates ?? [];
     const selectedDateDisplay = offeredDates.find(
       (date) => date.isoDate === selectedDateIso,
     )?.displayDate;
-    const isDoctorScoped = session.context?.appointmentDateSelection?.scope === 'DOCTOR';
+    const isDoctorScoped =
+      session.context?.appointmentDateSelection?.scope === 'DOCTOR';
 
     const availabilityResult =
       await this.resolveAvailableAppointmentTimesBySpecialtyAndDate.execute({
@@ -355,16 +419,17 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
           )
         : 'No encontramos horas disponibles para el dia seleccionado. Selecciona otro dia para continuar.';
 
-      const outboundMessages: ConversationStateHandlerResult['outboundMessages'] = [
-        {
-          type: 'text',
-          body: this.buildTimeNoLongerAvailableMessage(
-            selectedDisplayTime,
-            selectedDoctor,
-            noAvailabilityMessage,
-          ),
-        },
-      ];
+      const outboundMessages: ConversationStateHandlerResult['outboundMessages'] =
+        [
+          {
+            type: 'text',
+            body: this.buildTimeNoLongerAvailableMessage(
+              selectedDisplayTime,
+              selectedDoctor,
+              noAvailabilityMessage,
+            ),
+          },
+        ];
       if (offeredDates.length > 0) {
         outboundMessages.push(
           this.appointmentDateListFactory.build(offeredDates, {
@@ -396,21 +461,25 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       outboundMessages: [
         {
           type: 'text',
-          body: this.buildTimeNoLongerAvailableMessage(selectedDisplayTime, selectedDoctor),
+          body: this.buildTimeNoLongerAvailableMessage(
+            selectedDisplayTime,
+            selectedDoctor,
+          ),
         },
-        this.appointmentTimeListFactory.build(availabilityResult.times, availabilityResult.hasMore),
+        this.appointmentTimeListFactory.build(
+          availabilityResult.times,
+          availabilityResult.hasMore,
+        ),
       ],
     };
   }
 
   private buildTimeNoLongerAvailableMessage(
     selectedDisplayTime: string,
-    selectedDoctor?:
-      | {
-          employeeCode: string;
-          displayName: string;
-        }
-      | undefined,
+    selectedDoctor?: {
+      employeeCode: string;
+      displayName: string;
+    },
     suffix?: string,
   ): string {
     const contextualMessage = selectedDoctor
@@ -419,7 +488,9 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
           `Te mostramos las horas disponibles del medico ${selectedDoctor.displayName} para la fecha seleccionada.`
         }`
       : 'La hora seleccionada ya no se encuentra disponible. Por favor elige otra hora del listado.';
-    const continuationSuffix = selectedDoctor ? contextualMessage : suffix ?? contextualMessage;
+    const continuationSuffix = selectedDoctor
+      ? contextualMessage
+      : (suffix ?? contextualMessage);
 
     return `La hora ${selectedDisplayTime} ya no se encuentra disponible. ${continuationSuffix}`;
   }

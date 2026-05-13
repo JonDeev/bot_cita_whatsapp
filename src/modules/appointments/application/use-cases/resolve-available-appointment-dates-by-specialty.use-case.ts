@@ -56,14 +56,17 @@ export class ResolveAvailableAppointmentDatesBySpecialtyUseCase {
       };
     }
 
-    const cutoff = this.appointmentAvailabilityCutoffService.build(input.now ?? new Date());
+    const cutoff = this.appointmentAvailabilityCutoffService.build(
+      input.now ?? new Date(),
+    );
     const doctorEmployeeCode = input.doctorEmployeeCode?.trim() || undefined;
-    const candidates = await this.appointmentAvailabilityRepository.findAvailableDates({
-      specialtyCups,
-      cutoffDateIso: cutoff.cutoffDateIso,
-      cutoffTimeHHmm: cutoff.cutoffTimeHHmm,
-      doctorEmployeeCode,
-    });
+    const candidates =
+      await this.appointmentAvailabilityRepository.findAvailableDates({
+        specialtyCups,
+        cutoffDateIso: cutoff.cutoffDateIso,
+        cutoffTimeHHmm: cutoff.cutoffTimeHHmm,
+        doctorEmployeeCode,
+      });
 
     const dates = this.pickUniqueDates(candidates);
     if (dates.length === 0) {
@@ -95,10 +98,14 @@ export class ResolveAvailableAppointmentDatesBySpecialtyUseCase {
       uniqueDates.add(dateIso);
       selectedDates.push({
         isoDate: dateIso,
-        displayDate: this.appointmentDatePresenterService.formatIsoDate(dateIso),
+        displayDate:
+          this.appointmentDatePresenterService.formatIsoDate(dateIso),
       });
 
-      if (selectedDates.length === ResolveAvailableAppointmentDatesBySpecialtyUseCase.MAX_AVAILABLE_DATES) {
+      if (
+        selectedDates.length ===
+        ResolveAvailableAppointmentDatesBySpecialtyUseCase.MAX_AVAILABLE_DATES
+      ) {
         break;
       }
     }

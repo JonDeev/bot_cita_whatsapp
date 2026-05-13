@@ -12,7 +12,10 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
   constructor(private readonly prismaBot: PrismaBotService) {}
 
   async saveInbound(input: SaveInboundConversationMessageInput): Promise<void> {
-    const conversationId = await this.ensureConversationId(input.conversationKey, input.from);
+    const conversationId = await this.ensureConversationId(
+      input.conversationKey,
+      input.from,
+    );
     const occurredAt = this.fromUnixTimestamp(input.providerTimestamp);
     const payload = {
       phoneNumberId: input.phoneNumberId,
@@ -47,8 +50,13 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
     });
   }
 
-  async saveOutbound(input: SaveOutboundConversationMessageInput): Promise<void> {
-    const conversationId = await this.ensureConversationId(input.conversationKey, input.to);
+  async saveOutbound(
+    input: SaveOutboundConversationMessageInput,
+  ): Promise<void> {
+    const conversationId = await this.ensureConversationId(
+      input.conversationKey,
+      input.to,
+    );
     const occurredAt = new Date(input.sentAt);
     const payload = {
       to: input.to,
@@ -114,7 +122,10 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
     return Boolean(message);
   }
 
-  private async ensureConversationId(conversationKey: string, participantPhone: string): Promise<number> {
+  private async ensureConversationId(
+    conversationKey: string,
+    participantPhone: string,
+  ): Promise<number> {
     const conversation = await this.prismaBot.botConversation.upsert({
       where: { conversationKey },
       create: {

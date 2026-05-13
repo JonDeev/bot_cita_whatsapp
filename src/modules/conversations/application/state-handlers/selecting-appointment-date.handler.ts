@@ -68,7 +68,9 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
       };
     }
 
-    const selectedDateOption = parseAppointmentDateOptionId(event.interactiveReplyId ?? '');
+    const selectedDateOption = parseAppointmentDateOptionId(
+      event.interactiveReplyId ?? '',
+    );
     if (!selectedDateOption) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
@@ -84,7 +86,9 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
       return this.handleChooseDoctorSelection(session, offeredDates);
     }
 
-    const selectedDate = offeredDates.find((date) => date.isoDate === selectedDateOption.dateIso);
+    const selectedDate = offeredDates.find(
+      (date) => date.isoDate === selectedDateOption.dateIso,
+    );
     if (!selectedDate) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
@@ -98,16 +102,21 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
 
     await this.auditService.record('conversation.appointment_date.selected', {
       conversationKey: session.conversationKey,
-      specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-      specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+      specialtyCode:
+        session.context?.specialtySelection?.selectedSpecialty?.code,
+      specialtyCups:
+        session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
       doctorEmployeeCode:
-        session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
+        session.context?.appointmentDoctorSelection?.selectedDoctor
+          ?.employeeCode ?? null,
       appointmentDate: selectedDate.isoDate,
     });
 
     try {
-      const selectedSpecialty = session.context?.specialtySelection?.selectedSpecialty;
-      const selectedDoctor = session.context?.appointmentDoctorSelection?.selectedDoctor;
+      const selectedSpecialty =
+        session.context?.specialtySelection?.selectedSpecialty;
+      const selectedDoctor =
+        session.context?.appointmentDoctorSelection?.selectedDoctor;
       const availabilityResult =
         await this.resolveAvailableAppointmentTimesBySpecialtyAndDate.execute({
           specialtyCups: selectedSpecialty?.cups ?? null,
@@ -150,14 +159,17 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
         };
       }
 
-      await this.auditService.record('appointment.availability.times.resolved', {
-        conversationKey: session.conversationKey,
-        specialtyCode: selectedSpecialty?.code,
-        specialtyCups: selectedSpecialty?.cups ?? null,
-        doctorEmployeeCode: selectedDoctor?.employeeCode ?? null,
-        appointmentDate: selectedDate.isoDate,
-        availableTimeCount: availabilityResult.times.length,
-      });
+      await this.auditService.record(
+        'appointment.availability.times.resolved',
+        {
+          conversationKey: session.conversationKey,
+          specialtyCode: selectedSpecialty?.code,
+          specialtyCups: selectedSpecialty?.cups ?? null,
+          doctorEmployeeCode: selectedDoctor?.employeeCode ?? null,
+          appointmentDate: selectedDate.isoDate,
+          availableTimeCount: availabilityResult.times.length,
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME,
@@ -184,10 +196,13 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
     } catch (error) {
       await this.auditService.record('appointment.availability.times.failed', {
         conversationKey: session.conversationKey,
-        specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-        specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+        specialtyCode:
+          session.context?.specialtySelection?.selectedSpecialty?.code,
+        specialtyCups:
+          session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
         doctorEmployeeCode:
-          session.context?.appointmentDoctorSelection?.selectedDoctor?.employeeCode ?? null,
+          session.context?.appointmentDoctorSelection?.selectedDoctor
+            ?.employeeCode ?? null,
         appointmentDate: selectedDate.isoDate,
         errorMessage: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
       });
@@ -195,15 +210,17 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
         nextContext: {
-            ...session.context,
-            appointmentDateSelection: {
-              ...appointmentDateSelection,
-              offeredDates,
-              selectedDateIso: selectedDate.isoDate,
-            },
-            appointmentTimeSelection: undefined,
+          ...session.context,
+          appointmentDateSelection: {
+            ...appointmentDateSelection,
+            offeredDates,
+            selectedDateIso: selectedDate.isoDate,
+          },
+          appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+        outboundMessages: [
+          this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+        ],
       };
     }
   }
@@ -212,25 +229,38 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
     session: ConversationSession,
     offeredDates: Array<{ isoDate: string; displayDate: string }>,
   ): Promise<ConversationStateHandlerResult> {
-    await this.auditService.record('conversation.appointment_date.choose_doctor.selected', {
-      conversationKey: session.conversationKey,
-      specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-      specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
-    });
+    await this.auditService.record(
+      'conversation.appointment_date.choose_doctor.selected',
+      {
+        conversationKey: session.conversationKey,
+        specialtyCode:
+          session.context?.specialtySelection?.selectedSpecialty?.code,
+        specialtyCups:
+          session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+      },
+    );
 
     try {
       const availabilityResult =
         await this.resolveAvailableAppointmentDoctorsBySpecialty.execute({
-          specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
+          specialtyCups:
+            session.context?.specialtySelection?.selectedSpecialty?.cups ??
+            null,
         });
 
       if (!availabilityResult.hasAvailability) {
-        await this.auditService.record('appointment.availability.doctors.empty', {
-          conversationKey: session.conversationKey,
-          specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-          specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
-          reason: availabilityResult.reason,
-        });
+        await this.auditService.record(
+          'appointment.availability.doctors.empty',
+          {
+            conversationKey: session.conversationKey,
+            specialtyCode:
+              session.context?.specialtySelection?.selectedSpecialty?.code,
+            specialtyCups:
+              session.context?.specialtySelection?.selectedSpecialty?.cups ??
+              null,
+            reason: availabilityResult.reason,
+          },
+        );
 
         return {
           nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
@@ -240,7 +270,8 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
             appointmentDateSelection: {
               scope: 'SPECIALTY',
               specialtyOfferedDates:
-                session.context?.appointmentDateSelection?.specialtyOfferedDates ?? offeredDates,
+                session.context?.appointmentDateSelection
+                  ?.specialtyOfferedDates ?? offeredDates,
               offeredDates,
             },
             appointmentTimeSelection: undefined,
@@ -257,12 +288,18 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
         };
       }
 
-      await this.auditService.record('appointment.availability.doctors.resolved', {
-        conversationKey: session.conversationKey,
-        specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-        specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
-        availableDoctorCount: availabilityResult.doctors.length,
-      });
+      await this.auditService.record(
+        'appointment.availability.doctors.resolved',
+        {
+          conversationKey: session.conversationKey,
+          specialtyCode:
+            session.context?.specialtySelection?.selectedSpecialty?.code,
+          specialtyCups:
+            session.context?.specialtySelection?.selectedSpecialty?.cups ??
+            null,
+          availableDoctorCount: availabilityResult.doctors.length,
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
@@ -274,24 +311,36 @@ export class SelectingAppointmentDateHandler implements ConversationStateHandler
           appointmentDateSelection: {
             scope: 'SPECIALTY',
             specialtyOfferedDates:
-              session.context?.appointmentDateSelection?.specialtyOfferedDates ?? offeredDates,
+              session.context?.appointmentDateSelection
+                ?.specialtyOfferedDates ?? offeredDates,
             offeredDates,
           },
           appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentDoctorListFactory.build(availabilityResult.doctors)],
+        outboundMessages: [
+          this.appointmentDoctorListFactory.build(availabilityResult.doctors),
+        ],
       };
     } catch (error) {
-      await this.auditService.record('appointment.availability.doctors.failed', {
-        conversationKey: session.conversationKey,
-        specialtyCode: session.context?.specialtySelection?.selectedSpecialty?.code,
-        specialtyCups: session.context?.specialtySelection?.selectedSpecialty?.cups ?? null,
-        errorMessage: error instanceof Error ? error.message : 'UNKNOWN_ERROR',
-      });
+      await this.auditService.record(
+        'appointment.availability.doctors.failed',
+        {
+          conversationKey: session.conversationKey,
+          specialtyCode:
+            session.context?.specialtySelection?.selectedSpecialty?.code,
+          specialtyCups:
+            session.context?.specialtySelection?.selectedSpecialty?.cups ??
+            null,
+          errorMessage:
+            error instanceof Error ? error.message : 'UNKNOWN_ERROR',
+        },
+      );
 
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
-        outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+        outboundMessages: [
+          this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+        ],
       };
     }
   }

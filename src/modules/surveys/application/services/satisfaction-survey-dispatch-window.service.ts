@@ -57,14 +57,19 @@ export class SatisfactionSurveyDispatchWindowService {
       };
     }
 
-    const windowStartTotalMinutes = windowEndTotalMinutes - MINUTES_PER_HALF_HOUR;
-    const windowStartHHmm = this.toHHmmFromTotalMinutes(windowStartTotalMinutes);
+    const windowStartTotalMinutes =
+      windowEndTotalMinutes - MINUTES_PER_HALF_HOUR;
+    const windowStartHHmm = this.toHHmmFromTotalMinutes(
+      windowStartTotalMinutes,
+    );
     const windowEndHHmm = this.toHHmm(parts.hour, parts.minute);
 
     const surveyDateIso = `${parts.year}-${this.pad(parts.month)}-${this.pad(parts.day)}`;
     const windowStartIso = this.toBogotaIso(surveyDateIso, windowStartHHmm);
     const windowEndIso = this.toBogotaIso(surveyDateIso, windowEndHHmm);
-    const expiresAtIso = new Date(new Date(windowEndIso).getTime() + 24 * 60 * 60 * 1000).toISOString();
+    const expiresAtIso = new Date(
+      new Date(windowEndIso).getTime() + 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     return {
       shouldRun: true,
@@ -99,7 +104,9 @@ export class SatisfactionSurveyDispatchWindowService {
     });
 
     const parts = formatter.formatToParts(value);
-    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const byType = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
 
     return {
       year: Number(byType.year),

@@ -7,9 +7,7 @@ import type {
 } from '../../../domain/ports/satisfaction-survey-legacy-status.repository';
 
 @Injectable()
-export class PrismaLegacySatisfactionSurveyLegacyStatusRepository
-  implements SatisfactionSurveyLegacyStatusRepository
-{
+export class PrismaLegacySatisfactionSurveyLegacyStatusRepository implements SatisfactionSurveyLegacyStatusRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async updateAgendaSurveyNotificationStatus(

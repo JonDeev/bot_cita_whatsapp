@@ -29,11 +29,15 @@ export class WhatsappConfigService {
   }
 
   getInteractiveEventMaxAgeSeconds(): number | null {
-    return this.readOptionalPositiveNumberEnv('WHATSAPP_INTERACTIVE_EVENT_MAX_AGE_SECONDS');
+    return this.readOptionalPositiveNumberEnv(
+      'WHATSAPP_INTERACTIVE_EVENT_MAX_AGE_SECONDS',
+    );
   }
 
   getTextEventMaxAgeSeconds(): number | null {
-    return this.readOptionalPositiveNumberEnv('WHATSAPP_TEXT_EVENT_MAX_AGE_SECONDS');
+    return this.readOptionalPositiveNumberEnv(
+      'WHATSAPP_TEXT_EVENT_MAX_AGE_SECONDS',
+    );
   }
 
   shouldStoreWebhookPayloads(): boolean {

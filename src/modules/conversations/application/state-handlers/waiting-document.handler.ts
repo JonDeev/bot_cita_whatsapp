@@ -12,7 +12,9 @@ import type {
 export class WaitingDocumentHandler implements ConversationStateHandler {
   readonly state = CONVERSATION_STATES.WAITING_DOCUMENT;
 
-  constructor(private readonly inputNormalizer: PatientIdentityInputNormalizerService) {}
+  constructor(
+    private readonly inputNormalizer: PatientIdentityInputNormalizerService,
+  ) {}
 
   async handle(
     session: ConversationSession,
@@ -26,10 +28,12 @@ export class WaitingDocumentHandler implements ConversationStateHandler {
     }
 
     const rawDocument = event.textBody ?? '';
-    const documentNumber = this.inputNormalizer.sanitizeDocumentNumber(rawDocument);
+    const documentNumber =
+      this.inputNormalizer.sanitizeDocumentNumber(rawDocument);
 
     if (!documentNumber) {
-      const attempts = (session.context?.patientValidation?.failedAttempts ?? 0) + 1;
+      const attempts =
+        (session.context?.patientValidation?.failedAttempts ?? 0) + 1;
       return {
         nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
         nextContext: {
@@ -53,9 +57,11 @@ export class WaitingDocumentHandler implements ConversationStateHandler {
       nextContext: {
         ...session.context,
         patientValidation: {
-          failedAttempts: session.context?.patientValidation?.failedAttempts ?? 0,
+          failedAttempts:
+            session.context?.patientValidation?.failedAttempts ?? 0,
           documentNumber,
-          documentNumberMasked: this.inputNormalizer.maskDocumentNumber(documentNumber),
+          documentNumberMasked:
+            this.inputNormalizer.maskDocumentNumber(documentNumber),
         },
       },
       outboundMessages: [

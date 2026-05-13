@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { CONVERSATION_STATES, type ConversationState } from '../../domain/conversation-state';
+import {
+  CONVERSATION_STATES,
+  type ConversationState,
+} from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import type { ConversationSessionContext } from '../../domain/entities/conversation-session-context.entity';
 import type {
@@ -30,29 +33,41 @@ const STATES_WITHOUT_BACK = new Set<ConversationState>([
   CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
 ]);
 
-const BACK_TARGET_BY_STATE: Partial<Record<ConversationState, ConversationState>> = {
-  [CONVERSATION_STATES.WAITING_BIRTH_DATE]: CONVERSATION_STATES.WAITING_DOCUMENT,
-  [CONVERSATION_STATES.SELECTING_SPECIALTY]: CONVERSATION_STATES.WAITING_BIRTH_DATE,
-  [CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT]: CONVERSATION_STATES.WAITING_BIRTH_DATE,
+const BACK_TARGET_BY_STATE: Partial<
+  Record<ConversationState, ConversationState>
+> = {
+  [CONVERSATION_STATES.WAITING_BIRTH_DATE]:
+    CONVERSATION_STATES.WAITING_DOCUMENT,
+  [CONVERSATION_STATES.SELECTING_SPECIALTY]:
+    CONVERSATION_STATES.WAITING_BIRTH_DATE,
+  [CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT]:
+    CONVERSATION_STATES.WAITING_BIRTH_DATE,
   [CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_ACTIONS]:
     CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
   [CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS]:
     CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
-  [CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE]: CONVERSATION_STATES.SELECTING_SPECIALTY,
-  [CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR]: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
-  [CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME]: CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
+  [CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE]:
+    CONVERSATION_STATES.SELECTING_SPECIALTY,
+  [CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR]:
+    CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
+  [CONVERSATION_STATES.SELECTING_APPOINTMENT_TIME]:
+    CONVERSATION_STATES.SELECTING_APPOINTMENT_DATE,
 };
 
 const NAVIGATION_BUTTONS_BODY_PLACEHOLDER = '\u200B';
 
 @Injectable()
 export class ConversationNavigationService {
-  isNavigationOptionId(value: string | undefined | null): value is NavigationOptionId {
+  isNavigationOptionId(
+    value: string | undefined | null,
+  ): value is NavigationOptionId {
     if (!value) {
       return false;
     }
 
-    return Object.values(NAVIGATION_OPTION_IDS).includes(value as NavigationOptionId);
+    return Object.values(NAVIGATION_OPTION_IDS).includes(
+      value as NavigationOptionId,
+    );
   }
 
   buildNavigationMessage(
@@ -87,9 +102,10 @@ export class ConversationNavigationService {
           ...session.context,
           appointmentDoctorSelection: session.context.appointmentDoctorSelection
             ? {
-              offeredDoctors: session.context.appointmentDoctorSelection.offeredDoctors,
-              selectedDoctor: undefined,
-            }
+                offeredDoctors:
+                  session.context.appointmentDoctorSelection.offeredDoctors,
+                selectedDoctor: undefined,
+              }
             : undefined,
           appointmentDateSelection: {
             ...session.context.appointmentDateSelection,
@@ -138,11 +154,14 @@ export class ConversationNavigationService {
     }
 
     return {
-      targetState: BACK_TARGET_BY_STATE[session.state] ?? CONVERSATION_STATES.MAIN_MENU,
+      targetState:
+        BACK_TARGET_BY_STATE[session.state] ?? CONVERSATION_STATES.MAIN_MENU,
     };
   }
 
-  private resolvePresetForState(state: ConversationState): NavigationPreset | null {
+  private resolvePresetForState(
+    state: ConversationState,
+  ): NavigationPreset | null {
     if (STATES_WITHOUT_NAVIGATION.has(state)) {
       return null;
     }

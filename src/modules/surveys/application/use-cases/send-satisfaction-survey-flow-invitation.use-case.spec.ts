@@ -58,7 +58,9 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
     const surveyFlowTokenFactory = {
       create: jest.fn(() => 'survey_dispatch:22:2026-05-10'),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new SendSatisfactionSurveyFlowInvitationUseCase(
       repository as any,
@@ -68,7 +70,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
       conversationKeyFactory,
       whatsappConfigService,
       surveyFlowTemplateConfig as any,
-      surveyFlowTokenFactory as any,
+      surveyFlowTokenFactory,
       auditService,
     );
 
@@ -134,7 +136,9 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
         status: CONVERSATION_STATUSES.HUMAN_HANDOFF,
       }),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new SendSatisfactionSurveyFlowInvitationUseCase(
       repository as any,
@@ -142,17 +146,21 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
       conversationPersistenceRepository as any,
       { execute: jest.fn() } as any,
       new ConversationKeyFactory(),
-      { getPhoneNumberId: jest.fn(() => '112260851488328') } as unknown as WhatsappConfigService,
+      {
+        getPhoneNumberId: jest.fn(() => '112260851488328'),
+      } as unknown as WhatsappConfigService,
       {
         getTemplateName: jest.fn(() => 'satisfaction_survey_flow'),
         getTemplateLanguageCode: jest.fn(() => 'es_CO'),
         getTemplateButtonIndex: jest.fn(() => '0'),
       } as any,
-      { create: jest.fn(() => 'survey_dispatch:22:2026-05-10') } as any,
+      { create: jest.fn(() => 'survey_dispatch:22:2026-05-10') },
       auditService,
     );
 
-    await expect(useCase.execute({ dispatchId: 22 })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(useCase.execute({ dispatchId: 22 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(repository.markCancelledByHandoff).toHaveBeenCalledWith({
       dispatchId: 22,
       cancellationReason: 'Conversation is in human handoff.',

@@ -14,11 +14,16 @@ interface AppointmentTimeListItem {
 export class AppointmentTimeListFactory {
   private static readonly MAX_TIME_ROWS = 9;
 
-  build(times: AppointmentTimeListItem[], hasMoreTimes: boolean): ConversationOutboundInteractiveListMessage {
-    const rows = times.slice(0, AppointmentTimeListFactory.MAX_TIME_ROWS).map((time) => ({
-      id: buildAppointmentTimeOptionId(time.slotRef),
-      title: time.displayTime,
-    }));
+  build(
+    times: AppointmentTimeListItem[],
+    hasMoreTimes: boolean,
+  ): ConversationOutboundInteractiveListMessage {
+    const rows = times
+      .slice(0, AppointmentTimeListFactory.MAX_TIME_ROWS)
+      .map((time) => ({
+        id: buildAppointmentTimeOptionId(time.slotRef),
+        title: time.displayTime,
+      }));
 
     if (hasMoreTimes) {
       rows.push({

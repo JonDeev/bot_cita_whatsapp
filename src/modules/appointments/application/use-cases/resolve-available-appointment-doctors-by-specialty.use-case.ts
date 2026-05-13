@@ -53,13 +53,17 @@ export class ResolveAvailableAppointmentDoctorsBySpecialtyUseCase {
       };
     }
 
-    const cutoff = this.appointmentAvailabilityCutoffService.build(input.now ?? new Date());
-    const candidates = await this.appointmentAvailabilityRepository.findAvailableDoctors({
-      specialtyCups,
-      cutoffDateIso: cutoff.cutoffDateIso,
-      cutoffTimeHHmm: cutoff.cutoffTimeHHmm,
-      maxResults: ResolveAvailableAppointmentDoctorsBySpecialtyUseCase.MAX_AVAILABLE_DOCTORS,
-    });
+    const cutoff = this.appointmentAvailabilityCutoffService.build(
+      input.now ?? new Date(),
+    );
+    const candidates =
+      await this.appointmentAvailabilityRepository.findAvailableDoctors({
+        specialtyCups,
+        cutoffDateIso: cutoff.cutoffDateIso,
+        cutoffTimeHHmm: cutoff.cutoffTimeHHmm,
+        maxResults:
+          ResolveAvailableAppointmentDoctorsBySpecialtyUseCase.MAX_AVAILABLE_DOCTORS,
+      });
 
     const doctors = this.pickUniqueDoctors(candidates);
     if (doctors.length === 0) {
@@ -91,7 +95,10 @@ export class ResolveAvailableAppointmentDoctorsBySpecialtyUseCase {
       includedEmployeeCodes.add(employeeCode);
       selectedDoctors.push({
         employeeCode,
-        displayName: this.buildDoctorDisplayName(candidate.professionalName, employeeCode),
+        displayName: this.buildDoctorDisplayName(
+          candidate.professionalName,
+          employeeCode,
+        ),
       });
 
       if (
@@ -105,7 +112,10 @@ export class ResolveAvailableAppointmentDoctorsBySpecialtyUseCase {
     return selectedDoctors;
   }
 
-  private buildDoctorDisplayName(professionalName: string, employeeCode: string): string {
+  private buildDoctorDisplayName(
+    professionalName: string,
+    employeeCode: string,
+  ): string {
     const normalizedName = professionalName.trim();
     if (normalizedName) {
       return normalizedName;

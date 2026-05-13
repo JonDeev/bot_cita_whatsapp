@@ -5,7 +5,7 @@ describe('CancelAssignedAppointmentByPatientUseCase', () => {
   it('returns invalid input when patient or slot is missing', async () => {
     const useCase = new CancelAssignedAppointmentByPatientUseCase({
       cancelAssignedFutureAppointmentByPatient: jest.fn(),
-    } as unknown as AppointmentCancellationRepository);
+    });
 
     const result = await useCase.execute({
       patientId: null,
@@ -20,8 +20,10 @@ describe('CancelAssignedAppointmentByPatientUseCase', () => {
 
   it('returns cancelled when guarded update succeeds', async () => {
     const useCase = new CancelAssignedAppointmentByPatientUseCase({
-      cancelAssignedFutureAppointmentByPatient: jest.fn().mockResolvedValue(true),
-    } as unknown as AppointmentCancellationRepository);
+      cancelAssignedFutureAppointmentByPatient: jest
+        .fn()
+        .mockResolvedValue(true),
+    });
 
     const result = await useCase.execute({
       patientId: 98,
@@ -33,8 +35,10 @@ describe('CancelAssignedAppointmentByPatientUseCase', () => {
 
   it('returns not cancellable when guarded update affects zero rows', async () => {
     const useCase = new CancelAssignedAppointmentByPatientUseCase({
-      cancelAssignedFutureAppointmentByPatient: jest.fn().mockResolvedValue(false),
-    } as unknown as AppointmentCancellationRepository);
+      cancelAssignedFutureAppointmentByPatient: jest
+        .fn()
+        .mockResolvedValue(false),
+    });
 
     const result = await useCase.execute({
       patientId: 98,

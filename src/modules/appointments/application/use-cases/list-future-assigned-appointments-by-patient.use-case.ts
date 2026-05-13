@@ -53,7 +53,8 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
   private static readonly MAX_VISIBLE_ROWS = 10;
   private static readonly MAX_VISIBLE_ROWS_WHEN_HAS_MORE = 9;
   private static readonly DEFAULT_SPECIALTY_NAME = 'ESPECIALIDAD POR CONFIRMAR';
-  private static readonly DEFAULT_PROFESSIONAL_NAME = 'PROFESIONAL POR CONFIRMAR';
+  private static readonly DEFAULT_PROFESSIONAL_NAME =
+    'PROFESIONAL POR CONFIRMAR';
   private static readonly DEFAULT_SITE_NAME = 'SEDE POR CONFIRMAR';
   private static readonly DEFAULT_SITE_ADDRESS = 'DIRECCION POR CONFIRMAR';
 
@@ -77,9 +78,10 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
     }
 
     try {
-      const patient = await this.appointmentConfirmationDetailsRepository.findPatientById(
-        normalizedInput.patientId,
-      );
+      const patient =
+        await this.appointmentConfirmationDetailsRepository.findPatientById(
+          normalizedInput.patientId,
+        );
       if (!patient) {
         return {
           status: 'TECHNICAL_FAILURE',
@@ -89,13 +91,16 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
 
       const nowParts = this.formatNowInBogota(normalizedInput.now);
       const candidates =
-        await this.patientAssignedAppointmentRepository.findFutureAssignedAppointmentsByPatient({
-          patientUserId: String(normalizedInput.patientId),
-          currentDateIso: nowParts.dateIso,
-          currentTimeHHmm: nowParts.timeHHmm,
-          offset: normalizedInput.offset,
-          maxResults: ListFutureAssignedAppointmentsByPatientUseCase.MAX_QUERY_ROWS,
-        });
+        await this.patientAssignedAppointmentRepository.findFutureAssignedAppointmentsByPatient(
+          {
+            patientUserId: String(normalizedInput.patientId),
+            currentDateIso: nowParts.dateIso,
+            currentTimeHHmm: nowParts.timeHHmm,
+            offset: normalizedInput.offset,
+            maxResults:
+              ListFutureAssignedAppointmentsByPatientUseCase.MAX_QUERY_ROWS,
+          },
+        );
 
       const patientFullName = this.buildPatientFullName({
         firstName: patient.firstName,
@@ -113,10 +118,17 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
       }
 
       const hasMore =
-        candidates.length > ListFutureAssignedAppointmentsByPatientUseCase.MAX_VISIBLE_ROWS;
+        candidates.length >
+        ListFutureAssignedAppointmentsByPatientUseCase.MAX_VISIBLE_ROWS;
       const visibleCandidates = hasMore
-        ? candidates.slice(0, ListFutureAssignedAppointmentsByPatientUseCase.MAX_VISIBLE_ROWS_WHEN_HAS_MORE)
-        : candidates.slice(0, ListFutureAssignedAppointmentsByPatientUseCase.MAX_VISIBLE_ROWS);
+        ? candidates.slice(
+            0,
+            ListFutureAssignedAppointmentsByPatientUseCase.MAX_VISIBLE_ROWS_WHEN_HAS_MORE,
+          )
+        : candidates.slice(
+            0,
+            ListFutureAssignedAppointmentsByPatientUseCase.MAX_VISIBLE_ROWS,
+          );
 
       return {
         status: 'FOUND',
@@ -136,9 +148,10 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
             ListFutureAssignedAppointmentsByPatientUseCase.DEFAULT_SITE_ADDRESS,
           appointmentDateIso: candidate.appointmentDateIso,
           appointmentTimeHHmm: candidate.appointmentTimeHHmm,
-          appointmentDisplayTime: this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
-            candidate.appointmentTimeHHmm,
-          ),
+          appointmentDisplayTime:
+            this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
+              candidate.appointmentTimeHHmm,
+            ),
         })),
         hasMore,
         currentOffset: normalizedInput.offset,
@@ -202,8 +215,12 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
     const timeHHmm = `${normalizedParts.hour}:${normalizedParts.minute}`;
 
     if (
-      !ListFutureAssignedAppointmentsByPatientUseCase.ISO_DATE_PATTERN.test(dateIso) ||
-      !ListFutureAssignedAppointmentsByPatientUseCase.TIME_HHMM_PATTERN.test(timeHHmm)
+      !ListFutureAssignedAppointmentsByPatientUseCase.ISO_DATE_PATTERN.test(
+        dateIso,
+      ) ||
+      !ListFutureAssignedAppointmentsByPatientUseCase.TIME_HHMM_PATTERN.test(
+        timeHHmm,
+      )
     ) {
       throw new Error('Failed to compute valid Bogota date/time.');
     }
@@ -241,6 +258,9 @@ export class ListFutureAssignedAppointmentsByPatientUseCase {
     }
 
     const withoutCodePrefix = normalized.replace(/^\d+\s*-\s*/, '').trim();
-    return withoutCodePrefix || ListFutureAssignedAppointmentsByPatientUseCase.DEFAULT_SPECIALTY_NAME;
+    return (
+      withoutCodePrefix ||
+      ListFutureAssignedAppointmentsByPatientUseCase.DEFAULT_SPECIALTY_NAME
+    );
   }
 }

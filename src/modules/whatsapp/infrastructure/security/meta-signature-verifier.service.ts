@@ -9,7 +9,10 @@ export class MetaSignatureVerifierService implements WhatsappSignatureVerifierPo
 
   constructor(private readonly configService: WhatsappConfigService) {}
 
-  verifySignature(rawBody: Buffer, signatureHeader: string | undefined): boolean {
+  verifySignature(
+    rawBody: Buffer,
+    signatureHeader: string | undefined,
+  ): boolean {
     const appSecret = this.configService.getAppSecret();
     if (!appSecret) {
       this.logger.error('WHATSAPP_APP_SECRET is missing.');
@@ -20,7 +23,9 @@ export class MetaSignatureVerifierService implements WhatsappSignatureVerifierPo
       return false;
     }
 
-    const expectedDigest = createHmac('sha256', appSecret).update(rawBody).digest('hex');
+    const expectedDigest = createHmac('sha256', appSecret)
+      .update(rawBody)
+      .digest('hex');
     const expectedSignature = Buffer.from(`sha256=${expectedDigest}`);
     const receivedSignature = Buffer.from(signatureHeader);
 

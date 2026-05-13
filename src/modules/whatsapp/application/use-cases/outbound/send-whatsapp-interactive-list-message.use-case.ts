@@ -46,18 +46,25 @@ export class SendWhatsappInteractiveListMessageUseCase {
     }
 
     if (!input.buttonText?.trim()) {
-      throw new BadRequestException('Interactive list button text is required.');
+      throw new BadRequestException(
+        'Interactive list button text is required.',
+      );
     }
 
     if (input.sections.length === 0) {
-      throw new BadRequestException('Interactive list requires at least one section.');
+      throw new BadRequestException(
+        'Interactive list requires at least one section.',
+      );
     }
     this.validateInteractiveList(input);
 
-    await this.auditService.record('whatsapp.outbound.interactive_list.attempted', {
-      to: input.to,
-      trigger: input.trigger,
-    });
+    await this.auditService.record(
+      'whatsapp.outbound.interactive_list.attempted',
+      {
+        to: input.to,
+        trigger: input.trigger,
+      },
+    );
 
     try {
       const result = await this.messageSender.sendInteractiveListMessage({
@@ -67,27 +74,39 @@ export class SendWhatsappInteractiveListMessageUseCase {
         sections: input.sections,
       });
 
-      await this.auditService.record('whatsapp.outbound.interactive_list.sent', {
-        to: input.to,
-        trigger: input.trigger,
-        messageId: result.messageId,
-      });
+      await this.auditService.record(
+        'whatsapp.outbound.interactive_list.sent',
+        {
+          to: input.to,
+          trigger: input.trigger,
+          messageId: result.messageId,
+        },
+      );
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await this.auditService.record('whatsapp.outbound.interactive_list.failed', {
-        to: input.to,
-        trigger: input.trigger,
-        errorMessage,
-      });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.auditService.record(
+        'whatsapp.outbound.interactive_list.failed',
+        {
+          to: input.to,
+          trigger: input.trigger,
+          errorMessage,
+        },
+      );
 
       throw error;
     }
   }
 
-  private validateInteractiveList(input: SendWhatsappInteractiveListMessageInput): void {
-    if (this.countCharacters(input.body) > WHATSAPP_INTERACTIVE_LIST_LIMITS.BODY_MAX_LENGTH) {
+  private validateInteractiveList(
+    input: SendWhatsappInteractiveListMessageInput,
+  ): void {
+    if (
+      this.countCharacters(input.body) >
+      WHATSAPP_INTERACTIVE_LIST_LIMITS.BODY_MAX_LENGTH
+    ) {
       throw new BadRequestException(
         `Interactive list body exceeds ${WHATSAPP_INTERACTIVE_LIST_LIMITS.BODY_MAX_LENGTH} characters.`,
       );
@@ -140,7 +159,8 @@ export class SendWhatsappInteractiveListMessageUseCase {
         }
 
         if (
-          this.countCharacters(row.id) > WHATSAPP_INTERACTIVE_LIST_LIMITS.ROW_ID_MAX_LENGTH
+          this.countCharacters(row.id) >
+          WHATSAPP_INTERACTIVE_LIST_LIMITS.ROW_ID_MAX_LENGTH
         ) {
           throw new BadRequestException(
             `Interactive list row id at section ${sectionIndex} index ${rowIndex} exceeds ${WHATSAPP_INTERACTIVE_LIST_LIMITS.ROW_ID_MAX_LENGTH} characters.`,

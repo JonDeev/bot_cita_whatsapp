@@ -48,8 +48,14 @@ export class GetSatisfactionSurveyMetricsUseCase {
     input: GetSatisfactionSurveyMetricsInput,
   ): Promise<GetSatisfactionSurveyMetricsResult> {
     const surveyDateIso = this.resolveSurveyDateIso(input.surveyDateIso);
-    const windowStartHHmm = this.resolveOptionalHHmm(input.windowStartHHmm, 'windowStartHHmm');
-    const windowEndHHmm = this.resolveOptionalHHmm(input.windowEndHHmm, 'windowEndHHmm');
+    const windowStartHHmm = this.resolveOptionalHHmm(
+      input.windowStartHHmm,
+      'windowStartHHmm',
+    );
+    const windowEndHHmm = this.resolveOptionalHHmm(
+      input.windowEndHHmm,
+      'windowEndHHmm',
+    );
 
     if (Boolean(windowStartHHmm) !== Boolean(windowEndHHmm)) {
       throw new BadRequestException(
@@ -118,17 +124,24 @@ export class GetSatisfactionSurveyMetricsUseCase {
 
     const dateIso = value.trim();
     if (!ISO_DATE_PATTERN.test(dateIso)) {
-      throw new BadRequestException('surveyDateIso must use YYYY-MM-DD format.');
+      throw new BadRequestException(
+        'surveyDateIso must use YYYY-MM-DD format.',
+      );
     }
 
     if (!this.isValidIsoDate(dateIso)) {
-      throw new BadRequestException('surveyDateIso must be a valid calendar date.');
+      throw new BadRequestException(
+        'surveyDateIso must be a valid calendar date.',
+      );
     }
 
     return dateIso;
   }
 
-  private resolveOptionalHHmm(value: string | undefined, fieldName: string): string | undefined {
+  private resolveOptionalHHmm(
+    value: string | undefined,
+    fieldName: string,
+  ): string | undefined {
     if (!value?.trim()) {
       return undefined;
     }
@@ -139,7 +152,9 @@ export class GetSatisfactionSurveyMetricsUseCase {
     }
 
     if (!this.isValidHHmm(hhmm)) {
-      throw new BadRequestException(`${fieldName} must be a valid 24-hour time.`);
+      throw new BadRequestException(
+        `${fieldName} must be a valid 24-hour time.`,
+      );
     }
 
     return hhmm;

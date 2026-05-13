@@ -8,9 +8,7 @@ import type {
 } from '../../../domain/ports/satisfaction-survey-eligibility.repository';
 
 @Injectable()
-export class PrismaLegacySatisfactionSurveyEligibilityRepository
-  implements SatisfactionSurveyEligibilityRepository
-{
+export class PrismaLegacySatisfactionSurveyEligibilityRepository implements SatisfactionSurveyEligibilityRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findEligibleAppointmentsByWindow(
@@ -81,17 +79,19 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository
     `);
 
     return rows
-      .map((row): SatisfactionSurveyEligibleAppointment => ({
-        legacyAgendaId: row.legacyAgendaId ?? 0,
-        patientLegacyUserId: row.patientLegacyUserId ?? 0,
-        patientName: row.patientName?.trim() ?? '',
-        patientPhone: row.patientPhone?.trim() || null,
-        appointmentDateIso: row.appointmentDateIso?.trim() ?? '',
-        appointmentTimeHhmm: row.appointmentTimeHhmm?.trim() ?? '',
-        specialtyName: row.specialtyName?.trim() || null,
-        doctorName: row.doctorName?.trim() || null,
-        siteName: row.siteName?.trim() || null,
-      }))
+      .map(
+        (row): SatisfactionSurveyEligibleAppointment => ({
+          legacyAgendaId: row.legacyAgendaId ?? 0,
+          patientLegacyUserId: row.patientLegacyUserId ?? 0,
+          patientName: row.patientName?.trim() ?? '',
+          patientPhone: row.patientPhone?.trim() || null,
+          appointmentDateIso: row.appointmentDateIso?.trim() ?? '',
+          appointmentTimeHhmm: row.appointmentTimeHhmm?.trim() ?? '',
+          specialtyName: row.specialtyName?.trim() || null,
+          doctorName: row.doctorName?.trim() || null,
+          siteName: row.siteName?.trim() || null,
+        }),
+      )
       .filter(
         (row) =>
           row.legacyAgendaId > 0 &&

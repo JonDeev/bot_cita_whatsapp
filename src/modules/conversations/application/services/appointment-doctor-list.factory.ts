@@ -14,7 +14,9 @@ export class AppointmentDoctorListFactory {
     private readonly appointmentDoctorListPresenter: AppointmentDoctorListPresenterService,
   ) {}
 
-  build(doctors: AppointmentDoctorListItem[]): ConversationOutboundInteractiveListMessage {
+  build(
+    doctors: AppointmentDoctorListItem[],
+  ): ConversationOutboundInteractiveListMessage {
     return {
       type: 'interactive_list',
       body: 'Selecciona el medico con quien deseas agendar.',
@@ -23,7 +25,9 @@ export class AppointmentDoctorListFactory {
         {
           title: 'Medicos disponibles',
           rows: doctors.map((doctor) => {
-            const presentedRow = this.appointmentDoctorListPresenter.present(doctor.displayName);
+            const presentedRow = this.appointmentDoctorListPresenter.present(
+              doctor.displayName,
+            );
             return {
               id: buildAppointmentDoctorOptionId(doctor.employeeCode),
               title: presentedRow.title,

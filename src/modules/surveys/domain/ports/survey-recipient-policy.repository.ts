@@ -3,5 +3,7 @@ export interface SurveyRecipientPolicyRepository {
     patientLegacyUserId: number;
     phone: string;
   }): Promise<boolean>;
-  isPhoneSuppressedForSatisfactionSurveys(input: { phone: string }): Promise<boolean>;
+  isPhoneSuppressedForSatisfactionSurveys(input: {
+    phone: string;
+  }): Promise<boolean>;
 }

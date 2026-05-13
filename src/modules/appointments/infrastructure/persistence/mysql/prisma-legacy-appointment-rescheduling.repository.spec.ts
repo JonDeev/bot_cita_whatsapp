@@ -24,11 +24,14 @@ describe('PrismaLegacyAppointmentReschedulingRepository', () => {
       $transaction: jest.fn(),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyAppointmentReschedulingRepository(prisma);
-    const result = await repository.rescheduleAssignedFutureAppointmentByPatient({
-      ...buildCommand(),
-      originalSlotRef: 'abc',
-    });
+    const repository = new PrismaLegacyAppointmentReschedulingRepository(
+      prisma,
+    );
+    const result =
+      await repository.rescheduleAssignedFutureAppointmentByPatient({
+        ...buildCommand(),
+        originalSlotRef: 'abc',
+      });
 
     expect(result).toEqual({ status: 'ORIGINAL_APPOINTMENT_NOT_REBOOKABLE' });
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -43,11 +46,18 @@ describe('PrismaLegacyAppointmentReschedulingRepository', () => {
         .mockResolvedValueOnce(1), // release original
     };
     const prisma = {
-      $transaction: jest.fn().mockImplementation(async (callback) => callback(tx)),
+      $transaction: jest
+        .fn()
+        .mockImplementation(async (callback) => callback(tx)),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyAppointmentReschedulingRepository(prisma);
-    const result = await repository.rescheduleAssignedFutureAppointmentByPatient(buildCommand());
+    const repository = new PrismaLegacyAppointmentReschedulingRepository(
+      prisma,
+    );
+    const result =
+      await repository.rescheduleAssignedFutureAppointmentByPatient(
+        buildCommand(),
+      );
 
     expect(result).toEqual({
       status: 'RESCHEDULED',
@@ -67,11 +77,18 @@ describe('PrismaLegacyAppointmentReschedulingRepository', () => {
         .mockResolvedValueOnce(0), // release original
     };
     const prisma = {
-      $transaction: jest.fn().mockImplementation(async (callback) => callback(tx)),
+      $transaction: jest
+        .fn()
+        .mockImplementation(async (callback) => callback(tx)),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyAppointmentReschedulingRepository(prisma);
-    const result = await repository.rescheduleAssignedFutureAppointmentByPatient(buildCommand());
+    const repository = new PrismaLegacyAppointmentReschedulingRepository(
+      prisma,
+    );
+    const result =
+      await repository.rescheduleAssignedFutureAppointmentByPatient(
+        buildCommand(),
+      );
 
     expect(result).toEqual({ status: 'ORIGINAL_APPOINTMENT_NOT_REBOOKABLE' });
   });

@@ -6,14 +6,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../../../audit/application/services/audit.service';
-import { CONVERSATION_MESSAGE_REPOSITORY, CONVERSATION_PERSISTENCE_REPOSITORY } from '../../../conversations/domain/conversations.tokens';
+import {
+  CONVERSATION_MESSAGE_REPOSITORY,
+  CONVERSATION_PERSISTENCE_REPOSITORY,
+} from '../../../conversations/domain/conversations.tokens';
 import { CONVERSATION_STATUSES } from '../../../conversations/domain/conversation-status';
 import type { ConversationMessageRepository } from '../../../conversations/domain/ports/conversation-message.repository';
 import type { ConversationPersistenceRepository } from '../../../conversations/domain/ports/conversation-persistence.repository';
 import { ConversationKeyFactory } from '../../../conversations/application/services/conversation-key.factory';
 import { SendWhatsappFlowTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-flow-template-message.use-case';
 import { WhatsappConfigService } from '../../../whatsapp/application/services/whatsapp-config.service';
-import { SATISFACTION_SURVEY_DISPATCH_STATUSES, type SurveyDispatchRepository } from '../../domain/ports/survey-dispatch.repository';
+import {
+  SATISFACTION_SURVEY_DISPATCH_STATUSES,
+  type SurveyDispatchRepository,
+} from '../../domain/ports/survey-dispatch.repository';
 import { SURVEY_DISPATCH_REPOSITORY } from '../../domain/surveys.tokens';
 import { SurveyFlowTemplateConfigService } from '../services/survey-flow-template-config.service';
 import { SurveyFlowTokenFactory } from '../services/survey-flow-token.factory';
@@ -39,14 +45,20 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
     private readonly auditService: AuditService,
   ) {}
 
-  async execute(input: SendSatisfactionSurveyFlowInvitationInput): Promise<{ messageId: string }> {
+  async execute(
+    input: SendSatisfactionSurveyFlowInvitationInput,
+  ): Promise<{ messageId: string }> {
     if (!Number.isInteger(input.dispatchId) || input.dispatchId <= 0) {
       throw new BadRequestException('Dispatch id must be a positive integer.');
     }
 
-    const dispatch = await this.surveyDispatchRepository.findById(input.dispatchId);
+    const dispatch = await this.surveyDispatchRepository.findById(
+      input.dispatchId,
+    );
     if (!dispatch) {
-      throw new NotFoundException(`Survey dispatch ${input.dispatchId} was not found.`);
+      throw new NotFoundException(
+        `Survey dispatch ${input.dispatchId} was not found.`,
+      );
     }
 
     if (
@@ -65,7 +77,8 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
       );
     }
 
-    const templateLanguageCode = this.surveyFlowTemplateConfig.getTemplateLanguageCode();
+    const templateLanguageCode =
+      this.surveyFlowTemplateConfig.getTemplateLanguageCode();
     const buttonIndex = this.surveyFlowTemplateConfig.getTemplateButtonIndex();
     const flowToken =
       dispatch.flowToken ??
@@ -75,14 +88,14 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
       });
 
     const recipientPhone = dispatch.patientPhoneE164 ?? dispatch.patientPhone;
-    const conversationKey = this.conversationKeyFactory.createWhatsappConversationKey(
-      this.whatsappConfigService.getPhoneNumberId(),
-      recipientPhone,
-    );
+    const conversationKey =
+      this.conversationKeyFactory.createWhatsappConversationKey(
+        this.whatsappConfigService.getPhoneNumberId(),
+        recipientPhone,
+      );
 
-    const existingConversation = await this.conversationPersistenceRepository.findByKey(
-      conversationKey,
-    );
+    const existingConversation =
+      await this.conversationPersistenceRepository.findByKey(conversationKey);
     if (existingConversation?.status === CONVERSATION_STATUSES.HUMAN_HANDOFF) {
       await this.surveyDispatchRepository.markCancelledByHandoff({
         dispatchId: dispatch.id,
@@ -100,8 +113,10 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
     }
 
     const primaryAppointment = dispatch.appointments[0];
-    const specialtyName = primaryAppointment?.specialtyName?.trim() || 'la especialidad asignada';
-    const appointmentHour = primaryAppointment?.appointmentTimeHhmm || 'la hora asignada';
+    const specialtyName =
+      primaryAppointment?.specialtyName?.trim() || 'la especialidad asignada';
+    const appointmentHour =
+      primaryAppointment?.appointmentTimeHhmm || 'la hora asignada';
 
     await this.auditService.record('survey.dispatch.flow_template.attempted', {
       dispatchId: dispatch.id,
@@ -115,7 +130,11 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
         to: recipientPhone,
         templateName,
         languageCode: templateLanguageCode,
-        bodyTextParameters: [dispatch.patientName, specialtyName, appointmentHour],
+        bodyTextParameters: [
+          dispatch.patientName,
+          specialtyName,
+          appointmentHour,
+        ],
         buttonIndex,
         flowToken,
         flowActionData: {

@@ -8,9 +8,7 @@ import type {
 } from '../../../domain/ports/pending-appointment-check.repository';
 
 @Injectable()
-export class PrismaLegacyPendingAppointmentCheckRepository
-  implements PendingAppointmentCheckRepository
-{
+export class PrismaLegacyPendingAppointmentCheckRepository implements PendingAppointmentCheckRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findNearestPendingFutureAppointmentByPatientAndSpecialty(

@@ -23,7 +23,7 @@ describe('InternalSatisfactionSurveyMetricsController', () => {
 
     const controller = new InternalSatisfactionSurveyMetricsController(
       useCase as any,
-      { getInternalToken: jest.fn(() => 'secret-token') } as any,
+      { getInternalToken: jest.fn(() => 'secret-token') },
     );
 
     const result = await controller.getMetrics(
@@ -44,7 +44,7 @@ describe('InternalSatisfactionSurveyMetricsController', () => {
   it('rejects invalid internal token', async () => {
     const controller = new InternalSatisfactionSurveyMetricsController(
       { execute: jest.fn() } as any,
-      { getInternalToken: jest.fn(() => 'secret-token') } as any,
+      { getInternalToken: jest.fn(() => 'secret-token') },
     );
 
     await expect(
@@ -73,7 +73,7 @@ describe('InternalSatisfactionSurveyMetricsController', () => {
 
     const controller = new InternalSatisfactionSurveyMetricsController(
       useCase as any,
-      { getInternalToken: jest.fn(() => null) } as any,
+      { getInternalToken: jest.fn(() => null) },
     );
 
     await controller.getMetrics('2026-05-11', '07:00', '07:30', undefined);

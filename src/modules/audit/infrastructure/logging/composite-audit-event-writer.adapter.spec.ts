@@ -11,7 +11,10 @@ describe('CompositeAuditEventWriterAdapter', () => {
       write: jest.fn().mockResolvedValue(undefined),
     } as unknown as PrismaBotAuditEventWriterAdapter;
 
-    const adapter = new CompositeAuditEventWriterAdapter(loggerWriter, prismaWriter);
+    const adapter = new CompositeAuditEventWriterAdapter(
+      loggerWriter,
+      prismaWriter,
+    );
 
     await adapter.write({
       action: 'conversation.session.created',

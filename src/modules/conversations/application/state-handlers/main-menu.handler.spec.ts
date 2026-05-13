@@ -128,4 +128,36 @@ describe('MainMenuHandler', () => {
       flowIntent: 'CHECK_APPOINTMENTS',
     });
   });
+
+  it('moves to WAITING_DOCUMENT when dispensary option is selected', async () => {
+    const handler = new MainMenuHandler(new MainMenuListFactory());
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'MAIN_MENU',
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-4',
+        from: '573001112233',
+        timestamp: '1711111114',
+        messageType: 'interactive',
+        interactiveReplyId: 'main_menu_check_dispensary',
+        interactiveReplyTitle: '💊 MI DISPENSARIO',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('WAITING_DOCUMENT');
+    expect(result.nextContext).toMatchObject({
+      flowIntent: 'CHECK_DISPENSARY',
+    });
+  });
 });

@@ -10,7 +10,9 @@ interface SpecialtyListItem {
 
 @Injectable()
 export class SpecialtyListFactory {
-  build(specialties: SpecialtyListItem[]): ConversationOutboundInteractiveListMessage {
+  build(
+    specialties: SpecialtyListItem[],
+  ): ConversationOutboundInteractiveListMessage {
     return {
       type: 'interactive_list',
       body: 'Seleccione la especialidad que desea agendar.',

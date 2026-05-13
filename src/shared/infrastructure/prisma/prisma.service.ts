@@ -21,9 +21,13 @@ const STRICT_READ_ONLY_MODELS = new Set([
 ]);
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
-    const connectionString = process.env.SISM_DATABASE_URL ?? process.env.DATABASE_URL;
+    const connectionString =
+      process.env.SISM_DATABASE_URL ?? process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error(
         'Missing database connection string. Define SISM_DATABASE_URL or DATABASE_URL in the environment.',
@@ -63,7 +67,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
                     );
                   }
 
-                  const agendaUpdatesEnabled = process.env.ALLOW_AGENDA_UPDATES === 'true';
+                  const agendaUpdatesEnabled =
+                    process.env.ALLOW_AGENDA_UPDATES === 'true';
                   if (
                     (operation === 'update' || operation === 'updateMany') &&
                     !agendaUpdatesEnabled

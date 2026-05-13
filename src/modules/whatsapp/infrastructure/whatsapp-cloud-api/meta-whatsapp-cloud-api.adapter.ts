@@ -146,7 +146,8 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
           type: 'action',
           action: {
             flow_token: message.flowToken,
-            ...(message.flowActionData && Object.keys(message.flowActionData).length > 0
+            ...(message.flowActionData &&
+            Object.keys(message.flowActionData).length > 0
               ? { flow_action_data: message.flowActionData }
               : {}),
           },
@@ -168,14 +169,18 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     });
   }
 
-  private async send(payload: Record<string, unknown>): Promise<OutboundWhatsappSendResult> {
+  private async send(
+    payload: Record<string, unknown>,
+  ): Promise<OutboundWhatsappSendResult> {
     const accessToken = this.configService.getAccessToken();
     const phoneNumberId = this.configService.getPhoneNumberId();
     const apiBaseUrl = this.configService.getApiBaseUrl();
     const apiVersion = this.configService.getApiVersion();
 
     if (!accessToken || !phoneNumberId) {
-      throw new InternalServerErrorException('Missing WhatsApp API credentials.');
+      throw new InternalServerErrorException(
+        'Missing WhatsApp API credentials.',
+      );
     }
 
     const endpoint = `${apiBaseUrl}/${apiVersion}/${phoneNumberId}/messages`;
@@ -194,7 +199,9 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
 
     const messageId = json.messages?.[0]?.id;
     if (!messageId) {
-      throw new InternalServerErrorException('WhatsApp API response does not include message id.');
+      throw new InternalServerErrorException(
+        'WhatsApp API response does not include message id.',
+      );
     }
 
     return { messageId };
@@ -249,7 +256,9 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     );
   }
 
-  private async parseResponseJson(response: Response): Promise<MetaSendMessageResponse> {
+  private async parseResponseJson(
+    response: Response,
+  ): Promise<MetaSendMessageResponse> {
     try {
       return (await response.json()) as MetaSendMessageResponse;
     } catch {
@@ -262,9 +271,13 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     error: MetaSendMessageResponse['error'],
   ): string {
     const message = error?.message ?? 'Unknown error.';
-    const details = error?.error_data?.details ? ` details=${error.error_data.details}` : '';
+    const details = error?.error_data?.details
+      ? ` details=${error.error_data.details}`
+      : '';
     const code = error?.code ? ` code=${error.code}` : '';
-    const subcode = error?.error_subcode ? ` subcode=${error.error_subcode}` : '';
+    const subcode = error?.error_subcode
+      ? ` subcode=${error.error_subcode}`
+      : '';
     const type = error?.type ? ` type=${error.type}` : '';
     const trace = error?.fbtrace_id ? ` trace=${error.fbtrace_id}` : '';
 
@@ -296,9 +309,7 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
     return `message=${error.message}${causeCode}${causeMessage}`;
   }
 
-  private extractErrorCause(
-    error: Error,
-  ): {
+  private extractErrorCause(error: Error): {
     code?: string;
     message?: string;
   } | null {
@@ -307,9 +318,14 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
       return null;
     }
 
-    const code = 'code' in cause && typeof cause.code === 'string' ? cause.code : undefined;
+    const code =
+      'code' in cause && typeof cause.code === 'string'
+        ? cause.code
+        : undefined;
     const message =
-      'message' in cause && typeof cause.message === 'string' ? cause.message : undefined;
+      'message' in cause && typeof cause.message === 'string'
+        ? cause.message
+        : undefined;
 
     return { code, message };
   }

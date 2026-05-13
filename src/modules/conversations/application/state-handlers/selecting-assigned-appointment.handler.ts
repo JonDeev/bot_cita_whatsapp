@@ -53,7 +53,9 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
       };
     }
 
-    const selectedOption = parseAssignedAppointmentOptionId(event.interactiveReplyId ?? '');
+    const selectedOption = parseAssignedAppointmentOptionId(
+      event.interactiveReplyId ?? '',
+    );
     if (!selectedOption) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
@@ -88,11 +90,14 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
     }
 
     if (session.context?.flowIntent === 'CHECK_APPOINTMENTS') {
-      await this.auditService.record('conversation.check_appointment.selected', {
-        conversationKey: session.conversationKey,
-        patientId: session.context?.patientValidation?.patientId ?? null,
-        slotRef: selectedAppointment.slotRef,
-      });
+      await this.auditService.record(
+        'conversation.check_appointment.selected',
+        {
+          conversationKey: session.conversationKey,
+          patientId: session.context?.patientValidation?.patientId ?? null,
+          slotRef: selectedAppointment.slotRef,
+        },
+      );
 
       const patientFullName = selection?.patientFullName?.trim() || 'PACIENTE';
       return {
@@ -129,11 +134,14 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
       };
     }
 
-    await this.auditService.record('conversation.assigned_appointment.selected', {
-      conversationKey: session.conversationKey,
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      slotRef: selectedAppointment.slotRef,
-    });
+    await this.auditService.record(
+      'conversation.assigned_appointment.selected',
+      {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        slotRef: selectedAppointment.slotRef,
+      },
+    );
 
     const patientFullName = selection?.patientFullName?.trim() || 'PACIENTE';
     return {
@@ -186,17 +194,21 @@ export class SelectingAssignedAppointmentHandler implements ConversationStateHan
       };
     }
 
-    await this.auditService.record('appointment.assigned_list.show_more.selected', {
-      conversationKey: session.conversationKey,
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      currentOffset: selection.currentOffset,
-      nextOffset: selection.nextOffset,
-    });
+    await this.auditService.record(
+      'appointment.assigned_list.show_more.selected',
+      {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        currentOffset: selection.currentOffset,
+        nextOffset: selection.nextOffset,
+      },
+    );
 
-    const listResult = await this.listFutureAssignedAppointmentsByPatient.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      offset: selection.nextOffset,
-    });
+    const listResult =
+      await this.listFutureAssignedAppointmentsByPatient.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        offset: selection.nextOffset,
+      });
 
     if (listResult.status === 'FOUND') {
       return {

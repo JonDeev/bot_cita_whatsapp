@@ -17,7 +17,9 @@ export interface AssignedAppointmentConfirmationDetails {
 }
 
 export interface AppointmentConfirmationDetailsRepository {
-  findPatientById(patientId: number): Promise<PatientAppointmentConfirmationDetails | null>;
+  findPatientById(
+    patientId: number,
+  ): Promise<PatientAppointmentConfirmationDetails | null>;
 
   findAssignedAppointmentBySlotRef(
     slotRef: string,

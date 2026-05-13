@@ -7,11 +7,17 @@ export class SatisfactionSurveyDispatchSchedulerConfigService {
   }
 
   getTickIntervalMs(): number {
-    return this.readPositiveIntEnv('SURVEYS_HALF_HOURLY_DISPATCH_INTERVAL_MS', 60_000);
+    return this.readPositiveIntEnv(
+      'SURVEYS_HALF_HOURLY_DISPATCH_INTERVAL_MS',
+      60_000,
+    );
   }
 
   getSlotLockTtlSeconds(): number {
-    return this.readPositiveIntEnv('SURVEYS_HALF_HOURLY_DISPATCH_LOCK_TTL_SECONDS', 2_100);
+    return this.readPositiveIntEnv(
+      'SURVEYS_HALF_HOURLY_DISPATCH_LOCK_TTL_SECONDS',
+      2_100,
+    );
   }
 
   private readBooleanEnv(key: string, fallback: boolean): boolean {

@@ -23,9 +23,7 @@ interface ResolvedConsentDecision {
 }
 
 @Injectable()
-export class RequestingWhatsappAppointmentNotificationsOptInHandler
-  implements ConversationStateHandler
-{
+export class RequestingWhatsappAppointmentNotificationsOptInHandler implements ConversationStateHandler {
   readonly state =
     CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN;
 
@@ -51,18 +49,22 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler
     if (!decision) {
       return {
         nextState: this.state,
-        outboundMessages: [this.appointmentNotificationOptInMessageFactory.build()],
+        outboundMessages: [
+          this.appointmentNotificationOptInMessageFactory.build(),
+        ],
       };
     }
 
     const patientId = session.context?.patientValidation?.patientId;
-    const consentResult = await this.registerWhatsappPostBookingConsent.execute({
-      patientId,
-      phone: session.participantPhone,
-      granted: decision.granted,
-      consentTextSnapshot: APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
-      respondedAtIso: event.receivedAt,
-    });
+    const consentResult = await this.registerWhatsappPostBookingConsent.execute(
+      {
+        patientId,
+        phone: session.participantPhone,
+        granted: decision.granted,
+        consentTextSnapshot: APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
+        respondedAtIso: event.receivedAt,
+      },
+    );
 
     await this.auditService.record('conversation.whatsapp_opt_in.responded', {
       conversationKey: session.conversationKey,
@@ -100,7 +102,10 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler
   }
 
   private resolveConsentDecision(
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
   ): ResolvedConsentDecision | null {
     if (
       event.messageType === 'interactive' &&

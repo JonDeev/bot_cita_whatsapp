@@ -6,14 +6,16 @@ describe('ResolveEligibleSpecialtiesByPatientUseCase', () => {
       isCodeAllowed: jest.fn().mockResolvedValue(true),
     };
     const specialtyEligibilityRepository = {
-      findEligibleSpecialties: jest.fn().mockResolvedValue([
-        { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
-      ]),
+      findEligibleSpecialties: jest
+        .fn()
+        .mockResolvedValue([
+          { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+        ]),
     };
 
     const useCase = new ResolveEligibleSpecialtiesByPatientUseCase(
-      contractedEpsRepository as any,
-      specialtyEligibilityRepository as any,
+      contractedEpsRepository,
+      specialtyEligibilityRepository,
     );
 
     const result = await useCase.execute({
@@ -24,7 +26,9 @@ describe('ResolveEligibleSpecialtiesByPatientUseCase', () => {
 
     expect(result).toEqual({
       isEligible: true,
-      specialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+      specialties: [
+        { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+      ],
     });
   });
 
@@ -37,8 +41,8 @@ describe('ResolveEligibleSpecialtiesByPatientUseCase', () => {
     };
 
     const useCase = new ResolveEligibleSpecialtiesByPatientUseCase(
-      contractedEpsRepository as any,
-      specialtyEligibilityRepository as any,
+      contractedEpsRepository,
+      specialtyEligibilityRepository,
     );
 
     const result = await useCase.execute({

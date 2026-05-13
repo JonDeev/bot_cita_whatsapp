@@ -12,7 +12,10 @@ import {
   SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES,
   type SatisfactionSurveyLegacyStatusRepository,
 } from '../../domain/ports/satisfaction-survey-legacy-status.repository';
-import { SATISFACTION_SURVEY_DISPATCH_STATUSES, type SurveyDispatchRepository } from '../../domain/ports/survey-dispatch.repository';
+import {
+  SATISFACTION_SURVEY_DISPATCH_STATUSES,
+  type SurveyDispatchRepository,
+} from '../../domain/ports/survey-dispatch.repository';
 import { SatisfactionSurveyFlowSubmissionFieldMapService } from '../services/satisfaction-survey-flow-submission-field-map.service';
 
 const ACCEPT_VALUE = '1';
@@ -47,7 +50,8 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
       return { handled: false };
     }
 
-    const dispatch = await this.surveyDispatchRepository.findByFlowToken(flowToken);
+    const dispatch =
+      await this.surveyDispatchRepository.findByFlowToken(flowToken);
     if (!dispatch) {
       await this.auditService.record('survey.flow.submission.unmatched_token', {
         flowToken,
@@ -56,10 +60,11 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
       return { handled: true };
     }
 
-    const conversationKey = this.conversationKeyFactory.createWhatsappConversationKey(
-      event.phoneNumberId,
-      event.from,
-    );
+    const conversationKey =
+      this.conversationKeyFactory.createWhatsappConversationKey(
+        event.phoneNumberId,
+        event.from,
+      );
 
     await this.conversationMessageRepository.saveInbound({
       conversationKey,
@@ -76,7 +81,9 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
     });
 
     const nowIso = new Date().toISOString();
-    const relatedAgendaIds = dispatch.appointments.map((appointment) => appointment.legacyAgendaId);
+    const relatedAgendaIds = dispatch.appointments.map(
+      (appointment) => appointment.legacyAgendaId,
+    );
 
     if (dispatch.status === SATISFACTION_SURVEY_DISPATCH_STATUSES.SENT) {
       await this.surveyDispatchRepository.markStarted({
@@ -89,7 +96,11 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
     const decision = this.readStringField(response, map.decision);
 
     if (decision === UNKNOWN_PERSON_VALUE) {
-      await this.handleUnknownPerson(dispatch.id, dispatch.patientLegacyUserId, dispatch.patientPhone);
+      await this.handleUnknownPerson(
+        dispatch.id,
+        dispatch.patientLegacyUserId,
+        dispatch.patientPhone,
+      );
       await this.markRelatedAgendas(
         relatedAgendaIds,
         SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.NOT_APPLICABLE,
@@ -126,11 +137,14 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
 
     const hasStructuredAnswers = Boolean(q1 || q2 || q3 || q4 || q5Comment);
     if (!hasStructuredAnswers && decision !== ACCEPT_VALUE) {
-      await this.auditService.record('survey.flow.submission.ignored_without_answers', {
-        dispatchId: dispatch.id,
-        flowToken,
-        messageId: event.messageId,
-      });
+      await this.auditService.record(
+        'survey.flow.submission.ignored_without_answers',
+        {
+          dispatchId: dispatch.id,
+          flowToken,
+          messageId: event.messageId,
+        },
+      );
       return { handled: true };
     }
 
@@ -242,7 +256,7 @@ export class RecordSatisfactionSurveyFlowSubmissionUseCase {
 
   private async markRelatedAgendas(
     agendaIds: readonly number[],
-    status: typeof SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES[keyof typeof SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES],
+    status: (typeof SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES)[keyof typeof SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES],
   ): Promise<void> {
     if (agendaIds.length === 0) {
       return;

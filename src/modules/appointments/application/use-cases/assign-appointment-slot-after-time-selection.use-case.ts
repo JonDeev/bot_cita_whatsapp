@@ -58,7 +58,8 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
   private static readonly TIME_HHMM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
   private static readonly TIMEZONE = 'America/Bogota';
   private static readonly DEFAULT_PATIENT_PHONE = '0000';
-  private static readonly DEFAULT_PROFESSIONAL_NAME = 'PROFESIONAL POR CONFIRMAR';
+  private static readonly DEFAULT_PROFESSIONAL_NAME =
+    'PROFESIONAL POR CONFIRMAR';
   private static readonly DEFAULT_SITE_NAME = 'Santa Marta';
   private static readonly DEFAULT_SITE_ADDRESS = 'Direccion por confirmar';
 
@@ -82,9 +83,10 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
     }
 
     try {
-      const patientDetails = await this.appointmentConfirmationDetailsRepository.findPatientById(
-        normalizedInput.patientId,
-      );
+      const patientDetails =
+        await this.appointmentConfirmationDetailsRepository.findPatientById(
+          normalizedInput.patientId,
+        );
       if (!patientDetails) {
         return {
           status: 'TECHNICAL_FAILURE',
@@ -96,13 +98,15 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
         patientUserId: String(patientDetails.userId),
         patientPhone: this.normalizePhone(patientDetails.phone),
         requestDateIso: this.formatDateIsoInBogota(input.now ?? new Date()),
-        requiredSiteId: AssignAppointmentSlotAfterTimeSelectionUseCase.BOT_ENABLED_SITE_ID,
+        requiredSiteId:
+          AssignAppointmentSlotAfterTimeSelectionUseCase.BOT_ENABLED_SITE_ID,
       };
 
-      const wasPrimaryAssigned = await this.appointmentAssignmentRepository.assignSlotIfAvailable({
-        slotRef: normalizedInput.preferredSlotRef,
-        ...assignmentContext,
-      });
+      const wasPrimaryAssigned =
+        await this.appointmentAssignmentRepository.assignSlotIfAvailable({
+          slotRef: normalizedInput.preferredSlotRef,
+          ...assignmentContext,
+        });
 
       if (wasPrimaryAssigned) {
         return this.buildAssignedResult(
@@ -117,21 +121,24 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
         return { status: 'TIME_NO_LONGER_AVAILABLE' };
       }
 
-      const fallbackSlot = await this.appointmentAssignmentRepository.findFallbackAvailableSlot({
-        specialtyCups: normalizedInput.specialtyCups,
-        appointmentDateIso: normalizedInput.appointmentDateIso,
-        appointmentTimeHHmm: normalizedInput.appointmentTimeHHmm,
-        requiredSiteId: AssignAppointmentSlotAfterTimeSelectionUseCase.BOT_ENABLED_SITE_ID,
-        excludeSlotRef: normalizedInput.preferredSlotRef,
-      });
+      const fallbackSlot =
+        await this.appointmentAssignmentRepository.findFallbackAvailableSlot({
+          specialtyCups: normalizedInput.specialtyCups,
+          appointmentDateIso: normalizedInput.appointmentDateIso,
+          appointmentTimeHHmm: normalizedInput.appointmentTimeHHmm,
+          requiredSiteId:
+            AssignAppointmentSlotAfterTimeSelectionUseCase.BOT_ENABLED_SITE_ID,
+          excludeSlotRef: normalizedInput.preferredSlotRef,
+        });
       if (!fallbackSlot) {
         return { status: 'TIME_NO_LONGER_AVAILABLE' };
       }
 
-      const wasFallbackAssigned = await this.appointmentAssignmentRepository.assignSlotIfAvailable({
-        slotRef: fallbackSlot.slotRef,
-        ...assignmentContext,
-      });
+      const wasFallbackAssigned =
+        await this.appointmentAssignmentRepository.assignSlotIfAvailable({
+          slotRef: fallbackSlot.slotRef,
+          ...assignmentContext,
+        });
       if (!wasFallbackAssigned) {
         return { status: 'TIME_NO_LONGER_AVAILABLE' };
       }
@@ -157,7 +164,9 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
     patientDetails: PatientAppointmentConfirmationDetails,
   ): Promise<AssignAppointmentSlotAfterTimeSelectionResult> {
     const assignedAppointment =
-      await this.appointmentConfirmationDetailsRepository.findAssignedAppointmentBySlotRef(slotRef);
+      await this.appointmentConfirmationDetailsRepository.findAssignedAppointmentBySlotRef(
+        slotRef,
+      );
 
     if (!assignedAppointment) {
       return {
@@ -174,9 +183,10 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
         patientFullName: this.buildPatientFullName(patientDetails),
         appointmentDateIso: assignedAppointment.appointmentDateIso,
         appointmentTimeHHmm: assignedAppointment.appointmentTimeHHmm,
-        appointmentDisplayTime: this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
-          assignedAppointment.appointmentTimeHHmm,
-        ),
+        appointmentDisplayTime:
+          this.appointmentTimePresenterService.formatHHmmAsTwelveHour(
+            assignedAppointment.appointmentTimeHHmm,
+          ),
         professionalName:
           assignedAppointment.professionalName?.trim() ||
           AssignAppointmentSlotAfterTimeSelectionUseCase.DEFAULT_PROFESSIONAL_NAME,
@@ -191,19 +201,15 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
     };
   }
 
-  private normalizeInput(
-    input: AssignAppointmentSlotAfterTimeSelectionInput,
-  ):
-    | {
-        patientId: number;
-        specialtyName: string;
-        specialtyCups: string;
-        appointmentDateIso: string;
-        appointmentTimeHHmm: string;
-        preferredSlotRef: string;
-        doctorEmployeeCode?: string;
-      }
-    | null {
+  private normalizeInput(input: AssignAppointmentSlotAfterTimeSelectionInput): {
+    patientId: number;
+    specialtyName: string;
+    specialtyCups: string;
+    appointmentDateIso: string;
+    appointmentTimeHHmm: string;
+    preferredSlotRef: string;
+    doctorEmployeeCode?: string;
+  } | null {
     const patientId = input.patientId ?? null;
     const specialtyName = input.specialtyName?.trim() ?? '';
     const specialtyCups = input.specialtyCups?.trim() ?? '';
@@ -219,8 +225,12 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
       !specialtyName ||
       !specialtyCups ||
       !preferredSlotRef ||
-      !AssignAppointmentSlotAfterTimeSelectionUseCase.ISO_DATE_PATTERN.test(appointmentDateIso) ||
-      !AssignAppointmentSlotAfterTimeSelectionUseCase.TIME_HHMM_PATTERN.test(appointmentTimeHHmm)
+      !AssignAppointmentSlotAfterTimeSelectionUseCase.ISO_DATE_PATTERN.test(
+        appointmentDateIso,
+      ) ||
+      !AssignAppointmentSlotAfterTimeSelectionUseCase.TIME_HHMM_PATTERN.test(
+        appointmentTimeHHmm,
+      )
     ) {
       return null;
     }
@@ -249,10 +259,15 @@ export class AssignAppointmentSlotAfterTimeSelectionUseCase {
 
   private normalizePhone(phone: string | null): string {
     const normalizedPhone = phone?.trim() ?? '';
-    return normalizedPhone || AssignAppointmentSlotAfterTimeSelectionUseCase.DEFAULT_PATIENT_PHONE;
+    return (
+      normalizedPhone ||
+      AssignAppointmentSlotAfterTimeSelectionUseCase.DEFAULT_PATIENT_PHONE
+    );
   }
 
-  private buildPatientFullName(patientDetails: PatientAppointmentConfirmationDetails): string {
+  private buildPatientFullName(
+    patientDetails: PatientAppointmentConfirmationDetails,
+  ): string {
     const fullName = [
       patientDetails.firstName,
       patientDetails.secondName,

@@ -34,17 +34,15 @@ describe('MetaWhatsappCloudApiAdapter', () => {
       message: 'getaddrinfo EAI_AGAIN graph.facebook.com',
     };
 
-    mockedFetch
-      .mockRejectedValueOnce(firstError)
-      .mockResolvedValueOnce(
-        createResponse({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            messages: [{ id: 'wamid-123' }],
-          }),
+    mockedFetch.mockRejectedValueOnce(firstError).mockResolvedValueOnce(
+      createResponse({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          messages: [{ id: 'wamid-123' }],
         }),
-      );
+      }),
+    );
 
     const adapter = new MetaWhatsappCloudApiAdapter(configService);
 

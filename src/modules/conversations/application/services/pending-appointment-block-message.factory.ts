@@ -16,7 +16,9 @@ export interface PendingAppointmentBlockMessageInput {
 
 @Injectable()
 export class PendingAppointmentBlockMessageFactory {
-  build(input: PendingAppointmentBlockMessageInput): ConversationOutboundInteractiveButtonsMessage {
+  build(
+    input: PendingAppointmentBlockMessageInput,
+  ): ConversationOutboundInteractiveButtonsMessage {
     const patientName = input.patientName.trim() || 'PACIENTE';
 
     return {

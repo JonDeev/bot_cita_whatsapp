@@ -54,7 +54,9 @@ describe('AssignAppointmentSlotAfterTimeSelectionUseCase', () => {
         appointmentDisplayTime: '11:40 AM',
       },
     });
-    expect(assignmentRepository.findFallbackAvailableSlot).not.toHaveBeenCalled();
+    expect(
+      assignmentRepository.findFallbackAvailableSlot,
+    ).not.toHaveBeenCalled();
   });
 
   it('uses fallback slot when preferred slot was already taken', async () => {
@@ -63,7 +65,9 @@ describe('AssignAppointmentSlotAfterTimeSelectionUseCase', () => {
         .fn()
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true),
-      findFallbackAvailableSlot: jest.fn().mockResolvedValue({ slotRef: '202' }),
+      findFallbackAvailableSlot: jest
+        .fn()
+        .mockResolvedValue({ slotRef: '202' }),
     };
     const confirmationRepository: AppointmentConfirmationDetailsRepository = {
       findPatientById: jest.fn().mockResolvedValue(patient),
@@ -99,7 +103,9 @@ describe('AssignAppointmentSlotAfterTimeSelectionUseCase', () => {
         usedFallbackSlot: true,
       },
     });
-    expect(assignmentRepository.findFallbackAvailableSlot).toHaveBeenCalledTimes(1);
+    expect(
+      assignmentRepository.findFallbackAvailableSlot,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('returns time no longer available when no fallback slot exists', async () => {
@@ -130,7 +136,9 @@ describe('AssignAppointmentSlotAfterTimeSelectionUseCase', () => {
   it('does not use fallback when slot belongs to an explicitly selected doctor', async () => {
     const assignmentRepository: AppointmentAssignmentRepository = {
       assignSlotIfAvailable: jest.fn().mockResolvedValue(false),
-      findFallbackAvailableSlot: jest.fn().mockResolvedValue({ slotRef: '202' }),
+      findFallbackAvailableSlot: jest
+        .fn()
+        .mockResolvedValue({ slotRef: '202' }),
     };
     const useCase = new AssignAppointmentSlotAfterTimeSelectionUseCase(
       assignmentRepository,
@@ -152,6 +160,8 @@ describe('AssignAppointmentSlotAfterTimeSelectionUseCase', () => {
     });
 
     expect(result).toEqual({ status: 'TIME_NO_LONGER_AVAILABLE' });
-    expect(assignmentRepository.findFallbackAvailableSlot).not.toHaveBeenCalled();
+    expect(
+      assignmentRepository.findFallbackAvailableSlot,
+    ).not.toHaveBeenCalled();
   });
 });

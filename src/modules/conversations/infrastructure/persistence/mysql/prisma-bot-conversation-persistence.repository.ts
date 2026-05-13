@@ -8,7 +8,9 @@ import type { ConversationPersistenceRepository } from '../../../domain/ports/co
 export class PrismaBotConversationPersistenceRepository implements ConversationPersistenceRepository {
   constructor(private readonly prismaBot: PrismaBotService) {}
 
-  async findByKey(conversationKey: string): Promise<ConversationSession | null> {
+  async findByKey(
+    conversationKey: string,
+  ): Promise<ConversationSession | null> {
     const conversation = await this.prismaBot.botConversation.findUnique({
       where: { conversationKey },
     });
@@ -25,7 +27,8 @@ export class PrismaBotConversationPersistenceRepository implements ConversationP
       state: conversation.state as ConversationSession['state'],
       status: conversation.status as ConversationSession['status'],
       context:
-        (conversation.context as ConversationSession['context'] | null) ?? undefined,
+        (conversation.context as ConversationSession['context'] | null) ??
+        undefined,
       createdAt: conversation.createdAt.toISOString(),
       updatedAt: conversation.updatedAt.toISOString(),
     };

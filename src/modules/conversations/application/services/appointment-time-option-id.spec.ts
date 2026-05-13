@@ -6,14 +6,18 @@ import {
 
 describe('appointment-time-option-id', () => {
   it('parses slot option ids', () => {
-    expect(parseAppointmentTimeOptionId(buildAppointmentTimeOptionId('101'))).toEqual({
+    expect(
+      parseAppointmentTimeOptionId(buildAppointmentTimeOptionId('101')),
+    ).toEqual({
       kind: 'slot',
       slotRef: '101',
     });
   });
 
   it('parses show more option id', () => {
-    expect(parseAppointmentTimeOptionId(APPOINTMENT_TIME_SHOW_MORE_OPTION_ID)).toEqual({
+    expect(
+      parseAppointmentTimeOptionId(APPOINTMENT_TIME_SHOW_MORE_OPTION_ID),
+    ).toEqual({
       kind: 'show_more',
     });
   });

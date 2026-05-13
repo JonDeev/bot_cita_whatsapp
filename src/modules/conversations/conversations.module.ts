@@ -21,6 +21,7 @@ import { AppointmentNotificationOptInMessageFactory } from './application/servic
 import { AppointmentRescheduleConfirmationMessageFactory } from './application/services/appointment-reschedule-confirmation-message.factory';
 import { AppointmentReschedulingTimeSelectionService } from './application/services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from './application/services/appointment-time-list.factory';
+import { AssignedDispensaryMessageFactory } from './application/services/assigned-dispensary-message.factory';
 import { MainMenuListFactory } from './application/services/main-menu-list.factory';
 import { ConversationStatePromptService } from './application/services/conversation-state-prompt.service';
 import { SpecialtyListFactory } from './application/services/specialty-list.factory';
@@ -47,7 +48,13 @@ import { PrismaBotConversationMessageRepository } from './infrastructure/persist
 import { PatientsModule } from '../patients/patients.module';
 
 @Module({
-  imports: [AuditModule, RedisModule, PrismaBotModule, PatientsModule, AppointmentsModule],
+  imports: [
+    AuditModule,
+    RedisModule,
+    PrismaBotModule,
+    PatientsModule,
+    AppointmentsModule,
+  ],
   providers: [
     ConversationConfigService,
     ConversationKeyFactory,
@@ -63,6 +70,7 @@ import { PatientsModule } from '../patients/patients.module';
     AppointmentRescheduleConfirmationMessageFactory,
     AppointmentReschedulingTimeSelectionService,
     AppointmentTimeListFactory,
+    AssignedDispensaryMessageFactory,
     MainMenuListFactory,
     ConversationStatePromptService,
     SpecialtyListFactory,

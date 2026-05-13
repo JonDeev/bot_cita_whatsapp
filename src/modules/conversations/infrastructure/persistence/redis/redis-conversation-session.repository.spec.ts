@@ -12,7 +12,10 @@ describe('RedisConversationSessionRepository', () => {
       getSessionTtlSeconds: jest.fn().mockReturnValue(7200),
     } as unknown as ConversationConfigService;
 
-    const repository = new RedisConversationSessionRepository(redisService, conversationConfigService);
+    const repository = new RedisConversationSessionRepository(
+      redisService,
+      conversationConfigService,
+    );
 
     await repository.save({
       conversationKey: 'whatsapp:123:573001112233',

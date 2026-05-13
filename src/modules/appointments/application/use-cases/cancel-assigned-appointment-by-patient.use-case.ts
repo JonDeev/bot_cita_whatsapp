@@ -45,15 +45,19 @@ export class CancelAssignedAppointmentByPatientUseCase {
     try {
       const nowParts = this.formatNowInBogota(normalizedInput.now);
       const wasCancelled =
-        await this.appointmentCancellationRepository.cancelAssignedFutureAppointmentByPatient({
-          slotRef: normalizedInput.slotRef,
-          patientUserId: String(normalizedInput.patientId),
-          currentDateIso: nowParts.dateIso,
-          currentTimeHHmm: nowParts.timeHHmm,
-          canceledDateIso: nowParts.dateIso,
-        });
+        await this.appointmentCancellationRepository.cancelAssignedFutureAppointmentByPatient(
+          {
+            slotRef: normalizedInput.slotRef,
+            patientUserId: String(normalizedInput.patientId),
+            currentDateIso: nowParts.dateIso,
+            currentTimeHHmm: nowParts.timeHHmm,
+            canceledDateIso: nowParts.dateIso,
+          },
+        );
 
-      return wasCancelled ? { status: 'CANCELLED' } : { status: 'NOT_CANCELLABLE' };
+      return wasCancelled
+        ? { status: 'CANCELLED' }
+        : { status: 'NOT_CANCELLABLE' };
     } catch {
       return {
         status: 'TECHNICAL_FAILURE',
@@ -107,8 +111,12 @@ export class CancelAssignedAppointmentByPatientUseCase {
     const timeHHmm = `${normalizedParts.hour}:${normalizedParts.minute}`;
 
     if (
-      !CancelAssignedAppointmentByPatientUseCase.ISO_DATE_PATTERN.test(dateIso) ||
-      !CancelAssignedAppointmentByPatientUseCase.TIME_HHMM_PATTERN.test(timeHHmm)
+      !CancelAssignedAppointmentByPatientUseCase.ISO_DATE_PATTERN.test(
+        dateIso,
+      ) ||
+      !CancelAssignedAppointmentByPatientUseCase.TIME_HHMM_PATTERN.test(
+        timeHHmm,
+      )
     ) {
       throw new Error('Failed to compute valid Bogota date/time.');
     }

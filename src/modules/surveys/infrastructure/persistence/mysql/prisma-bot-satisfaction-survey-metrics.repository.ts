@@ -19,9 +19,7 @@ interface MutableWindowCounters {
 }
 
 @Injectable()
-export class PrismaBotSatisfactionSurveyMetricsRepository
-  implements SatisfactionSurveyMetricsRepository
-{
+export class PrismaBotSatisfactionSurveyMetricsRepository implements SatisfactionSurveyMetricsRepository {
   constructor(private readonly prismaBot: PrismaBotService) {}
 
   async findByDateAndOptionalWindow(
@@ -33,8 +31,14 @@ export class PrismaBotSatisfactionSurveyMetricsRepository
       surveyDate,
       ...(filters.windowStartHHmm && filters.windowEndHHmm
         ? {
-            windowStartAt: this.toBogotaDateTime(filters.surveyDateIso, filters.windowStartHHmm),
-            windowEndAt: this.toBogotaDateTime(filters.surveyDateIso, filters.windowEndHHmm),
+            windowStartAt: this.toBogotaDateTime(
+              filters.surveyDateIso,
+              filters.windowStartHHmm,
+            ),
+            windowEndAt: this.toBogotaDateTime(
+              filters.surveyDateIso,
+              filters.windowEndHHmm,
+            ),
           }
         : {}),
     };
@@ -104,17 +108,21 @@ export class PrismaBotSatisfactionSurveyMetricsRepository
     }
 
     return Array.from(grouped.values())
-      .map((window): SatisfactionSurveyMetricsWindow => ({
-        windowStartHHmm: window.windowStartHHmm,
-        windowEndHHmm: window.windowEndHHmm,
-        eligible: window.eligibleAgendaIds.size,
-        sent: window.sent,
-        failed: window.failed,
-        completed: window.completed,
-        declined: window.declined,
-        blocked: window.blocked,
-      }))
-      .sort((left, right) => left.windowStartHHmm.localeCompare(right.windowStartHHmm));
+      .map(
+        (window): SatisfactionSurveyMetricsWindow => ({
+          windowStartHHmm: window.windowStartHHmm,
+          windowEndHHmm: window.windowEndHHmm,
+          eligible: window.eligibleAgendaIds.size,
+          sent: window.sent,
+          failed: window.failed,
+          completed: window.completed,
+          declined: window.declined,
+          blocked: window.blocked,
+        }),
+      )
+      .sort((left, right) =>
+        left.windowStartHHmm.localeCompare(right.windowStartHHmm),
+      );
   }
 
   private toBogotaDateTime(dateIso: string, hhmm: string): Date {

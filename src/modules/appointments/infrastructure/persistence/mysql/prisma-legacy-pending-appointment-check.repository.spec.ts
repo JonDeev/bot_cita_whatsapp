@@ -21,13 +21,18 @@ describe('PrismaLegacyPendingAppointmentCheckRepository', () => {
       ]),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyPendingAppointmentCheckRepository(prisma);
-    const appointment = await repository.findNearestPendingFutureAppointmentByPatientAndSpecialty({
-      patientUserId: '77',
-      specialtyCups: '890201',
-      currentDateIso: '2026-05-06',
-      currentTimeHHmm: '10:30',
-    });
+    const repository = new PrismaLegacyPendingAppointmentCheckRepository(
+      prisma,
+    );
+    const appointment =
+      await repository.findNearestPendingFutureAppointmentByPatientAndSpecialty(
+        {
+          patientUserId: '77',
+          specialtyCups: '890201',
+          currentDateIso: '2026-05-06',
+          currentTimeHHmm: '10:30',
+        },
+      );
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     expect(appointment).toEqual({
@@ -64,13 +69,18 @@ describe('PrismaLegacyPendingAppointmentCheckRepository', () => {
       ]),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyPendingAppointmentCheckRepository(prisma);
-    const appointment = await repository.findNearestPendingFutureAppointmentByPatientAndSpecialty({
-      patientUserId: '77',
-      specialtyCups: '890201',
-      currentDateIso: '2026-05-06',
-      currentTimeHHmm: '10:30',
-    });
+    const repository = new PrismaLegacyPendingAppointmentCheckRepository(
+      prisma,
+    );
+    const appointment =
+      await repository.findNearestPendingFutureAppointmentByPatientAndSpecialty(
+        {
+          patientUserId: '77',
+          specialtyCups: '890201',
+          currentDateIso: '2026-05-06',
+          currentTimeHHmm: '10:30',
+        },
+      );
 
     expect(appointment).toBeNull();
   });

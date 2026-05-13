@@ -21,7 +21,7 @@ describe('GetSatisfactionSurveyMetricsUseCase', () => {
     const auditService = { record: jest.fn().mockResolvedValue(undefined) };
 
     const useCase = new GetSatisfactionSurveyMetricsUseCase(
-      repository as any,
+      repository,
       auditService as unknown as AuditService,
     );
 
@@ -51,7 +51,7 @@ describe('GetSatisfactionSurveyMetricsUseCase', () => {
 
   it('rejects incomplete window filter pair', async () => {
     const useCase = new GetSatisfactionSurveyMetricsUseCase(
-      { findByDateAndOptionalWindow: jest.fn() } as any,
+      { findByDateAndOptionalWindow: jest.fn() },
       { record: jest.fn() } as any,
     );
 
@@ -65,7 +65,7 @@ describe('GetSatisfactionSurveyMetricsUseCase', () => {
 
   it('rejects non-calendar dates', async () => {
     const useCase = new GetSatisfactionSurveyMetricsUseCase(
-      { findByDateAndOptionalWindow: jest.fn() } as any,
+      { findByDateAndOptionalWindow: jest.fn() },
       { record: jest.fn() } as any,
     );
 
@@ -78,7 +78,7 @@ describe('GetSatisfactionSurveyMetricsUseCase', () => {
 
   it('rejects invalid 24-hour times', async () => {
     const useCase = new GetSatisfactionSurveyMetricsUseCase(
-      { findByDateAndOptionalWindow: jest.fn() } as any,
+      { findByDateAndOptionalWindow: jest.fn() },
       { record: jest.fn() } as any,
     );
 

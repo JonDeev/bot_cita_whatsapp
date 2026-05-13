@@ -10,7 +10,9 @@ describe('SendWhatsappTextMessageUseCase', () => {
       sendInteractiveButtonsMessage: jest.fn(),
       sendFlowTemplateMessage: jest.fn(),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new SendWhatsappTextMessageUseCase(sender, auditService);
 
@@ -21,11 +23,14 @@ describe('SendWhatsappTextMessageUseCase', () => {
     });
 
     expect(result.messageId).toBe('wamid-123');
-    expect(auditService.record).toHaveBeenCalledWith('whatsapp.outbound.text.sent', {
-      to: '573001112233',
-      trigger: 'test',
-      messageId: 'wamid-123',
-    });
+    expect(auditService.record).toHaveBeenCalledWith(
+      'whatsapp.outbound.text.sent',
+      {
+        to: '573001112233',
+        trigger: 'test',
+        messageId: 'wamid-123',
+      },
+    );
   });
 
   it('validates required recipient', async () => {

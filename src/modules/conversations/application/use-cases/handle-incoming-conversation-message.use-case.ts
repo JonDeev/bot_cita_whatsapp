@@ -64,10 +64,11 @@ export class HandleIncomingConversationMessageUseCase {
       return { outboundMessages: [] };
     }
 
-    const conversationKey = this.conversationKeyFactory.createWhatsappConversationKey(
-      event.phoneNumberId,
-      event.from,
-    );
+    const conversationKey =
+      this.conversationKeyFactory.createWhatsappConversationKey(
+        event.phoneNumberId,
+        event.from,
+      );
     const resolvedSession = await this.resolveSession(conversationKey, event);
     const session = resolvedSession.session;
 
@@ -79,11 +80,14 @@ export class HandleIncomingConversationMessageUseCase {
     });
 
     if (resolvedSession.wasRestoredFromPersistence) {
-      await this.auditService.record('conversation.session.restored_from_persistence', {
-        conversationKey,
-        state: session.state,
-        status: session.status,
-      });
+      await this.auditService.record(
+        'conversation.session.restored_from_persistence',
+        {
+          conversationKey,
+          state: session.state,
+          status: session.status,
+        },
+      );
     }
 
     if (resolvedSession.wasCreated) {
@@ -113,11 +117,14 @@ export class HandleIncomingConversationMessageUseCase {
       event,
     );
     if (!hasValidInteractiveContext) {
-      await this.auditService.record('conversation.interactive.invalid_context_skipped', {
-        conversationKey,
-        messageId: event.messageId,
-        contextMessageId: event.contextMessageId ?? null,
-      });
+      await this.auditService.record(
+        'conversation.interactive.invalid_context_skipped',
+        {
+          conversationKey,
+          messageId: event.messageId,
+          contextMessageId: event.contextMessageId ?? null,
+        },
+      );
       return { outboundMessages: [] };
     }
 
@@ -131,7 +138,10 @@ export class HandleIncomingConversationMessageUseCase {
       return { outboundMessages: [] };
     }
 
-    const navigationCommand = await this.handleNavigationCommand(sessionToProcess, event);
+    const navigationCommand = await this.handleNavigationCommand(
+      sessionToProcess,
+      event,
+    );
 
     const { finalSession: updatedSession, finalResult: handlerResult } =
       navigationCommand ??
@@ -167,7 +177,10 @@ export class HandleIncomingConversationMessageUseCase {
 
   private createInitialSession(
     conversationKey: string,
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
   ): ConversationSession {
     const timestamp = new Date().toISOString();
 
@@ -185,9 +198,13 @@ export class HandleIncomingConversationMessageUseCase {
 
   private async resolveSession(
     conversationKey: string,
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
   ): Promise<ResolvedConversationSession> {
-    const cachedSession = await this.conversationSessionRepository.findByKey(conversationKey);
+    const cachedSession =
+      await this.conversationSessionRepository.findByKey(conversationKey);
     if (cachedSession) {
       return {
         session: cachedSession,
@@ -197,9 +214,8 @@ export class HandleIncomingConversationMessageUseCase {
     }
 
     if (this.conversationConfigService.shouldRestoreSessionFromPersistence()) {
-      const persistedSession = await this.conversationPersistenceRepository.findByKey(
-        conversationKey,
-      );
+      const persistedSession =
+        await this.conversationPersistenceRepository.findByKey(conversationKey);
       if (persistedSession) {
         await this.conversationSessionRepository.save(persistedSession);
         return {
@@ -236,7 +252,10 @@ export class HandleIncomingConversationMessageUseCase {
 
   private async handleWithAutoTransitions(
     session: ConversationSession,
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
   ): Promise<{
     finalSession: ConversationSession;
     finalResult: ConversationStateHandlerResult;
@@ -244,8 +263,15 @@ export class HandleIncomingConversationMessageUseCase {
     let currentSession = session;
     let currentResult: ConversationStateHandlerResult | null = null;
 
-    for (let index = 0; index < HandleIncomingConversationMessageUseCase.MAX_HANDLER_TRANSITIONS_PER_EVENT; index += 1) {
-      const handler = this.conversationStateHandlerResolver.resolve(currentSession.state);
+    for (
+      let index = 0;
+      index <
+      HandleIncomingConversationMessageUseCase.MAX_HANDLER_TRANSITIONS_PER_EVENT;
+      index += 1
+    ) {
+      const handler = this.conversationStateHandlerResolver.resolve(
+        currentSession.state,
+      );
       currentResult = await handler.handle(currentSession, event);
 
       currentSession = this.buildUpdatedSession(
@@ -270,7 +296,10 @@ export class HandleIncomingConversationMessageUseCase {
 
   private async reopenIfClosed(
     session: ConversationSession,
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
   ): Promise<ConversationSession> {
     if (session.status !== CONVERSATION_STATUSES.CLOSED) {
       return session;
@@ -292,7 +321,10 @@ export class HandleIncomingConversationMessageUseCase {
 
   private async hasValidInteractiveContext(
     conversationKey: string,
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
   ): Promise<boolean> {
     if (event.messageType !== 'interactive' || !event.contextMessageId) {
       return true;
@@ -309,7 +341,10 @@ export class HandleIncomingConversationMessageUseCase {
     status: ConversationStatus,
     outboundMessages: ConversationOutboundMessage[],
   ): ConversationOutboundMessage[] {
-    if (status !== CONVERSATION_STATUSES.BOT_ACTIVE || outboundMessages.length === 0) {
+    if (
+      status !== CONVERSATION_STATUSES.BOT_ACTIVE ||
+      outboundMessages.length === 0
+    ) {
       return outboundMessages;
     }
 
@@ -317,11 +352,14 @@ export class HandleIncomingConversationMessageUseCase {
       return outboundMessages;
     }
 
-    if (outboundMessages.some((message) => message.type === 'interactive_buttons')) {
+    if (
+      outboundMessages.some((message) => message.type === 'interactive_buttons')
+    ) {
       return outboundMessages;
     }
 
-    const navigationMessage = this.conversationNavigationService.buildNavigationMessage(state);
+    const navigationMessage =
+      this.conversationNavigationService.buildNavigationMessage(state);
     if (!navigationMessage) {
       return outboundMessages;
     }
@@ -331,17 +369,19 @@ export class HandleIncomingConversationMessageUseCase {
 
   private async handleNavigationCommand(
     session: ConversationSession,
-    event: Extract<NormalizedWhatsappEvent, { kind: 'incoming_message_received' }>,
-  ): Promise<
-    | {
-        finalSession: ConversationSession;
-        finalResult: ConversationStateHandlerResult;
-      }
-    | null
-  > {
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
+  ): Promise<{
+    finalSession: ConversationSession;
+    finalResult: ConversationStateHandlerResult;
+  } | null> {
     if (
       event.messageType !== 'interactive' ||
-      !this.conversationNavigationService.isNavigationOptionId(event.interactiveReplyId)
+      !this.conversationNavigationService.isNavigationOptionId(
+        event.interactiveReplyId,
+      )
     ) {
       return null;
     }
@@ -407,7 +447,8 @@ export class HandleIncomingConversationMessageUseCase {
       };
     }
 
-    const backNavigation = this.conversationNavigationService.resolveBackNavigation(session);
+    const backNavigation =
+      this.conversationNavigationService.resolveBackNavigation(session);
     const backTargetSession = this.buildUpdatedSession(
       session,
       backNavigation.targetState,

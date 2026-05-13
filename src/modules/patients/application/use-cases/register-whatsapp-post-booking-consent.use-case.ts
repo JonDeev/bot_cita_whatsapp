@@ -1,8 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { WHATSAPP_CONTACT_CONSENT_REPOSITORY } from '../../domain/patients.tokens';
-import type {
-  WhatsappContactConsentRepository,
-} from '../../domain/ports/whatsapp-contact-consent.repository';
+import type { WhatsappContactConsentRepository } from '../../domain/ports/whatsapp-contact-consent.repository';
 import {
   WHATSAPP_CONTACT_CONSENT_CHANNEL,
   WHATSAPP_CONTACT_CONSENT_PURPOSES,
@@ -68,7 +66,9 @@ export class RegisterWhatsappPostBookingConsentUseCase {
       patientLegacyUserId: patientId,
       phone,
       channel: WHATSAPP_CONTACT_CONSENT_CHANNEL,
-      source: input.source?.trim() || RegisterWhatsappPostBookingConsentUseCase.DEFAULT_SOURCE,
+      source:
+        input.source?.trim() ||
+        RegisterWhatsappPostBookingConsentUseCase.DEFAULT_SOURCE,
       consentTextSnapshot,
       policyUrl: input.policyUrl?.trim() || null,
       policyVersion: input.policyVersion?.trim() || null,

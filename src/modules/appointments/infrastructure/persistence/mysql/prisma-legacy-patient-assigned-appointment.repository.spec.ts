@@ -18,14 +18,17 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
       ]),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyPatientAssignedAppointmentRepository(prisma);
-    const appointments = await repository.findFutureAssignedAppointmentsByPatient({
-      patientUserId: '98',
-      currentDateIso: '2026-05-06',
-      currentTimeHHmm: '10:30',
-      offset: 0,
-      maxResults: 11,
-    });
+    const repository = new PrismaLegacyPatientAssignedAppointmentRepository(
+      prisma,
+    );
+    const appointments =
+      await repository.findFutureAssignedAppointmentsByPatient({
+        patientUserId: '98',
+        currentDateIso: '2026-05-06',
+        currentTimeHHmm: '10:30',
+        offset: 0,
+        maxResults: 11,
+      });
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     expect(appointments).toEqual([
@@ -58,14 +61,17 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
       ]),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyPatientAssignedAppointmentRepository(prisma);
-    const appointments = await repository.findFutureAssignedAppointmentsByPatient({
-      patientUserId: '98',
-      currentDateIso: '2026-05-06',
-      currentTimeHHmm: '10:30',
-      offset: 0,
-      maxResults: 11,
-    });
+    const repository = new PrismaLegacyPatientAssignedAppointmentRepository(
+      prisma,
+    );
+    const appointments =
+      await repository.findFutureAssignedAppointmentsByPatient({
+        patientUserId: '98',
+        currentDateIso: '2026-05-06',
+        currentTimeHHmm: '10:30',
+        offset: 0,
+        maxResults: 11,
+      });
 
     expect(appointments).toEqual([]);
   });
@@ -86,14 +92,17 @@ describe('PrismaLegacyPatientAssignedAppointmentRepository', () => {
       ]),
     } as unknown as PrismaService;
 
-    const repository = new PrismaLegacyPatientAssignedAppointmentRepository(prisma);
-    const appointments = await repository.findFutureAssignedAppointmentsByPatient({
-      patientUserId: '98',
-      currentDateIso: '2026-05-06',
-      currentTimeHHmm: '10:30',
-      offset: 0,
-      maxResults: 11,
-    });
+    const repository = new PrismaLegacyPatientAssignedAppointmentRepository(
+      prisma,
+    );
+    const appointments =
+      await repository.findFutureAssignedAppointmentsByPatient({
+        patientUserId: '98',
+        currentDateIso: '2026-05-06',
+        currentTimeHHmm: '10:30',
+        offset: 0,
+        maxResults: 11,
+      });
 
     expect(appointments).toEqual([
       {

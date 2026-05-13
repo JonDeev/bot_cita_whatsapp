@@ -7,12 +7,16 @@ export class SurveyFlowTemplateConfigService {
   }
 
   getTemplateLanguageCode(): string {
-    const value = this.readStringEnv('WHATSAPP_SURVEY_FLOW_TEMPLATE_LANGUAGE_CODE');
+    const value = this.readStringEnv(
+      'WHATSAPP_SURVEY_FLOW_TEMPLATE_LANGUAGE_CODE',
+    );
     return value || 'es_CO';
   }
 
   getTemplateButtonIndex(): string {
-    const value = this.readStringEnv('WHATSAPP_SURVEY_FLOW_TEMPLATE_BUTTON_INDEX');
+    const value = this.readStringEnv(
+      'WHATSAPP_SURVEY_FLOW_TEMPLATE_BUTTON_INDEX',
+    );
     return value || '0';
   }
 

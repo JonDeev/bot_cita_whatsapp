@@ -16,7 +16,11 @@ describe('assigned appointment option id helpers', () => {
   });
 
   it('parses show more option id', () => {
-    expect(parseAssignedAppointmentOptionId(ASSIGNED_APPOINTMENT_SHOW_MORE_OPTION_ID)).toEqual({
+    expect(
+      parseAssignedAppointmentOptionId(
+        ASSIGNED_APPOINTMENT_SHOW_MORE_OPTION_ID,
+      ),
+    ).toEqual({
       kind: 'show_more',
     });
   });

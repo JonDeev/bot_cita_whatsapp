@@ -8,12 +8,12 @@ import type {
 } from '../../../domain/ports/appointment-confirmation-details.repository';
 
 @Injectable()
-export class PrismaLegacyAppointmentConfirmationDetailsRepository
-  implements AppointmentConfirmationDetailsRepository
-{
+export class PrismaLegacyAppointmentConfirmationDetailsRepository implements AppointmentConfirmationDetailsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findPatientById(patientId: number): Promise<PatientAppointmentConfirmationDetails | null> {
+  async findPatientById(
+    patientId: number,
+  ): Promise<PatientAppointmentConfirmationDetails | null> {
     const patient = await this.prisma.usuarios.findUnique({
       where: {
         IdUsuario: patientId,

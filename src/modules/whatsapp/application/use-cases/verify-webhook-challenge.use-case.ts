@@ -13,7 +13,9 @@ export class VerifyWebhookChallengeUseCase {
 
   execute(input: VerifyWebhookChallengeInput): string {
     if (input.mode !== 'subscribe') {
-      throw new UnauthorizedException('Invalid hub.mode for webhook verification.');
+      throw new UnauthorizedException(
+        'Invalid hub.mode for webhook verification.',
+      );
     }
 
     const expectedVerifyToken = this.configService.getVerifyToken();

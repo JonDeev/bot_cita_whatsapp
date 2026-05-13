@@ -7,7 +7,9 @@ import {
 } from '../value-objects/outbound-whatsapp-message';
 
 export interface WhatsappMessageSenderPort {
-  sendTextMessage(message: OutboundWhatsappTextMessage): Promise<OutboundWhatsappSendResult>;
+  sendTextMessage(
+    message: OutboundWhatsappTextMessage,
+  ): Promise<OutboundWhatsappSendResult>;
   sendInteractiveListMessage(
     message: OutboundWhatsappInteractiveListMessage,
   ): Promise<OutboundWhatsappSendResult>;

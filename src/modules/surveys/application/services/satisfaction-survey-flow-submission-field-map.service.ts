@@ -13,7 +13,10 @@ export interface SatisfactionSurveyFlowFieldMap {
 export class SatisfactionSurveyFlowSubmissionFieldMapService {
   getFieldMap(): SatisfactionSurveyFlowFieldMap {
     return {
-      decision: this.readKeyEnv('SURVEY_FLOW_FIELD_DECISION', 'survey_decision'),
+      decision: this.readKeyEnv(
+        'SURVEY_FLOW_FIELD_DECISION',
+        'survey_decision',
+      ),
       q1: this.readKeyEnv('SURVEY_FLOW_FIELD_Q1', 'q1'),
       q2: this.readKeyEnv('SURVEY_FLOW_FIELD_Q2', 'q2'),
       q3: this.readKeyEnv('SURVEY_FLOW_FIELD_Q3', 'q3'),

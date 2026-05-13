@@ -13,12 +13,14 @@ import type {
 export class MainMenuHandler implements ConversationStateHandler {
   readonly state = CONVERSATION_STATES.MAIN_MENU;
 
-  constructor(private readonly mainMenuListFactory: MainMenuListFactory) { }
+  constructor(private readonly mainMenuListFactory: MainMenuListFactory) {}
 
   async handle(
     _session: ConversationSession,
     event: NormalizedWhatsappEvent,
   ): Promise<ConversationStateHandlerResult> {
+    await Promise.resolve();
+
     if (event.kind !== 'incoming_message_received') {
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
@@ -38,6 +40,13 @@ export class MainMenuHandler implements ConversationStateHandler {
       event.interactiveReplyId === MAIN_MENU_OPTION_IDS.CHECK_APPOINTMENTS
     ) {
       return this.buildDocumentRequestResponse('CHECK_APPOINTMENTS');
+    }
+
+    if (
+      event.messageType === 'interactive' &&
+      event.interactiveReplyId === MAIN_MENU_OPTION_IDS.CHECK_DISPENSARY
+    ) {
+      return this.buildDocumentRequestResponse('CHECK_DISPENSARY');
     }
 
     if (
@@ -67,7 +76,11 @@ export class MainMenuHandler implements ConversationStateHandler {
   }
 
   private buildDocumentRequestResponse(
-    flowIntent: 'REQUEST_APPOINTMENT' | 'CANCEL_OR_RESCHEDULE' | 'CHECK_APPOINTMENTS',
+    flowIntent:
+      | 'REQUEST_APPOINTMENT'
+      | 'CANCEL_OR_RESCHEDULE'
+      | 'CHECK_APPOINTMENTS'
+      | 'CHECK_DISPENSARY',
   ): ConversationStateHandlerResult {
     return {
       nextState: CONVERSATION_STATES.WAITING_DOCUMENT,

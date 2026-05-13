@@ -18,12 +18,17 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       phoneNumberId: '123',
     };
 
-    const signatureVerifier = { verifySignature: jest.fn().mockReturnValue(true) };
+    const signatureVerifier = {
+      verifySignature: jest.fn().mockReturnValue(true),
+    };
     const payloadParser = { parse: jest.fn().mockReturnValue([event, event]) };
     const webhookInboxRepository = {
-      saveIfFirstSeen: jest.fn().mockResolvedValueOnce({ created: true }).mockResolvedValueOnce({
-        created: false,
-      }),
+      saveIfFirstSeen: jest
+        .fn()
+        .mockResolvedValueOnce({ created: true })
+        .mockResolvedValueOnce({
+          created: false,
+        }),
       updateStatus: jest.fn().mockResolvedValue(undefined),
     };
     const idempotencyStore = {
@@ -34,7 +39,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       getInteractiveEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
       getTextEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
     const orchestrator = {
       handleEvents: jest.fn().mockResolvedValue(undefined),
     } as unknown as ConversationOrchestratorService;
@@ -42,7 +49,7 @@ describe('ProcessWhatsappWebhookUseCase', () => {
     const useCase = new ProcessWhatsappWebhookUseCase(
       signatureVerifier,
       payloadParser,
-      webhookInboxRepository as any,
+      webhookInboxRepository,
       idempotencyStore,
       new WebhookIdempotencyKeyFactory(),
       whatsappConfig as any,
@@ -66,7 +73,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
   });
 
   it('throws when signature is invalid', async () => {
-    const signatureVerifier = { verifySignature: jest.fn().mockReturnValue(false) };
+    const signatureVerifier = {
+      verifySignature: jest.fn().mockReturnValue(false),
+    };
     const payloadParser = { parse: jest.fn() };
     const webhookInboxRepository = {
       saveIfFirstSeen: jest.fn(),
@@ -79,12 +88,14 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       getTextEventMaxAgeSeconds: jest.fn(),
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
-    const orchestrator = { handleEvents: jest.fn() } as unknown as ConversationOrchestratorService;
+    const orchestrator = {
+      handleEvents: jest.fn(),
+    } as unknown as ConversationOrchestratorService;
 
     const useCase = new ProcessWhatsappWebhookUseCase(
       signatureVerifier,
       payloadParser,
-      webhookInboxRepository as any,
+      webhookInboxRepository,
       idempotencyStore,
       new WebhookIdempotencyKeyFactory(),
       whatsappConfig as any,
@@ -113,7 +124,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       phoneNumberId: '123',
     };
 
-    const signatureVerifier = { verifySignature: jest.fn().mockReturnValue(true) };
+    const signatureVerifier = {
+      verifySignature: jest.fn().mockReturnValue(true),
+    };
     const payloadParser = { parse: jest.fn().mockReturnValue([event]) };
     const webhookInboxRepository = {
       saveIfFirstSeen: jest.fn().mockResolvedValue({ created: true }),
@@ -125,7 +138,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       getInteractiveEventMaxAgeSeconds: jest.fn().mockReturnValue(60),
       getTextEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
     const orchestrator = {
       handleEvents: jest.fn().mockResolvedValue(undefined),
     } as unknown as ConversationOrchestratorService;
@@ -133,7 +148,7 @@ describe('ProcessWhatsappWebhookUseCase', () => {
     const useCase = new ProcessWhatsappWebhookUseCase(
       signatureVerifier,
       payloadParser,
-      webhookInboxRepository as any,
+      webhookInboxRepository,
       idempotencyStore,
       new WebhookIdempotencyKeyFactory(),
       whatsappConfig as any,
@@ -171,7 +186,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       phoneNumberId: '123',
     };
 
-    const signatureVerifier = { verifySignature: jest.fn().mockReturnValue(true) };
+    const signatureVerifier = {
+      verifySignature: jest.fn().mockReturnValue(true),
+    };
     const payloadParser = { parse: jest.fn().mockReturnValue([event]) };
     const webhookInboxRepository = {
       saveIfFirstSeen: jest.fn().mockResolvedValue({ created: true }),
@@ -183,7 +200,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       getInteractiveEventMaxAgeSeconds: jest.fn().mockReturnValue(60),
       getTextEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
     const orchestrator = {
       handleEvents: jest.fn().mockResolvedValue(undefined),
     } as unknown as ConversationOrchestratorService;
@@ -191,7 +210,7 @@ describe('ProcessWhatsappWebhookUseCase', () => {
     const useCase = new ProcessWhatsappWebhookUseCase(
       signatureVerifier,
       payloadParser,
-      webhookInboxRepository as any,
+      webhookInboxRepository,
       idempotencyStore,
       new WebhookIdempotencyKeyFactory(),
       whatsappConfig as any,

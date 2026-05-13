@@ -26,7 +26,11 @@ export class PatientIdentityInputNormalizerService {
     const month = Number(match[2]);
     const year = Number(match[3]);
 
-    if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) {
+    if (
+      !Number.isInteger(day) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(year)
+    ) {
       return null;
     }
 

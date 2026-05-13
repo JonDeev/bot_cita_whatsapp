@@ -32,9 +32,11 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
     }
 
     const maxAttempts = 3;
-    const currentAttempts = session.context?.patientValidation?.failedAttempts ?? 0;
+    const currentAttempts =
+      session.context?.patientValidation?.failedAttempts ?? 0;
     const documentNumber = session.context?.patientValidation?.documentNumber;
-    const documentMasked = session.context?.patientValidation?.documentNumberMasked;
+    const documentMasked =
+      session.context?.patientValidation?.documentNumberMasked;
 
     if (!documentNumber) {
       return {
@@ -48,7 +50,9 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
       };
     }
 
-    const parsedBirthDate = this.inputNormalizer.parseWhatsappBirthDate(event.textBody ?? '');
+    const parsedBirthDate = this.inputNormalizer.parseWhatsappBirthDate(
+      event.textBody ?? '',
+    );
     if (!parsedBirthDate) {
       const attempts = currentAttempts + 1;
       if (attempts >= maxAttempts) {
@@ -147,10 +151,10 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
 
     return {
       nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
-        nextContext: {
-          ...session.context,
-          patientValidation: {
-            failedAttempts: 0,
+      nextContext: {
+        ...session.context,
+        patientValidation: {
+          failedAttempts: 0,
           documentNumber,
           documentNumberMasked: documentMasked,
           patientId: validationResult.patientId,

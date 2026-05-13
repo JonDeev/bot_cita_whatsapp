@@ -18,12 +18,18 @@ export class AppointmentDoctorListPresenterService {
       return { title: AppointmentDoctorListPresenterService.DEFAULT_TITLE };
     }
 
-    if (this.countCharacters(normalizedName) <= AppointmentDoctorListPresenterService.TITLE_MAX_LENGTH) {
+    if (
+      this.countCharacters(normalizedName) <=
+      AppointmentDoctorListPresenterService.TITLE_MAX_LENGTH
+    ) {
       return { title: normalizedName };
     }
 
     const compactTitle = this.buildCompactTitle(normalizedName);
-    const safeTitle = this.truncate(compactTitle, AppointmentDoctorListPresenterService.TITLE_MAX_LENGTH);
+    const safeTitle = this.truncate(
+      compactTitle,
+      AppointmentDoctorListPresenterService.TITLE_MAX_LENGTH,
+    );
     const safeDescription = this.truncate(
       normalizedName,
       AppointmentDoctorListPresenterService.DESCRIPTION_MAX_LENGTH,
@@ -57,7 +63,8 @@ export class AppointmentDoctorListPresenterService {
       return value;
     }
 
-    const truncatedLength = maxLength - AppointmentDoctorListPresenterService.ELLIPSIS.length;
+    const truncatedLength =
+      maxLength - AppointmentDoctorListPresenterService.ELLIPSIS.length;
     if (truncatedLength <= 0) {
       return AppointmentDoctorListPresenterService.ELLIPSIS.slice(0, maxLength);
     }

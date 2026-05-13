@@ -18,7 +18,9 @@ export class SendWhatsappTextMessageUseCase {
     private readonly auditService: AuditService,
   ) {}
 
-  async execute(input: SendWhatsappTextMessageInput): Promise<OutboundWhatsappSendResult> {
+  async execute(
+    input: SendWhatsappTextMessageInput,
+  ): Promise<OutboundWhatsappSendResult> {
     if (!input.to?.trim()) {
       throw new BadRequestException('Recipient phone number is required.');
     }
@@ -46,7 +48,8 @@ export class SendWhatsappTextMessageUseCase {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       await this.auditService.record('whatsapp.outbound.text.failed', {
         to: input.to,
         trigger: input.trigger,

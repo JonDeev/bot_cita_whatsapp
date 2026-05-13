@@ -36,26 +36,31 @@ export class CreateSatisfactionSurveyDispatchUseCase {
     this.validateInput(input);
 
     const sanitizedPhone = this.phoneNormalizer.sanitize(input.patientPhone);
-    const patientPhoneE164 = this.phoneNormalizer.toWhatsappRecipient(sanitizedPhone);
+    const patientPhoneE164 =
+      this.phoneNormalizer.toWhatsappRecipient(sanitizedPhone);
     const dedupeKey = `survey:${input.patientLegacyUserId}:${input.surveyDateIso}`;
 
-    const result = await this.surveyDispatchRepository.createOrGetDailyDispatch({
-      surveyDefinitionCode: SATISFACTION_SURVEY_DEFINITION.CODE,
-      surveyDefinitionVersion: SATISFACTION_SURVEY_DEFINITION.VERSION,
-      patientLegacyUserId: input.patientLegacyUserId,
-      patientName: input.patientName.trim(),
-      patientPhone: sanitizedPhone,
-      patientPhoneE164,
-      surveyDateIso: input.surveyDateIso,
-      triggerType: input.triggerType,
-      windowStartIso: input.windowStartIso,
-      windowEndIso: input.windowEndIso,
-      expiresAtIso: input.expiresAtIso,
-      dedupeKey,
-      appointments: input.appointments,
-    });
+    const result = await this.surveyDispatchRepository.createOrGetDailyDispatch(
+      {
+        surveyDefinitionCode: SATISFACTION_SURVEY_DEFINITION.CODE,
+        surveyDefinitionVersion: SATISFACTION_SURVEY_DEFINITION.VERSION,
+        patientLegacyUserId: input.patientLegacyUserId,
+        patientName: input.patientName.trim(),
+        patientPhone: sanitizedPhone,
+        patientPhoneE164,
+        surveyDateIso: input.surveyDateIso,
+        triggerType: input.triggerType,
+        windowStartIso: input.windowStartIso,
+        windowEndIso: input.windowEndIso,
+        expiresAtIso: input.expiresAtIso,
+        dedupeKey,
+        appointments: input.appointments,
+      },
+    );
 
-    const action = result.wasCreated ? 'survey.dispatch.created' : 'survey.dispatch.reused';
+    const action = result.wasCreated
+      ? 'survey.dispatch.created'
+      : 'survey.dispatch.reused';
 
     await this.auditService.record(action, {
       dispatchId: result.dispatch.id,
@@ -70,16 +75,25 @@ export class CreateSatisfactionSurveyDispatchUseCase {
   }
 
   private validateInput(input: CreateSatisfactionSurveyDispatchInput): void {
-    if (!Number.isInteger(input.patientLegacyUserId) || input.patientLegacyUserId <= 0) {
-      throw new BadRequestException('Patient legacy user id must be a positive integer.');
+    if (
+      !Number.isInteger(input.patientLegacyUserId) ||
+      input.patientLegacyUserId <= 0
+    ) {
+      throw new BadRequestException(
+        'Patient legacy user id must be a positive integer.',
+      );
     }
 
     if (!input.patientName?.trim()) {
       throw new BadRequestException('Patient name is required.');
     }
 
-    if (!this.phoneNormalizer.isValidLegacyColombianMobile(input.patientPhone)) {
-      throw new BadRequestException('Patient phone must be a valid Colombian mobile number.');
+    if (
+      !this.phoneNormalizer.isValidLegacyColombianMobile(input.patientPhone)
+    ) {
+      throw new BadRequestException(
+        'Patient phone must be a valid Colombian mobile number.',
+      );
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.surveyDateIso)) {
@@ -95,20 +109,31 @@ export class CreateSatisfactionSurveyDispatchUseCase {
     this.assertIsoDateTime(input.expiresAtIso, 'Expiration');
 
     if (input.appointments.length === 0) {
-      throw new BadRequestException('At least one appointment is required to create a survey dispatch.');
+      throw new BadRequestException(
+        'At least one appointment is required to create a survey dispatch.',
+      );
     }
 
     for (const appointment of input.appointments) {
-      if (!Number.isInteger(appointment.legacyAgendaId) || appointment.legacyAgendaId <= 0) {
-        throw new BadRequestException('Appointment legacy agenda id must be a positive integer.');
+      if (
+        !Number.isInteger(appointment.legacyAgendaId) ||
+        appointment.legacyAgendaId <= 0
+      ) {
+        throw new BadRequestException(
+          'Appointment legacy agenda id must be a positive integer.',
+        );
       }
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(appointment.appointmentDateIso)) {
-        throw new BadRequestException('Appointment date must use YYYY-MM-DD format.');
+        throw new BadRequestException(
+          'Appointment date must use YYYY-MM-DD format.',
+        );
       }
 
       if (!/^\d{2}:\d{2}$/.test(appointment.appointmentTimeHhmm)) {
-        throw new BadRequestException('Appointment time must use HH:MM format.');
+        throw new BadRequestException(
+          'Appointment time must use HH:MM format.',
+        );
       }
     }
   }

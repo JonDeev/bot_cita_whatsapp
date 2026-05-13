@@ -115,7 +115,11 @@ export interface SaveSurveyAnswerByQuestionKeyCommand {
 export interface UpsertSurveyContactSuppressionCommand {
   patientLegacyUserId: number;
   phone: string;
-  reason: 'UNKNOWN_PERSON' | 'OPT_OUT_SURVEY' | 'INVALID_PHONE' | 'MANUAL_BLOCK';
+  reason:
+    | 'UNKNOWN_PERSON'
+    | 'OPT_OUT_SURVEY'
+    | 'INVALID_PHONE'
+    | 'MANUAL_BLOCK';
   notes?: string;
 }
 
@@ -123,8 +127,12 @@ export interface SurveyDispatchRepository {
   createOrGetDailyDispatch(
     command: CreateSurveyDispatchCommand,
   ): Promise<CreateSurveyDispatchResult>;
-  findById(dispatchId: number): Promise<SatisfactionSurveyDispatchRecord | null>;
-  findByFlowToken(flowToken: string): Promise<SatisfactionSurveyDispatchRecord | null>;
+  findById(
+    dispatchId: number,
+  ): Promise<SatisfactionSurveyDispatchRecord | null>;
+  findByFlowToken(
+    flowToken: string,
+  ): Promise<SatisfactionSurveyDispatchRecord | null>;
   markSent(command: MarkSurveyDispatchSentCommand): Promise<void>;
   markFailed(command: MarkSurveyDispatchFailedCommand): Promise<void>;
   markCancelledByHandoff(
@@ -133,7 +141,13 @@ export interface SurveyDispatchRepository {
   markStarted(command: MarkSurveyDispatchStartedCommand): Promise<void>;
   markCompleted(command: MarkSurveyDispatchCompletedCommand): Promise<void>;
   markDeclined(command: MarkSurveyDispatchDeclinedCommand): Promise<void>;
-  markBlockedContact(command: MarkSurveyDispatchBlockedContactCommand): Promise<void>;
-  saveAnswerByQuestionKey(command: SaveSurveyAnswerByQuestionKeyCommand): Promise<void>;
-  upsertContactSuppression(command: UpsertSurveyContactSuppressionCommand): Promise<void>;
+  markBlockedContact(
+    command: MarkSurveyDispatchBlockedContactCommand,
+  ): Promise<void>;
+  saveAnswerByQuestionKey(
+    command: SaveSurveyAnswerByQuestionKeyCommand,
+  ): Promise<void>;
+  upsertContactSuppression(
+    command: UpsertSurveyContactSuppressionCommand,
+  ): Promise<void>;
 }

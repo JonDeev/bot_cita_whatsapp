@@ -6,7 +6,7 @@ describe('RegisterWhatsappPostBookingConsentUseCase', () => {
       recordConsent: jest.fn().mockResolvedValue(undefined),
     };
 
-    const useCase = new RegisterWhatsappPostBookingConsentUseCase(repository as any);
+    const useCase = new RegisterWhatsappPostBookingConsentUseCase(repository);
     const result = await useCase.execute({
       patientId: 98,
       phone: '573001112233',
@@ -31,7 +31,7 @@ describe('RegisterWhatsappPostBookingConsentUseCase', () => {
       recordConsent: jest.fn(),
     };
 
-    const useCase = new RegisterWhatsappPostBookingConsentUseCase(repository as any);
+    const useCase = new RegisterWhatsappPostBookingConsentUseCase(repository);
     const result = await useCase.execute({
       patientId: null,
       phone: '573001112233',

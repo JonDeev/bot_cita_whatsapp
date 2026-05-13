@@ -11,7 +11,9 @@ export type SurveyEligibilitySource =
 @Injectable()
 export class SatisfactionSurveyEligibilitySourceConfigService {
   getSource(): SurveyEligibilitySource {
-    const source = (process.env.SURVEYS_ELIGIBILITY_SOURCE ?? '').trim().toLowerCase();
+    const source = (process.env.SURVEYS_ELIGIBILITY_SOURCE ?? '')
+      .trim()
+      .toLowerCase();
     if (source === SURVEY_ELIGIBILITY_SOURCES.JSON) {
       return SURVEY_ELIGIBILITY_SOURCES.JSON;
     }
@@ -20,7 +22,9 @@ export class SatisfactionSurveyEligibilitySourceConfigService {
   }
 
   getJsonFilePath(): string {
-    const configuredPath = (process.env.SURVEYS_ELIGIBILITY_JSON_FILE_PATH ?? '').trim();
+    const configuredPath = (
+      process.env.SURVEYS_ELIGIBILITY_JSON_FILE_PATH ?? ''
+    ).trim();
     if (configuredPath) {
       return configuredPath;
     }

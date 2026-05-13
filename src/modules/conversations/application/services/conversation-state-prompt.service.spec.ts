@@ -19,7 +19,9 @@ describe('ConversationStatePromptService', () => {
       new AssignedAppointmentListFactory(),
       new AssignedAppointmentConsultationDetailsMessageFactory(),
       new AssignedAppointmentDetailsMessageFactory(),
-      new AppointmentDoctorListFactory(new AppointmentDoctorListPresenterService()),
+      new AppointmentDoctorListFactory(
+        new AppointmentDoctorListPresenterService(),
+      ),
       new AppointmentDateListFactory(),
       new AppointmentTimeListFactory(),
       new AppointmentNotificationOptInMessageFactory(),
@@ -39,7 +41,9 @@ describe('ConversationStatePromptService', () => {
         status: 'BOT_ACTIVE',
         context: {
           specialtySelection: {
-            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
           },
         },
         createdAt: '2026-05-04T10:00:00.000Z',
@@ -107,7 +111,9 @@ describe('ConversationStatePromptService', () => {
         status: 'BOT_ACTIVE',
         context: {
           appointmentTimeSelection: {
-            offeredTimes: [{ slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' }],
+            offeredTimes: [
+              { slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' },
+            ],
             hasMoreTimes: true,
             nextCursorTimeHHmm: '08:30',
           },
@@ -175,7 +181,9 @@ describe('ConversationStatePromptService', () => {
       CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
     );
 
-    expect(result.nextState).toBe(CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT);
+    expect(result.nextState).toBe(
+      CONVERSATION_STATES.SELECTING_ASSIGNED_APPOINTMENT,
+    );
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_list',
       buttonText: 'Ver citas',
@@ -218,7 +226,9 @@ describe('ConversationStatePromptService', () => {
       CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
     );
 
-    expect(result.nextState).toBe(CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS);
+    expect(result.nextState).toBe(
+      CONVERSATION_STATES.REVIEWING_ASSIGNED_APPOINTMENT_DETAILS,
+    );
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_buttons',
       buttons: [
@@ -242,7 +252,9 @@ describe('ConversationStatePromptService', () => {
         status: 'BOT_ACTIVE',
         context: {
           appointmentDoctorSelection: {
-            offeredDoctors: [{ employeeCode: 'M001', displayName: 'ANA GARCIA' }],
+            offeredDoctors: [
+              { employeeCode: 'M001', displayName: 'ANA GARCIA' },
+            ],
           },
         },
         createdAt: '2026-05-04T10:00:00.000Z',
@@ -278,7 +290,8 @@ describe('ConversationStatePromptService', () => {
         channel: 'whatsapp',
         participantPhone: '573001112233',
         phoneNumberId: '123',
-        state: CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+        state:
+          CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
         status: 'BOT_ACTIVE',
         createdAt: '2026-05-09T10:00:00.000Z',
         updatedAt: '2026-05-09T10:00:00.000Z',
@@ -287,14 +300,21 @@ describe('ConversationStatePromptService', () => {
     );
 
     expect(result).toEqual({
-      nextState: CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+      nextState:
+        CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
       outboundMessages: [
         {
           type: 'interactive_buttons',
           body: expect.stringContaining('recordatorios'),
           buttons: [
-            { id: 'appointment_notifications_opt_in:accept', title: 'Si autorizo' },
-            { id: 'appointment_notifications_opt_in:decline', title: 'No autorizo' },
+            {
+              id: 'appointment_notifications_opt_in:accept',
+              title: 'Si autorizo',
+            },
+            {
+              id: 'appointment_notifications_opt_in:decline',
+              title: 'No autorizo',
+            },
           ],
         },
       ],

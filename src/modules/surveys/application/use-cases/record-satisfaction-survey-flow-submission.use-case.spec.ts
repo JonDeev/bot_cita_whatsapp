@@ -39,7 +39,13 @@ describe('RecordSatisfactionSurveyFlowSubmissionUseCase', () => {
         initialTemplateName: 'satisfaction_survey_flow',
         initialTemplateLanguage: 'es_CO',
         flowToken: 'survey_dispatch:99:2026-05-11',
-        appointments: [{ legacyAgendaId: 601, appointmentDateIso: '2026-05-11', appointmentTimeHhmm: '07:15' }],
+        appointments: [
+          {
+            legacyAgendaId: 601,
+            appointmentDateIso: '2026-05-11',
+            appointmentTimeHhmm: '07:15',
+          },
+        ],
       }),
       findById: jest.fn().mockResolvedValue({
         appointments: [{ legacyAgendaId: 601 }],
@@ -57,13 +63,24 @@ describe('RecordSatisfactionSurveyFlowSubmissionUseCase', () => {
       saveInbound: jest.fn().mockResolvedValue(undefined),
     };
 
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
     const useCase = new RecordSatisfactionSurveyFlowSubmissionUseCase(
       surveyDispatchRepository as any,
-      legacyStatusRepository as any,
+      legacyStatusRepository,
       conversationMessageRepository as any,
-      { getFieldMap: jest.fn(() => ({ decision: 'survey_decision', q1: 'q1', q2: 'q2', q3: 'q3', q4: 'q4', q5Comment: 'q5_comment' })) } as any,
+      {
+        getFieldMap: jest.fn(() => ({
+          decision: 'survey_decision',
+          q1: 'q1',
+          q2: 'q2',
+          q3: 'q3',
+          q4: 'q4',
+          q5Comment: 'q5_comment',
+        })),
+      } as any,
       new ConversationKeyFactory(),
       auditService,
     );
@@ -72,11 +89,15 @@ describe('RecordSatisfactionSurveyFlowSubmissionUseCase', () => {
 
     expect(result).toEqual({ handled: true });
     expect(surveyDispatchRepository.markCompleted).toHaveBeenCalled();
-    expect(legacyStatusRepository.updateAgendaSurveyNotificationStatus).toHaveBeenCalledWith({
+    expect(
+      legacyStatusRepository.updateAgendaSurveyNotificationStatus,
+    ).toHaveBeenCalledWith({
       legacyAgendaIds: [601],
       status: SATISFACTION_SURVEY_LEGACY_NOTIFICATION_STATUSES.ANSWERED,
     });
-    expect(surveyDispatchRepository.saveAnswerByQuestionKey).toHaveBeenCalledTimes(5);
+    expect(
+      surveyDispatchRepository.saveAnswerByQuestionKey,
+    ).toHaveBeenCalledTimes(5);
   });
 
   it('blocks contact when flow marks unknown person', async () => {
@@ -96,7 +117,13 @@ describe('RecordSatisfactionSurveyFlowSubmissionUseCase', () => {
         initialTemplateName: null,
         initialTemplateLanguage: null,
         flowToken: 'survey_dispatch:100:2026-05-11',
-        appointments: [{ legacyAgendaId: 602, appointmentDateIso: '2026-05-11', appointmentTimeHhmm: '07:20' }],
+        appointments: [
+          {
+            legacyAgendaId: 602,
+            appointmentDateIso: '2026-05-11',
+            appointmentTimeHhmm: '07:20',
+          },
+        ],
       }),
       findById: jest.fn().mockResolvedValue({
         appointments: [{ legacyAgendaId: 602 }],
@@ -112,9 +139,18 @@ describe('RecordSatisfactionSurveyFlowSubmissionUseCase', () => {
 
     const useCase = new RecordSatisfactionSurveyFlowSubmissionUseCase(
       surveyDispatchRepository as any,
-      legacyStatusRepository as any,
+      legacyStatusRepository,
       { saveInbound: jest.fn().mockResolvedValue(undefined) } as any,
-      { getFieldMap: jest.fn(() => ({ decision: 'survey_decision', q1: 'q1', q2: 'q2', q3: 'q3', q4: 'q4', q5Comment: 'q5_comment' })) } as any,
+      {
+        getFieldMap: jest.fn(() => ({
+          decision: 'survey_decision',
+          q1: 'q1',
+          q2: 'q2',
+          q3: 'q3',
+          q4: 'q4',
+          q5Comment: 'q5_comment',
+        })),
+      } as any,
       new ConversationKeyFactory(),
       { record: jest.fn().mockResolvedValue(undefined) } as any,
     );
@@ -129,7 +165,9 @@ describe('RecordSatisfactionSurveyFlowSubmissionUseCase', () => {
 
     expect(result).toEqual({ handled: true });
     expect(surveyDispatchRepository.markBlockedContact).toHaveBeenCalled();
-    expect(surveyDispatchRepository.upsertContactSuppression).toHaveBeenCalledWith(
+    expect(
+      surveyDispatchRepository.upsertContactSuppression,
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         reason: 'UNKNOWN_PERSON',
       }),

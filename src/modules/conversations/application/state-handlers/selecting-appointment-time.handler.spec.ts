@@ -21,10 +21,10 @@ describe('SelectingAppointmentTimeHandler', () => {
       new AppointmentAssignmentConfirmationMessageFactory(),
       new AppointmentAvailabilityMessageFactory(),
       new AppointmentNotificationOptInMessageFactory(),
-      (reschedulingTimeSelectionService ??
+      reschedulingTimeSelectionService ??
         ({
           handleAfterTimeSelection: jest.fn(),
-        } as unknown as AppointmentReschedulingTimeSelectionService)),
+        } as unknown as AppointmentReschedulingTimeSelectionService),
       resolveTimes,
       assignAppointment,
       {
@@ -71,7 +71,9 @@ describe('SelectingAppointmentTimeHandler', () => {
             patientId: 98,
           },
           specialtySelection: {
-            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
             selectedSpecialty: {
               code: '890201',
               name: 'MEDICINA GENERAL',
@@ -80,12 +82,18 @@ describe('SelectingAppointmentTimeHandler', () => {
           },
           appointmentDateSelection: {
             scope: 'SPECIALTY',
-            specialtyOfferedDates: [{ isoDate: '2026-04-30', displayDate: '30/04/2026' }],
-            offeredDates: [{ isoDate: '2026-04-30', displayDate: '30/04/2026' }],
+            specialtyOfferedDates: [
+              { isoDate: '2026-04-30', displayDate: '30/04/2026' },
+            ],
+            offeredDates: [
+              { isoDate: '2026-04-30', displayDate: '30/04/2026' },
+            ],
             selectedDateIso: '2026-04-30',
           },
           appointmentTimeSelection: {
-            offeredTimes: [{ slotRef: '101', timeHHmm: '11:40', displayTime: '11:40 AM' }],
+            offeredTimes: [
+              { slotRef: '101', timeHHmm: '11:40', displayTime: '11:40 AM' },
+            ],
             hasMoreTimes: false,
           },
         },
@@ -104,7 +112,9 @@ describe('SelectingAppointmentTimeHandler', () => {
       },
     );
 
-    expect(result.nextState).toBe('REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN');
+    expect(result.nextState).toBe(
+      'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+    );
     expect(result.nextContext?.appointmentTimeSelection).toBeUndefined();
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'text',
@@ -114,7 +124,10 @@ describe('SelectingAppointmentTimeHandler', () => {
       type: 'interactive_buttons',
       buttons: [
         { id: 'appointment_notifications_opt_in:accept', title: 'Si autorizo' },
-        { id: 'appointment_notifications_opt_in:decline', title: 'No autorizo' },
+        {
+          id: 'appointment_notifications_opt_in:decline',
+          title: 'No autorizo',
+        },
       ],
     });
   });
@@ -147,7 +160,9 @@ describe('SelectingAppointmentTimeHandler', () => {
         status: 'BOT_ACTIVE',
         context: {
           specialtySelection: {
-            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
             selectedSpecialty: {
               code: '890201',
               name: 'MEDICINA GENERAL',
@@ -156,12 +171,18 @@ describe('SelectingAppointmentTimeHandler', () => {
           },
           appointmentDateSelection: {
             scope: 'SPECIALTY',
-            specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
-            offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+            specialtyOfferedDates: [
+              { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
+            offeredDates: [
+              { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
             selectedDateIso: '2026-05-06',
           },
           appointmentTimeSelection: {
-            offeredTimes: [{ slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' }],
+            offeredTimes: [
+              { slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' },
+            ],
             hasMoreTimes: true,
             nextCursorTimeHHmm: '08:30',
           },
@@ -224,7 +245,9 @@ describe('SelectingAppointmentTimeHandler', () => {
             patientId: 98,
           },
           specialtySelection: {
-            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
             selectedSpecialty: {
               code: '890201',
               name: 'MEDICINA GENERAL',
@@ -232,17 +255,25 @@ describe('SelectingAppointmentTimeHandler', () => {
             },
           },
           appointmentDoctorSelection: {
-            offeredDoctors: [{ employeeCode: 'M001', displayName: 'ANA GARCIA' }],
+            offeredDoctors: [
+              { employeeCode: 'M001', displayName: 'ANA GARCIA' },
+            ],
             selectedDoctor: { employeeCode: 'M001', displayName: 'ANA GARCIA' },
           },
           appointmentDateSelection: {
             scope: 'DOCTOR',
-            specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
-            offeredDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+            specialtyOfferedDates: [
+              { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
+            offeredDates: [
+              { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
             selectedDateIso: '2026-05-06',
           },
           appointmentTimeSelection: {
-            offeredTimes: [{ slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' }],
+            offeredTimes: [
+              { slotRef: '101', timeHHmm: '08:30', displayTime: '08:30 AM' },
+            ],
             hasMoreTimes: false,
           },
         },
@@ -269,7 +300,9 @@ describe('SelectingAppointmentTimeHandler', () => {
     expect(result.nextState).toBe('SELECTING_APPOINTMENT_TIME');
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'text',
-      body: expect.stringContaining('Ese cupo ya fue ocupado por otro paciente.'),
+      body: expect.stringContaining(
+        'Ese cupo ya fue ocupado por otro paciente.',
+      ),
     });
   });
 
@@ -339,7 +372,9 @@ describe('SelectingAppointmentTimeHandler', () => {
             originalAppointmentTimeHHmm: '11:40',
           },
           specialtySelection: {
-            offeredSpecialties: [{ code: '890201', name: 'MEDICINA GENERAL', cups: '890201' }],
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
             selectedSpecialty: {
               code: '890201',
               name: 'MEDICINA GENERAL',
@@ -348,12 +383,18 @@ describe('SelectingAppointmentTimeHandler', () => {
           },
           appointmentDateSelection: {
             scope: 'SPECIALTY',
-            specialtyOfferedDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
-            offeredDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
+            specialtyOfferedDates: [
+              { isoDate: '2026-05-30', displayDate: '30/05/2026' },
+            ],
+            offeredDates: [
+              { isoDate: '2026-05-30', displayDate: '30/05/2026' },
+            ],
             selectedDateIso: '2026-05-30',
           },
           appointmentTimeSelection: {
-            offeredTimes: [{ slotRef: '202', timeHHmm: '11:40', displayTime: '11:40 AM' }],
+            offeredTimes: [
+              { slotRef: '202', timeHHmm: '11:40', displayTime: '11:40 AM' },
+            ],
             hasMoreTimes: false,
           },
         },

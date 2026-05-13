@@ -11,7 +11,9 @@ describe('assigned appointment action option ids', () => {
       ),
     ).toBe(true);
     expect(
-      isAssignedAppointmentActionOptionId(ASSIGNED_APPOINTMENT_ACTION_OPTION_IDS.CANCEL),
+      isAssignedAppointmentActionOptionId(
+        ASSIGNED_APPOINTMENT_ACTION_OPTION_IDS.CANCEL,
+      ),
     ).toBe(true);
   });
 

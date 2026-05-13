@@ -5,10 +5,13 @@ describe('AppointmentTimeListFactory', () => {
     const factory = new AppointmentTimeListFactory();
 
     expect(
-      factory.build([
-        { slotRef: '101', displayTime: '08:30 AM' },
-        { slotRef: '102', displayTime: '01:45 PM' },
-      ], false),
+      factory.build(
+        [
+          { slotRef: '101', displayTime: '08:30 AM' },
+          { slotRef: '102', displayTime: '01:45 PM' },
+        ],
+        false,
+      ),
     ).toEqual({
       type: 'interactive_list',
       body: 'Selecciona la hora de la cita',

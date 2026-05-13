@@ -2,17 +2,20 @@ import { Module } from '@nestjs/common';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
 import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
 import { PatientIdentityInputNormalizerService } from './application/services/patient-identity-input-normalizer.service';
+import { ResolveAssignedDispensaryByPatientUseCase } from './application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from './application/use-cases/resolve-eligible-specialties-by-patient.use-case';
 import { RegisterWhatsappPostBookingConsentUseCase } from './application/use-cases/register-whatsapp-post-booking-consent.use-case';
 import { ValidatePatientByDocumentAndBirthDateUseCase } from './application/use-cases/validate-patient-by-document-and-birth-date.use-case';
 import {
   CONTRACTED_EPS_REPOSITORY,
+  PATIENT_ASSIGNED_DISPENSARY_REPOSITORY,
   PATIENT_SPECIALTY_ELIGIBILITY_REPOSITORY,
   PATIENT_VALIDATION_REPOSITORY,
   WHATSAPP_CONTACT_CONSENT_REPOSITORY,
 } from './domain/patients.tokens';
 import { PrismaBotContractedEpsRepository } from './infrastructure/persistence/mysql/prisma-bot-contracted-eps.repository';
 import { PrismaBotWhatsappContactConsentRepository } from './infrastructure/persistence/mysql/prisma-bot-whatsapp-contact-consent.repository';
+import { PrismaLegacyPatientAssignedDispensaryRepository } from './infrastructure/persistence/mysql/prisma-legacy-patient-assigned-dispensary.repository';
 import { PrismaPatientSpecialtyEligibilityRepository } from './infrastructure/persistence/mysql/prisma-patient-specialty-eligibility.repository';
 import { PrismaLegacyPatientValidationRepository } from './infrastructure/persistence/mysql/prisma-legacy-patient-validation.repository';
 
@@ -21,6 +24,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
   providers: [
     PatientIdentityInputNormalizerService,
     ValidatePatientByDocumentAndBirthDateUseCase,
+    ResolveAssignedDispensaryByPatientUseCase,
     ResolveEligibleSpecialtiesByPatientUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
     {
@@ -36,6 +40,10 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
       useClass: PrismaPatientSpecialtyEligibilityRepository,
     },
     {
+      provide: PATIENT_ASSIGNED_DISPENSARY_REPOSITORY,
+      useClass: PrismaLegacyPatientAssignedDispensaryRepository,
+    },
+    {
       provide: WHATSAPP_CONTACT_CONSENT_REPOSITORY,
       useClass: PrismaBotWhatsappContactConsentRepository,
     },
@@ -43,6 +51,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
   exports: [
     PatientIdentityInputNormalizerService,
     ValidatePatientByDocumentAndBirthDateUseCase,
+    ResolveAssignedDispensaryByPatientUseCase,
     ResolveEligibleSpecialtiesByPatientUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
   ],

@@ -40,7 +40,10 @@ export class SendWhatsappInteractiveButtonsMessageUseCase {
       throw new BadRequestException('Interactive buttons body is required.');
     }
 
-    if (Array.from(input.body).length > WHATSAPP_INTERACTIVE_BUTTON_LIMITS.BODY_MAX_LENGTH) {
+    if (
+      Array.from(input.body).length >
+      WHATSAPP_INTERACTIVE_BUTTON_LIMITS.BODY_MAX_LENGTH
+    ) {
       throw new BadRequestException(
         `Interactive buttons body exceeds ${WHATSAPP_INTERACTIVE_BUTTON_LIMITS.BODY_MAX_LENGTH} characters.`,
       );
@@ -48,11 +51,14 @@ export class SendWhatsappInteractiveButtonsMessageUseCase {
 
     this.validateButtons(input.buttons);
 
-    await this.auditService.record('whatsapp.outbound.interactive_buttons.attempted', {
-      to: input.to,
-      trigger: input.trigger,
-      buttonCount: input.buttons.length,
-    });
+    await this.auditService.record(
+      'whatsapp.outbound.interactive_buttons.attempted',
+      {
+        to: input.to,
+        trigger: input.trigger,
+        buttonCount: input.buttons.length,
+      },
+    );
 
     try {
       const result = await this.messageSender.sendInteractiveButtonsMessage({
@@ -61,28 +67,39 @@ export class SendWhatsappInteractiveButtonsMessageUseCase {
         buttons: input.buttons,
       });
 
-      await this.auditService.record('whatsapp.outbound.interactive_buttons.sent', {
-        to: input.to,
-        trigger: input.trigger,
-        messageId: result.messageId,
-      });
+      await this.auditService.record(
+        'whatsapp.outbound.interactive_buttons.sent',
+        {
+          to: input.to,
+          trigger: input.trigger,
+          messageId: result.messageId,
+        },
+      );
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await this.auditService.record('whatsapp.outbound.interactive_buttons.failed', {
-        to: input.to,
-        trigger: input.trigger,
-        errorMessage,
-      });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.auditService.record(
+        'whatsapp.outbound.interactive_buttons.failed',
+        {
+          to: input.to,
+          trigger: input.trigger,
+          errorMessage,
+        },
+      );
 
       throw error;
     }
   }
 
-  private validateButtons(buttons: OutboundWhatsappInteractiveButtonsMessage['buttons']): void {
+  private validateButtons(
+    buttons: OutboundWhatsappInteractiveButtonsMessage['buttons'],
+  ): void {
     if (buttons.length === 0) {
-      throw new BadRequestException('Interactive buttons require at least one button.');
+      throw new BadRequestException(
+        'Interactive buttons require at least one button.',
+      );
     }
 
     if (buttons.length > WHATSAPP_INTERACTIVE_BUTTON_LIMITS.MAX_BUTTONS) {
@@ -94,22 +111,31 @@ export class SendWhatsappInteractiveButtonsMessageUseCase {
     const ids = new Set<string>();
     for (const [index, button] of buttons.entries()) {
       if (!button.id?.trim()) {
-        throw new BadRequestException(`Button at index ${index} requires an id.`);
+        throw new BadRequestException(
+          `Button at index ${index} requires an id.`,
+        );
       }
 
       if (ids.has(button.id)) {
-        throw new BadRequestException(`Button id '${button.id}' is duplicated.`);
+        throw new BadRequestException(
+          `Button id '${button.id}' is duplicated.`,
+        );
       }
       ids.add(button.id);
 
-      if (Array.from(button.id).length > WHATSAPP_INTERACTIVE_BUTTON_LIMITS.BUTTON_ID_MAX_LENGTH) {
+      if (
+        Array.from(button.id).length >
+        WHATSAPP_INTERACTIVE_BUTTON_LIMITS.BUTTON_ID_MAX_LENGTH
+      ) {
         throw new BadRequestException(
           `Button id at index ${index} exceeds ${WHATSAPP_INTERACTIVE_BUTTON_LIMITS.BUTTON_ID_MAX_LENGTH} characters.`,
         );
       }
 
       if (!button.title?.trim()) {
-        throw new BadRequestException(`Button at index ${index} requires a title.`);
+        throw new BadRequestException(
+          `Button at index ${index} requires a title.`,
+        );
       }
 
       if (
@@ -121,6 +147,5 @@ export class SendWhatsappInteractiveButtonsMessageUseCase {
         );
       }
     }
-
   }
 }

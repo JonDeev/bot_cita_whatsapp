@@ -36,9 +36,12 @@ export class AppointmentReschedulingTimeSelectionService {
     selectedTime: OfferedAppointmentTimeSessionContext,
   ): Promise<RescheduleAfterTimeSelectionOutcome> {
     const rescheduleContext = session.context?.appointmentReschedule;
-    const selectedSpecialty = session.context?.specialtySelection?.selectedSpecialty;
-    const selectedDoctor = session.context?.appointmentDoctorSelection?.selectedDoctor;
-    const selectedDateIso = session.context?.appointmentDateSelection?.selectedDateIso;
+    const selectedSpecialty =
+      session.context?.specialtySelection?.selectedSpecialty;
+    const selectedDoctor =
+      session.context?.appointmentDoctorSelection?.selectedDoctor;
+    const selectedDateIso =
+      session.context?.appointmentDateSelection?.selectedDateIso;
     const patientId = session.context?.patientValidation?.patientId ?? null;
 
     if (!rescheduleContext || !selectedSpecialty?.cups || !selectedDateIso) {
@@ -62,7 +65,9 @@ export class AppointmentReschedulingTimeSelectionService {
             appointmentDateSelection: undefined,
             appointmentTimeSelection: undefined,
           },
-          outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+          outboundMessages: [
+            this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+          ],
         },
       };
     }
@@ -78,31 +83,38 @@ export class AppointmentReschedulingTimeSelectionService {
       doctorEmployeeCode: selectedDoctor?.employeeCode ?? null,
     });
 
-    const rescheduleResult = await this.rescheduleAssignedAppointmentByPatient.execute({
-      patientId,
-      originalSlotRef: rescheduleContext.originalSlotRef,
-      specialtyName: selectedSpecialty.name,
-      specialtyCups: selectedSpecialty.cups,
-      appointmentDateIso: selectedDateIso,
-      appointmentTimeHHmm: selectedTime.timeHHmm,
-      preferredNewSlotRef: selectedTime.slotRef,
-      doctorEmployeeCode: selectedDoctor?.employeeCode ?? null,
-    });
+    const rescheduleResult =
+      await this.rescheduleAssignedAppointmentByPatient.execute({
+        patientId,
+        originalSlotRef: rescheduleContext.originalSlotRef,
+        specialtyName: selectedSpecialty.name,
+        specialtyCups: selectedSpecialty.cups,
+        appointmentDateIso: selectedDateIso,
+        appointmentTimeHHmm: selectedTime.timeHHmm,
+        preferredNewSlotRef: selectedTime.slotRef,
+        doctorEmployeeCode: selectedDoctor?.employeeCode ?? null,
+      });
 
     if (rescheduleResult.status === 'RESCHEDULED') {
       if (rescheduleResult.appointment.usedFallbackSlot) {
-        await this.auditService.record('appointment.rescheduling.primary_slot_unavailable', {
-          conversationKey: session.conversationKey,
-          originalSlotRef: rescheduleContext.originalSlotRef,
-          preferredSlotRef: selectedTime.slotRef,
-        });
+        await this.auditService.record(
+          'appointment.rescheduling.primary_slot_unavailable',
+          {
+            conversationKey: session.conversationKey,
+            originalSlotRef: rescheduleContext.originalSlotRef,
+            preferredSlotRef: selectedTime.slotRef,
+          },
+        );
 
-        await this.auditService.record('appointment.rescheduling.fallback_slot_found', {
-          conversationKey: session.conversationKey,
-          originalSlotRef: rescheduleContext.originalSlotRef,
-          preferredSlotRef: selectedTime.slotRef,
-          assignedSlotRef: rescheduleResult.appointment.slotRef,
-        });
+        await this.auditService.record(
+          'appointment.rescheduling.fallback_slot_found',
+          {
+            conversationKey: session.conversationKey,
+            originalSlotRef: rescheduleContext.originalSlotRef,
+            preferredSlotRef: selectedTime.slotRef,
+            assignedSlotRef: rescheduleResult.appointment.slotRef,
+          },
+        );
       }
 
       await this.auditService.record('appointment.rescheduling.succeeded', {
@@ -136,12 +148,15 @@ export class AppointmentReschedulingTimeSelectionService {
     }
 
     if (rescheduleResult.status === 'TIME_NO_LONGER_AVAILABLE') {
-      await this.auditService.record('appointment.rescheduling.time_exhausted', {
-        conversationKey: session.conversationKey,
-        patientId,
-        originalSlotRef: rescheduleContext.originalSlotRef,
-        preferredSlotRef: selectedTime.slotRef,
-      });
+      await this.auditService.record(
+        'appointment.rescheduling.time_exhausted',
+        {
+          conversationKey: session.conversationKey,
+          patientId,
+          originalSlotRef: rescheduleContext.originalSlotRef,
+          preferredSlotRef: selectedTime.slotRef,
+        },
+      );
 
       return {
         status: 'TIME_NO_LONGER_AVAILABLE',
@@ -160,10 +175,11 @@ export class AppointmentReschedulingTimeSelectionService {
 
       return {
         status: 'COMPLETED',
-        result: await this.rebuildAssignedAppointmentListAfterRescheduleRejection(
-          session,
-          'La cita original ya no esta disponible para reprogramar. Te mostramos tus citas asignadas actualizadas.',
-        ),
+        result:
+          await this.rebuildAssignedAppointmentListAfterRescheduleRejection(
+            session,
+            'La cita original ya no esta disponible para reprogramar. Te mostramos tus citas asignadas actualizadas.',
+          ),
       };
     }
 
@@ -187,7 +203,9 @@ export class AppointmentReschedulingTimeSelectionService {
           appointmentDateSelection: undefined,
           appointmentTimeSelection: undefined,
         },
-        outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+        outboundMessages: [
+          this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+        ],
       },
     };
   }
@@ -196,10 +214,11 @@ export class AppointmentReschedulingTimeSelectionService {
     session: ConversationSession,
     prefixMessage: string,
   ): Promise<ConversationStateHandlerResult> {
-    const listResult = await this.listFutureAssignedAppointmentsByPatient.execute({
-      patientId: session.context?.patientValidation?.patientId ?? null,
-      offset: 0,
-    });
+    const listResult =
+      await this.listFutureAssignedAppointmentsByPatient.execute({
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        offset: 0,
+      });
 
     if (listResult.status === 'FOUND') {
       return {
@@ -270,7 +289,9 @@ export class AppointmentReschedulingTimeSelectionService {
         appointmentDateSelection: undefined,
         appointmentTimeSelection: undefined,
       },
-      outboundMessages: [this.appointmentAvailabilityMessageFactory.buildTechnicalFailure()],
+      outboundMessages: [
+        this.appointmentAvailabilityMessageFactory.buildTechnicalFailure(),
+      ],
     };
   }
 }

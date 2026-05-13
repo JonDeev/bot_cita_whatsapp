@@ -29,6 +29,11 @@ export class MainMenuListFactory {
               description: 'Ver citas ya programadas',
             },
             {
+              id: 'main_menu_check_dispensary',
+              title: '💊 Mi dispensario',
+              description: 'Consultar farmacia asignada',
+            },
+            {
               id: 'main_menu_cancel_or_reschedule',
               title: '⚠️ Cancelar/Reprogramar',
               description: 'Cancelar o reprogramar una cita',

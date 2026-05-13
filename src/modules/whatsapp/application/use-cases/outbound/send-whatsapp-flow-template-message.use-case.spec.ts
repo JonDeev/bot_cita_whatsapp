@@ -8,11 +8,18 @@ describe('SendWhatsappFlowTemplateMessageUseCase', () => {
       sendTextMessage: jest.fn(),
       sendInteractiveListMessage: jest.fn(),
       sendInteractiveButtonsMessage: jest.fn(),
-      sendFlowTemplateMessage: jest.fn().mockResolvedValue({ messageId: 'wamid-flow-123' }),
+      sendFlowTemplateMessage: jest
+        .fn()
+        .mockResolvedValue({ messageId: 'wamid-flow-123' }),
     };
-    const auditService = { record: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
 
-    const useCase = new SendWhatsappFlowTemplateMessageUseCase(sender, auditService);
+    const useCase = new SendWhatsappFlowTemplateMessageUseCase(
+      sender,
+      auditService,
+    );
 
     const result = await useCase.execute({
       to: '573001112233',
@@ -28,12 +35,15 @@ describe('SendWhatsappFlowTemplateMessageUseCase', () => {
     });
 
     expect(result.messageId).toBe('wamid-flow-123');
-    expect(auditService.record).toHaveBeenCalledWith('whatsapp.outbound.flow_template.sent', {
-      to: '573001112233',
-      trigger: 'test',
-      templateName: 'satisfaction_survey_flow',
-      messageId: 'wamid-flow-123',
-    });
+    expect(auditService.record).toHaveBeenCalledWith(
+      'whatsapp.outbound.flow_template.sent',
+      {
+        to: '573001112233',
+        trigger: 'test',
+        templateName: 'satisfaction_survey_flow',
+        messageId: 'wamid-flow-123',
+      },
+    );
   });
 
   it('rejects a non-numeric button index', async () => {
@@ -45,7 +55,10 @@ describe('SendWhatsappFlowTemplateMessageUseCase', () => {
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
 
-    const useCase = new SendWhatsappFlowTemplateMessageUseCase(sender, auditService);
+    const useCase = new SendWhatsappFlowTemplateMessageUseCase(
+      sender,
+      auditService,
+    );
 
     await expect(
       useCase.execute({

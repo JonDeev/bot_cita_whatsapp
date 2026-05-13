@@ -5,8 +5,12 @@ describe('ConversationNavigationService', () => {
   it('does not build navigation buttons for document and birth date steps', () => {
     const service = new ConversationNavigationService();
 
-    const documentStepMessage = service.buildNavigationMessage(CONVERSATION_STATES.WAITING_DOCUMENT);
-    const birthDateStepMessage = service.buildNavigationMessage(CONVERSATION_STATES.WAITING_BIRTH_DATE);
+    const documentStepMessage = service.buildNavigationMessage(
+      CONVERSATION_STATES.WAITING_DOCUMENT,
+    );
+    const birthDateStepMessage = service.buildNavigationMessage(
+      CONVERSATION_STATES.WAITING_BIRTH_DATE,
+    );
 
     expect(documentStepMessage).toBeNull();
     expect(birthDateStepMessage).toBeNull();
@@ -15,7 +19,9 @@ describe('ConversationNavigationService', () => {
   it('builds menu+finish buttons for specialty selection step', () => {
     const service = new ConversationNavigationService();
 
-    const message = service.buildNavigationMessage(CONVERSATION_STATES.SELECTING_SPECIALTY);
+    const message = service.buildNavigationMessage(
+      CONVERSATION_STATES.SELECTING_SPECIALTY,
+    );
 
     expect(message).toMatchObject({
       type: 'interactive_buttons',
@@ -61,7 +67,9 @@ describe('ConversationNavigationService', () => {
   it('builds back+menu+finish buttons for other states', () => {
     const service = new ConversationNavigationService();
 
-    const message = service.buildNavigationMessage(CONVERSATION_STATES.MAIN_MENU);
+    const message = service.buildNavigationMessage(
+      CONVERSATION_STATES.MAIN_MENU,
+    );
 
     expect(message).toMatchObject({
       type: 'interactive_buttons',
@@ -137,7 +145,9 @@ describe('ConversationNavigationService', () => {
       context: {
         appointmentDateSelection: {
           scope: 'DOCTOR',
-          specialtyOfferedDates: [{ isoDate: '2026-05-06', displayDate: '06/05/2026' }],
+          specialtyOfferedDates: [
+            { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+          ],
           offeredDates: [{ isoDate: '2026-05-07', displayDate: '07/05/2026' }],
         },
       },
@@ -145,7 +155,9 @@ describe('ConversationNavigationService', () => {
       updatedAt: '2026-05-04T10:00:00.000Z',
     });
 
-    expect(result.targetState).toBe(CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR);
+    expect(result.targetState).toBe(
+      CONVERSATION_STATES.SELECTING_APPOINTMENT_DOCTOR,
+    );
   });
 
   it('returns reviewing-assigned-actions when navigating back from reprogramming date selection', () => {
@@ -168,7 +180,9 @@ describe('ConversationNavigationService', () => {
         },
         appointmentDateSelection: {
           scope: 'SPECIALTY',
-          specialtyOfferedDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
+          specialtyOfferedDates: [
+            { isoDate: '2026-05-30', displayDate: '30/05/2026' },
+          ],
           offeredDates: [{ isoDate: '2026-05-30', displayDate: '30/05/2026' }],
         },
       },

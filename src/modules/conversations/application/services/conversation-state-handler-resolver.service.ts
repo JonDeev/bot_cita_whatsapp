@@ -16,7 +16,10 @@ import type { ConversationStateHandler } from '../state-handlers/conversation-st
 
 @Injectable()
 export class ConversationStateHandlerResolverService {
-  private readonly handlersByState: Map<ConversationState, ConversationStateHandler>;
+  private readonly handlersByState: Map<
+    ConversationState,
+    ConversationStateHandler
+  >;
 
   constructor(
     mainMenuHandler: MainMenuHandler,
@@ -32,11 +35,23 @@ export class ConversationStateHandlerResolverService {
     selectingAppointmentDoctorHandler: SelectingAppointmentDoctorHandler,
     selectingAppointmentTimeHandler: SelectingAppointmentTimeHandler,
   ) {
-    this.handlersByState = new Map<ConversationState, ConversationStateHandler>();
+    this.handlersByState = new Map<
+      ConversationState,
+      ConversationStateHandler
+    >();
     this.handlersByState.set(mainMenuHandler.state, mainMenuHandler);
-    this.handlersByState.set(waitingDocumentHandler.state, waitingDocumentHandler);
-    this.handlersByState.set(waitingBirthDateHandler.state, waitingBirthDateHandler);
-    this.handlersByState.set(patientValidatedHandler.state, patientValidatedHandler);
+    this.handlersByState.set(
+      waitingDocumentHandler.state,
+      waitingDocumentHandler,
+    );
+    this.handlersByState.set(
+      waitingBirthDateHandler.state,
+      waitingBirthDateHandler,
+    );
+    this.handlersByState.set(
+      patientValidatedHandler.state,
+      patientValidatedHandler,
+    );
     this.handlersByState.set(
       selectingAssignedAppointmentHandler.state,
       selectingAssignedAppointmentHandler,
@@ -53,13 +68,22 @@ export class ConversationStateHandlerResolverService {
       requestingWhatsappAppointmentNotificationsOptInHandler.state,
       requestingWhatsappAppointmentNotificationsOptInHandler,
     );
-    this.handlersByState.set(selectingSpecialtyHandler.state, selectingSpecialtyHandler);
-    this.handlersByState.set(selectingAppointmentDateHandler.state, selectingAppointmentDateHandler);
+    this.handlersByState.set(
+      selectingSpecialtyHandler.state,
+      selectingSpecialtyHandler,
+    );
+    this.handlersByState.set(
+      selectingAppointmentDateHandler.state,
+      selectingAppointmentDateHandler,
+    );
     this.handlersByState.set(
       selectingAppointmentDoctorHandler.state,
       selectingAppointmentDoctorHandler,
     );
-    this.handlersByState.set(selectingAppointmentTimeHandler.state, selectingAppointmentTimeHandler);
+    this.handlersByState.set(
+      selectingAppointmentTimeHandler.state,
+      selectingAppointmentTimeHandler,
+    );
   }
 
   resolve(state: ConversationState): ConversationStateHandler {

@@ -14,7 +14,9 @@ export type ParsedAppointmentDateOption =
       kind: 'choose_doctor';
     };
 
-export function parseAppointmentDateOptionId(optionId: string): ParsedAppointmentDateOption | null {
+export function parseAppointmentDateOptionId(
+  optionId: string,
+): ParsedAppointmentDateOption | null {
   if (optionId === APPOINTMENT_DATE_CHOOSE_DOCTOR_OPTION_ID) {
     return { kind: 'choose_doctor' };
   }

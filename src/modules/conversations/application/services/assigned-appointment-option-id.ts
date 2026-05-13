@@ -25,7 +25,9 @@ export function parseAssignedAppointmentOptionId(
     return null;
   }
 
-  const slotRef = optionId.slice(ASSIGNED_APPOINTMENT_OPTION_PREFIX.length).trim();
+  const slotRef = optionId
+    .slice(ASSIGNED_APPOINTMENT_OPTION_PREFIX.length)
+    .trim();
   if (!slotRef || slotRef === 'show_more') {
     return null;
   }

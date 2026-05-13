@@ -38,6 +38,8 @@ export interface UpdateWebhookInboxEventInput {
 }
 
 export interface WebhookInboxRepositoryPort {
-  saveIfFirstSeen(input: SaveWebhookInboxEventInput): Promise<SaveWebhookInboxEventResult>;
+  saveIfFirstSeen(
+    input: SaveWebhookInboxEventInput,
+  ): Promise<SaveWebhookInboxEventResult>;
   updateStatus(input: UpdateWebhookInboxEventInput): Promise<void>;
 }

@@ -10,9 +10,7 @@ import type {
 class OriginalSlotNoLongerRebookableError extends Error {}
 
 @Injectable()
-export class PrismaLegacyAppointmentReschedulingRepository
-  implements AppointmentReschedulingRepository
-{
+export class PrismaLegacyAppointmentReschedulingRepository implements AppointmentReschedulingRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async rescheduleAssignedFutureAppointmentByPatient(
@@ -57,7 +55,11 @@ export class PrismaLegacyAppointmentReschedulingRepository
           return { status: 'TIME_NO_LONGER_AVAILABLE' };
         }
 
-        const fallbackSlotId = await this.findFallbackSlotId(tx, preferredNewSlotId, command);
+        const fallbackSlotId = await this.findFallbackSlotId(
+          tx,
+          preferredNewSlotId,
+          command,
+        );
         if (fallbackSlotId === null) {
           return { status: 'TIME_NO_LONGER_AVAILABLE' };
         }
@@ -92,7 +94,9 @@ export class PrismaLegacyAppointmentReschedulingRepository
     originalSlotId: number,
     command: RescheduleAssignedFutureAppointmentByPatientCommand,
   ): Promise<boolean> {
-    const rows = await tx.$queryRaw<Array<{ slotRef: number | null }>>(Prisma.sql`
+    const rows = await tx.$queryRaw<
+      Array<{ slotRef: number | null }>
+    >(Prisma.sql`
       SELECT a.idagenda AS slotRef
       FROM agenda a
       WHERE a.idagenda = ${originalSlotId}
@@ -142,7 +146,9 @@ export class PrismaLegacyAppointmentReschedulingRepository
     excludedSlotId: number,
     command: RescheduleAssignedFutureAppointmentByPatientCommand,
   ): Promise<number | null> {
-    const rows = await tx.$queryRaw<Array<{ slotRef: number | null }>>(Prisma.sql`
+    const rows = await tx.$queryRaw<
+      Array<{ slotRef: number | null }>
+    >(Prisma.sql`
       SELECT a.idagenda AS slotRef
       FROM agenda a
       INNER JOIN especialidad_empleados ee

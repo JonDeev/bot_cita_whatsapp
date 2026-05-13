@@ -39,7 +39,9 @@ export class PrismaBotSurveyRecipientPolicyRepository implements SurveyRecipient
     return consentPhone === inputPhone || consentPhone === `57${inputPhone}`;
   }
 
-  async isPhoneSuppressedForSatisfactionSurveys(input: { phone: string }): Promise<boolean> {
+  async isPhoneSuppressedForSatisfactionSurveys(input: {
+    phone: string;
+  }): Promise<boolean> {
     const normalizedPhone = this.normalizePhone(input.phone);
     const candidatePhones = [normalizedPhone, `57${normalizedPhone}`];
 

@@ -17,11 +17,11 @@ describe('ListFutureAssignedAppointmentsByPatientUseCase', () => {
     const useCase = new ListFutureAssignedAppointmentsByPatientUseCase(
       {
         findFutureAssignedAppointmentsByPatient: jest.fn(),
-      } as unknown as PatientAssignedAppointmentRepository,
+      },
       {
         findPatientById: jest.fn(),
         findAssignedAppointmentBySlotRef: jest.fn(),
-      } as unknown as AppointmentConfirmationDetailsRepository,
+      },
       new AppointmentTimePresenterService(),
     );
 
