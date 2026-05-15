@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { json, urlencoded } from 'express';
 import { IncomingMessage } from 'http';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import {
   formatHttpStartupError,
@@ -17,7 +19,9 @@ interface IncomingMessageWithRawBody extends IncomingMessage {
 const bootstrapLogger = new Logger('Bootstrap');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  });
   const rawBodyBuffer = (
     request: IncomingMessageWithRawBody,
     _response: unknown,
@@ -28,6 +32,7 @@ async function bootstrap() {
 
   app.use(json({ verify: rawBodyBuffer }));
   app.use(urlencoded({ extended: true, verify: rawBodyBuffer }));
+  app.useStaticAssets(join(process.cwd(), 'public'));
   app.enableShutdownHooks();
 
   let httpServerOptions: HttpServerOptions | null = null;

@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="es-CO">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Eliminación de datos de usuario | IPS SISM</title>
+  <meta name="description"
+    content="Instrucciones para solicitar la eliminación de datos de usuario tratados por Servicios Integrales de Salud del Magdalena S.A.S." />
+
+  <style>
+    :root {
+      --primary: #0f5fa8;
+      --primary-dark: #0a3f73;
+      --primary-soft: #eaf5ff;
+      --accent: #18a8e0;
+      --text: #132238;
+      --muted: #5f6f85;
+      --border: rgba(15, 95, 168, 0.16);
+      --card: rgba(255, 255, 255, 0.88);
+      --shadow: 0 24px 80px rgba(15, 49, 86, 0.16);
+      --radius: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(24, 168, 224, 0.18), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(15, 95, 168, 0.16), transparent 30rem),
+        linear-gradient(135deg, #f8fbff 0%, #eef7ff 48%, #ffffff 100%);
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(15, 95, 168, 0.08), transparent 42%),
+        radial-gradient(circle at 90% 12%, rgba(24, 168, 224, 0.20), transparent 16rem);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 32px;
+      align-items: center;
+      padding: 52px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 30px;
+    }
+
+    .brand-logo-wrap {
+      display: grid;
+      place-items: center;
+      width: 92px;
+      height: 92px;
+      border-radius: 24px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      box-shadow: 0 14px 40px rgba(15, 95, 168, 0.12);
+      padding: 12px;
+    }
+
+    .brand-logo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand-label {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    .brand-name {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(36px, 5vw, 58px);
+      line-height: 1.02;
+      letter-spacing: -0.055em;
+      color: var(--primary-dark);
+    }
+
+    .lead {
+      margin: 22px 0 0;
+      max-width: 720px;
+      font-size: 18px;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .email-card {
+      position: relative;
+      padding: 28px;
+      border-radius: 26px;
+      background: linear-gradient(145deg, #ffffff 0%, #f5fbff 100%);
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(15, 95, 168, 0.12);
+    }
+
+    .email-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 28px;
+      right: 28px;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    .email-label {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .email {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      color: var(--primary-dark);
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 850;
+      letter-spacing: -0.035em;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    .email:hover {
+      color: var(--primary);
+    }
+
+    .email-help {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      margin-top: 24px;
+      padding: 0 22px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #ffffff;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 14px 32px rgba(15, 95, 168, 0.22);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 38px rgba(15, 95, 168, 0.28);
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .section {
+      padding: 32px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 16px 48px rgba(15, 49, 86, 0.08);
+      backdrop-filter: blur(14px);
+    }
+
+    .section h2 {
+      margin: 0 0 18px;
+      color: var(--primary-dark);
+      font-size: 24px;
+      letter-spacing: -0.035em;
+    }
+
+    .section p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    .steps {
+      display: grid;
+      gap: 14px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--primary-soft);
+      border: 1px solid rgba(15, 95, 168, 0.12);
+    }
+
+    .step-number {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: #ffffff;
+      color: var(--primary);
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(15, 95, 168, 0.10);
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--primary-dark);
+      font-size: 15px;
+    }
+
+    .step span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding: 22px 8px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 860px) {
+
+      .hero-content,
+      .content {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-content {
+        padding: 34px 24px;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+
+      .brand-logo-wrap {
+        width: 78px;
+        height: 78px;
+        border-radius: 20px;
+      }
+
+      .section {
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        width: min(100% - 20px, 1120px);
+        padding: 20px 0;
+      }
+
+      .hero-content {
+        padding: 28px 20px;
+      }
+
+      .brand {
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .email-card {
+        padding: 24px 20px;
+      }
+
+      .step {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="titulo-principal">
+      <div class="hero-content">
+        <div>
+          <div class="brand">
+            <div class="brand-logo-wrap">
+              <img class="brand-logo" src="./logo_sism.svg"
+                alt="Logo Servicios Integrales de Salud del Magdalena SISM" />
+            </div>
+
+            <div class="brand-text">
+              <span class="brand-label">IPS SISM</span>
+              <span class="brand-name">Servicios Integrales de Salud del Magdalena S.A.S.</span>
+            </div>
+          </div>
+
+          <h1 id="titulo-principal">Eliminación de datos de usuario</h1>
+
+          <p class="lead">
+            Esta página contiene las instrucciones para que los usuarios puedan solicitar la eliminación de sus datos
+            personales tratados por Servicios Integrales de Salud del Magdalena S.A.S.
+          </p>
+        </div>
+
+        <aside class="email-card" aria-label="Correo de solicitud de eliminación de datos">
+          <p class="email-label">Correo autorizado</p>
+
+          <a class="email"
+            href="mailto:lcampo@sism.com.co?subject=Solicitud%20de%20eliminaci%C3%B3n%20de%20datos%20personales">
+            lcampo@sism.com.co
+          </a>
+
+          <p class="email-help">
+            La solicitud debe enviarse a este correo electrónico indicando que desea la eliminación de sus datos
+            personales.
+          </p>
+
+          <a class="button"
+            href="mailto:lcampo@sism.com.co?subject=Solicitud%20de%20eliminaci%C3%B3n%20de%20datos%20personales">
+            Enviar solicitud
+          </a>
+        </aside>
+      </div>
+    </section>
+
+    <section class="content" aria-label="Instrucciones para eliminación de datos">
+      <article class="section">
+        <h2>¿Cómo solicitar la eliminación?</h2>
+
+        <ul class="steps">
+          <li class="step">
+            <span class="step-number">1</span>
+            <span>
+              <strong>Enviar un correo electrónico</strong>
+              Escriba a lcampo@sism.com.co solicitando la eliminación de sus datos personales.
+            </span>
+          </li>
+
+          <li class="step">
+            <span class="step-number">2</span>
+            <span>
+              <strong>Identificar la solicitud</strong>
+              Use como asunto: “Solicitud de eliminación de datos personales”.
+            </span>
+          </li>
+
+          <li class="step">
+            <span class="step-number">3</span>
+            <span>
+              <strong>Esperar respuesta</strong>
+              La IPS revisará la solicitud y dará respuesta a través del correo electrónico suministrado.
+            </span>
+          </li>
+        </ul>
+      </article>
+
+      <article class="section">
+        <h2>Información importante</h2>
+
+        <p>
+          Para gestionar correctamente la solicitud, el usuario debe indicar en el correo sus datos de identificación y
+          un medio de contacto. Esta página es pública y no requiere inicio de sesión para consultar las instrucciones
+          de eliminación de datos.
+        </p>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <p>
+        © Servicios Integrales de Salud del Magdalena S.A.S. — Instrucciones para eliminación de datos de usuario.
+      </p>
+    </footer>
+  </main>
+</body>
+
+</html>

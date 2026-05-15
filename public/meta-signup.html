@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Embedded Signup WhatsApp - Test SISM</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: 60px auto;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    button {
+      background: #1877f2;
+      color: white;
+      border: 0;
+      padding: 14px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 16px;
+      border-radius: 8px;
+      overflow: auto;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Prueba de Coexistencia WhatsApp</h1>
+
+  <p>
+    Usa este botón para iniciar el flujo de WhatsApp Embedded Signup
+    con WhatsApp Business App onboarding.
+  </p>
+
+  <button onclick="launchWhatsAppSignup()">
+    Conectar WhatsApp por coexistencia
+  </button>
+
+  <pre id="result">Esperando respuesta...</pre>
+
+  <script>
+    window.fbAsyncInit = function () {
+      FB.init({
+        appId: "1898748107455708",
+        autoLogAppEvents: true,
+        xfbml: true,
+        version: "v25.0"
+      });
+    };
+
+    window.addEventListener("message", function (event) {
+      if (
+        event.origin !== "https://www.facebook.com" &&
+        event.origin !== "https://web.facebook.com"
+      ) {
+        return;
+      }
+
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "WA_EMBEDDED_SIGNUP") {
+          document.getElementById("result").textContent =
+            JSON.stringify(data, null, 2);
+
+          console.log("WA_EMBEDDED_SIGNUP:", data);
+        }
+      } catch (error) {
+        console.log("Mensaje no JSON:", event.data);
+      }
+    });
+
+    function launchWhatsAppSignup() {
+      FB.login(
+        function (response) {
+          document.getElementById("result").textContent =
+            JSON.stringify(response, null, 2);
+
+          if (response.authResponse && response.authResponse.code) {
+            console.log("Código recibido:", response.authResponse.code);
+          }
+        },
+        {
+          config_id: "1341062241217716",
+          response_type: "code",
+          override_default_response_type: true,
+          extras: {
+            version: "v3",
+            featureType: "whatsapp_business_app_onboarding",
+            sessionInfoVersion: "3",
+            setup: {}
+          }
+        }
+      );
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const returnedCode = params.get("code");
+
+    if (returnedCode) {
+      document.getElementById("result").textContent =
+        "CODE RECIBIDO:\n\n" + returnedCode;
+      console.log("CODE RECIBIDO:", returnedCode);
+    }
+  </script>
+
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/es_LA/sdk.js">
+  </script>
+</body>
+
+</html>

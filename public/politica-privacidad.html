@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="index, follow" />
+  <title>Política de Tratamiento de la Información y Protección de Datos Personales - SISM S.A.S.</title>
+  <meta name="description"
+    content="Política de tratamiento de la información y protección de datos personales de Servicios Integrales de Salud del Magdalena S.I.S.M. S.A.S." />
+
+  <style>
+    :root {
+      --bg: #eef6fb;
+      --paper: rgba(255, 255, 255, 0.98);
+      --paper-strong: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --border: rgba(30, 64, 175, 0.14);
+      --line: rgba(15, 95, 143, 0.18);
+      --accent: #0f5f8f;
+      --accent-strong: #084f7a;
+      --accent-soft: #e8f6fc;
+      --accent-soft-2: #f2fbff;
+      --gold: #d9a441;
+      --shadow: 0 28px 80px rgba(8, 47, 73, 0.16);
+      --shadow-soft: 0 14px 38px rgba(15, 95, 143, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(15, 95, 143, 0.20), transparent 34rem),
+        radial-gradient(circle at 90% 8%, rgba(217, 164, 65, 0.15), transparent 30rem),
+        linear-gradient(135deg, #f8fbff 0%, var(--bg) 50%, #f7fbfd 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
+      font-size: 15.5px;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(15, 95, 143, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 95, 143, 0.04) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 72%);
+    }
+
+    .page {
+      width: min(100%, 1120px);
+      margin: 42px auto;
+      padding: 0 22px;
+      position: relative;
+    }
+
+    .document {
+      position: relative;
+      background: var(--paper);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .document::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 8px;
+      background: linear-gradient(90deg, var(--accent-strong), #2b9ac7, var(--gold));
+      z-index: 2;
+    }
+
+    .document-header {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr) 260px;
+      align-items: stretch;
+      min-height: 150px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 246, 252, 0.94)),
+        radial-gradient(circle at 20% 20%, rgba(15, 95, 143, 0.12), transparent 34%);
+    }
+
+    .brand-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 26px 22px;
+      border-right: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(242, 251, 255, 0.95));
+    }
+
+    .brand-logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 122px;
+      height: 122px;
+      border-radius: 28px;
+      background: #ffffff;
+      border: 1px solid rgba(15, 95, 143, 0.12);
+      box-shadow: var(--shadow-soft);
+      padding: 12px;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .document-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 140px;
+      padding: 30px 34px;
+      text-align: center;
+      border-right: 1px solid var(--line);
+    }
+
+    .document-title h1 {
+      margin: 0;
+      color: #0f172a;
+      font-size: clamp(20px, 2vw, 27px);
+      line-height: 1.2;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 850;
+      max-width: 680px;
+    }
+
+    .document-title h1::after {
+      content: "";
+      display: block;
+      width: 92px;
+      height: 3px;
+      margin: 18px auto 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #49afd0, var(--gold));
+    }
+
+    .document-meta {
+      display: grid;
+      grid-template-rows: repeat(3, 1fr);
+      background: rgba(255, 255, 255, 0.68);
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      min-height: 46px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .meta-row:last-child {
+      border-bottom: 0;
+    }
+
+    .meta-label,
+    .meta-value {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .meta-label {
+      color: #0f172a;
+      font-weight: 800;
+      border-right: 1px solid var(--line);
+      background: rgba(248, 250, 252, 0.74);
+      text-transform: uppercase;
+      letter-spacing: 0.045em;
+    }
+
+    .meta-value {
+      justify-content: center;
+      color: #0f172a;
+      font-weight: 750;
+      background: rgba(255, 255, 255, 0.54);
+    }
+
+    .content {
+      padding: 54px 68px 68px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.99)),
+        radial-gradient(circle at top right, rgba(15, 95, 143, 0.06), transparent 36%);
+    }
+
+    .notice {
+      position: relative;
+      margin-bottom: 34px;
+      padding: 22px 24px 22px 26px;
+      border: 1px solid rgba(15, 95, 143, 0.18);
+      border-left: 6px solid var(--accent);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(135deg, var(--accent-soft), #ffffff 72%);
+      color: #164e63;
+      box-shadow: 0 12px 28px rgba(15, 95, 143, 0.08);
+    }
+
+    .notice::before {
+      content: "";
+      position: absolute;
+      top: 18px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(15, 95, 143, 0.13), rgba(217, 164, 65, 0.20));
+    }
+
+    h2 {
+      position: relative;
+      margin: 42px 0 18px;
+      padding: 12px 16px 12px 18px;
+      color: #0f172a;
+      font-size: 18px;
+      line-height: 1.35;
+      text-transform: uppercase;
+      letter-spacing: 0.035em;
+      background: linear-gradient(90deg, rgba(15, 95, 143, 0.09), rgba(15, 95, 143, 0));
+      border-left: 5px solid var(--accent);
+      border-radius: 14px;
+    }
+
+    h3 {
+      margin: 30px 0 13px;
+      color: #0f172a;
+      font-size: 16.5px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    p {
+      margin: 0 0 15px;
+      text-align: justify;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 20px 24px;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 9px;
+      text-align: justify;
+    }
+
+    strong {
+      color: #111827;
+      font-weight: 800;
+    }
+
+    .alpha-list {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .alpha-list>li {
+      margin-bottom: 16px;
+      padding: 16px 18px;
+      border: 1px solid rgba(15, 95, 143, 0.10);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.96));
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.035);
+    }
+
+    .roman-list {
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .footer-note {
+      margin-top: 38px;
+      padding: 22px 24px;
+      border-top: 1px solid var(--line);
+      border-radius: 18px;
+      color: #111827;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(232, 246, 252, 0.74), rgba(255, 255, 255, 0.94));
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent-strong);
+      text-decoration: none;
+      font-weight: 800;
+      border-bottom: 1px solid rgba(15, 95, 143, 0.28);
+    }
+
+    a:hover {
+      color: var(--accent);
+      border-bottom-color: currentColor;
+    }
+
+    ::selection {
+      background: rgba(15, 95, 143, 0.18);
+    }
+
+    @media (max-width: 900px) {
+      .document-header {
+        grid-template-columns: 150px 1fr;
+      }
+
+      .document-meta {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: none;
+        border-top: 1px solid var(--line);
+      }
+
+      .meta-row {
+        border-bottom: 0;
+        border-right: 1px solid var(--line);
+      }
+
+      .meta-row:last-child {
+        border-right: 0;
+      }
+
+      .document-title {
+        border-right: 0;
+      }
+
+      .brand-logo-wrap {
+        width: 104px;
+        height: 104px;
+        border-radius: 24px;
+      }
+
+      .content {
+        padding: 42px 36px 52px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        margin: 0 auto;
+        padding: 0;
+      }
+
+      .document {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+      }
+
+      .document-header {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 24px 18px 12px;
+      }
+
+      .brand-logo-wrap {
+        width: 116px;
+        height: 116px;
+      }
+
+      .document-title {
+        min-height: auto;
+        padding: 22px 18px 26px;
+        border-right: 0;
+      }
+
+      .document-title h1 {
+        font-size: 18px;
+      }
+
+      .document-meta {
+        grid-column: auto;
+        grid-template-columns: 1fr;
+      }
+
+      .meta-row {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .meta-row:last-child {
+        border-bottom: 0;
+      }
+
+      .content {
+        padding: 30px 20px 42px;
+      }
+
+      .notice {
+        padding: 18px 18px 18px 20px;
+      }
+
+      .notice::before {
+        display: none;
+      }
+
+      .alpha-list>li {
+        padding: 14px 15px;
+      }
+
+      p,
+      li {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        font-size: 12px;
+      }
+
+      body::before {
+        display: none;
+      }
+
+      .page {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      .document {
+        border: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+
+      .document::before {
+        height: 4px;
+      }
+
+      .document-header {
+        grid-template-columns: 120px 1fr 220px;
+        min-height: 112px;
+      }
+
+      .brand-panel {
+        padding: 14px;
+      }
+
+      .brand-logo-wrap {
+        width: 86px;
+        height: 86px;
+        box-shadow: none;
+      }
+
+      .document-title {
+        min-height: 112px;
+        padding: 16px;
+      }
+
+      .document-title h1 {
+        font-size: 16px;
+      }
+
+      .content {
+        padding: 24px 28px;
+      }
+
+      .notice,
+      .alpha-list>li,
+      .footer-note {
+        box-shadow: none;
+        background: #fff;
+      }
+
+      h2,
+      h3 {
+        page-break-after: avoid;
+      }
+
+      p,
+      li {
+        orphans: 3;
+        widows: 3;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <article class="document" aria-labelledby="titulo-politica">
+      <header class="document-header">
+        <div class="brand-panel" aria-label="Identidad institucional">
+          <div class="brand-logo-wrap">
+            <img class="brand-logo" src="./logo_sism.svg"
+              alt="Logo Servicios Integrales de Salud del Magdalena S.I.S.M. S.A.S." />
+          </div>
+        </div>
+
+        <div class="document-title">
+          <h1 id="titulo-politica">
+            Política de Tratamiento de la Información<br />
+            y de Protección de Datos Personales.
+          </h1>
+        </div>
+
+        <div class="document-meta" aria-label="Información documental">
+          <div class="meta-row">
+            <div class="meta-label">Código</div>
+            <div class="meta-value">PL-GER-001</div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-label">Versión</div>
+            <div class="meta-value">001</div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-label">Fecha</div>
+            <div class="meta-value">15/10/2021</div>
+          </div>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="notice">
+          <strong>Servicios Integrales de Salud del Magdalena – S.I.S.M S.A.S.</strong><br />
+          Política de tratamiento de la información y protección de datos personales.
+        </div>
+
+        <p>
+          SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA – S.I.S.M S.A.S identificada con NIT N° 900018045-5 ubicada en la
+          CARRERA 19 No. 26 B – 53, barrio los Naranjos de la ciudad de Santa Marta, (en adelante La IPS) por medio de
+          la presente política de tratamiento de la información y de protección de datos personales (en adelante la
+          “Política”) establece los lineamientos que regulan la recolección, almacenamiento, uso, circulación,
+          tratamiento, administración, transferencia, transmisión, actualización, rectificación, supresión y protección
+          de los datos personales de pacientes, empleados, médicos adscritos, contratistas, proveedores, entre otros, a
+          través de los diferentes canales de recolección (sitio web, aplicaciones, de manera presencial, entre otros)
+          de información que tiene la IPS (en adelante los “Datos Personales”).
+        </p>
+
+        <p>
+          Lo anterior conforme a lo dispuesto en el Artículo 15 y 20 de la Constitución Política y en especial por lo
+          dispuesto en la Ley Estatutaria 1581 de 2012 y en el Capítulo 25 parte 2 título 2 libro 2 del Decreto 1074 de
+          2015 y/o sus decretos complementarios o modificatorios, y demás normas aplicables sobre la materia.
+        </p>
+
+        <h2>1. Definiciones</h2>
+
+        <ol class="alpha-list">
+          <li><strong>a) Autoridad de Protección de Datos:</strong> correspondencia del área de atención al paciente y/o
+            funcionamiento de los programas promocionales por parte de nosotros, usted podrá optar por no ser incluido
+            en la lista de distribución desde un comienzo cuando brinde su información o cada vez que se le envíe un
+            correo electrónico o de texto.</li>
+
+          <li><strong>b) Autorización:</strong> Consentimiento previo, expreso e informado por el Titular para llevar a
+            cabo el Tratamiento de datos personales.</li>
+
+          <li><strong>c) Aviso de privacidad:</strong> Comunicación verbal o escrita generada por el responsable
+            dirigido al Titular para el tratamiento de sus datos personales, mediante la cual se le informa acerca de la
+            existencia de las políticas de Tratamiento de información que le serán aplicables, la forma de acceder a las
+            mismas y las finalidades del Tratamiento que se pretende dar a los datos personales.</li>
+
+          <li><strong>d) Base de Datos:</strong> Conjunto organizado de datos personales que sea objeto de Tratamiento.
+          </li>
+
+          <li><strong>e) Datos personales:</strong> Información asociada o vinculada a una o varias personas naturales
+            determinadas o determinables, que permite su identificación, ubicación, contacto, etc. Tienen las siguientes
+            características: (i) están referidos a aspectos exclusivos y propios de una persona natural; ii) permiten
+            identificar a la persona, en mayor o menor medida, gracias a la visión de conjunto que se logre con el mismo
+            y con otros datos; iii) su propiedad reside exclusivamente en el Titular del mismo, situación que no se
+            altera por su obtención por parte de un tercero de manera lícita o ilícita, y iv) su tratamiento está
+            sometido a reglas especiales (principios) en lo relativo a su captación, administración y divulgación.</li>
+
+          <li><strong>f) Datos privados:</strong> Información que sólo es relevante para el Titular.</li>
+
+          <li><strong>g) Datos públicos:</strong> Es el dato que no sea semiprivado, privado o sensible. Son
+            considerados datos públicos, entre otros, los datos relativos al estado civil de las personas, a su
+            profesión u oficio y a su calidad de comerciante o de servidor público. Por su naturaleza, los datos
+            públicos pueden estar contenidos, entre otros, en registros públicos, documentos públicos, gacetas y
+            boletines oficiales, y sentencias judiciales debidamente ejecutoriadas que no estén sometidas a reserva.
+          </li>
+
+          <li><strong>h) Dato sensible:</strong> Aquel dato que afecta la intimidad del Titular o cuyo uso indebido
+            puede generar su discriminación, tales como aquellos que revelen el origen racial o étnico, la orientación
+            política, las convicciones religiosas o filosóficas, la pertenencia a sindicatos, organizaciones sociales,
+            de derechos humanos o que promueva intereses de cualquier partido político o que garanticen los derechos y
+            garantías de partidos políticos de oposición, así como los datos relativos a la salud, a la vida sexual y
+            los datos biométricos.</li>
+
+          <li><strong>i) Encargado del Tratamiento:</strong> Persona natural o jurídica, pública o privada, que por sí
+            misma o en asocio con otros, realice el Tratamiento de datos personales por cuenta del Responsable del
+            Tratamiento.</li>
+
+          <li><strong>j) Oficial de protección de datos:</strong> Es la persona o área designada para asumir la función
+            de protección de datos personales y para tramitar las solicitudes de los Titulares, en el ejercicio de sus
+            derechos. Vela por la implementación efectiva de las políticas, procedimientos y buenas prácticas adoptados
+            por la empresa para la gestión de datos personales.</li>
+
+          <li><strong>k) Reclamo:</strong> Solicitud del Titular del dato o de las personas autorizadas por éste o por
+            la Ley para corregir, actualizar o suprimir sus datos personales o para revocar la autorización en los casos
+            establecidos en la Ley.</li>
+
+          <li><strong>l) Responsable del Tratamiento:</strong> Persona natural o jurídica, pública o privada, que por sí
+            misma o en asocio con otros, decida sobre la base de datos y/o el Tratamiento de los datos.</li>
+
+          <li><strong>m) Tercero:</strong> Persona natural o jurídica, pública o privada u organización administrativa
+            distinta al Titular y al Responsable del Tratamiento.</li>
+
+          <li><strong>n) Titular:</strong> Persona natural cuyos datos personales son objeto de Tratamiento.</li>
+
+          <li><strong>o) Transferencia:</strong> La transferencia de datos tiene lugar cuando el responsable y/o
+            encargado del Tratamiento de datos personales, ubicado en Colombia, envía la información o los datos
+            personales a un receptor, que a su vez es responsable del Tratamiento y se encuentra dentro o fuera del
+            país.</li>
+
+          <li><strong>p) Transmisión:</strong> Tratamiento de datos personales que implica la comunicación de los mismos
+            dentro o fuera del territorio de la República de Colombia cuando tenga por objeto la realización de un
+            Tratamiento por el encargado por cuenta del Responsable.</li>
+
+          <li><strong>q) Tratamiento:</strong> Cualquier operación o conjunto de operaciones sobre datos personales,
+            tales como la recolección, almacenamiento, uso, circulación o supresión.</li>
+        </ol>
+
+        <h2>2. Principios</h2>
+
+        <p>
+          Para el Tratamiento de los Datos Personales, La IPS aplicará los principios que se mencionan a continuación,
+          los cuales constituyen las reglas a seguir en la recolección, manejo, uso, tratamiento, almacenamiento e
+          intercambio, de datos personales:
+        </p>
+
+        <ol class="alpha-list">
+          <li><strong>a) Principio de legalidad:</strong> El Tratamiento de datos personales es una actividad reglada
+            que debe sujetarse a lo establecido en la Ley 1581 de 2012 y en las demás disposiciones que la desarrollen,
+            modifiquen o sustituyan.</li>
+
+          <li><strong>b) Principio de finalidad:</strong> El Tratamiento de los datos personales deberá obedecer a una
+            finalidad legítima de acuerdo con la Constitución y la Ley, previamente informada al Titular.</li>
+
+          <li><strong>c) Principio de libertad:</strong> El Tratamiento sólo puede realizarse con la autorización
+            previa, expresa e informada del Titular. Ningún dato personal podrá ser obtenido ni divulgado sin esta
+            autorización, salvo disposición legal o judicial que releve el consentimiento del Titular.</li>
+
+          <li><strong>d) Principio de veracidad o calidad:</strong> La información relacionada en el Tratamiento deberá
+            ser completa, exacta, veraz, actualizada, comprobable y comprensible. No deberá haber datos parciales,
+            incompletos o fraccionados o que induzcan a error.</li>
+
+          <li><strong>e) Principio de transparencia:</strong> En el Tratamiento se debe garantizar al Titular el derecho
+            a obtener del Responsable o del Encargado del Tratamiento, en cualquier momento y sin restricciones,
+            información acerca de la existencia de los datos que le conciernen.</li>
+
+          <li><strong>f) Principio de acceso y circulación restringida:</strong> El Tratamiento se sujeta a los límites
+            que se derivan de la naturaleza de los datos personales, de las disposiciones de la Ley y la Constitución.
+            En este sentido, el Tratamiento sólo podrá hacerse por personas autorizadas por el Titular y/o por las
+            personas previstas en la Ley.</li>
+
+          <li><strong>g) Principio de seguridad:</strong> Los datos personales sujetos a Tratamiento por el responsable
+            o el Encargado del Tratamiento, se deben manejar con las medidas técnicas, humanas y administrativas que
+            sean necesarias para otorgar seguridad a los registros evitando su adulteración, pérdida, consulta, uso o
+            acceso no autorizado o fraudulento.</li>
+
+          <li><strong>h) Principio de confidencialidad:</strong> Todas las personas que intervengan en el Tratamiento de
+            datos personales están obligadas a garantizar la reserva de la información, incluso después de finalizada su
+            relación con alguna de las labores que comprende el Tratamiento, pudiendo solo realizar suministro o
+            comunicación de datos personales cuando corresponda al desarrollo de las actividades autorizadas por la Ley
+            y en los términos dispuestos por ésta.</li>
+        </ol>
+
+        <h2>3. Responsable del Tratamiento</h2>
+
+        <p>
+          El responsable del Tratamiento de los datos es SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.I.S.M - S.A.S
+          identificada con NIT N° 900018045-5 La IPS ha designado a un Oficial de Protección de Datos Personales, quien
+          tiene la función de proteger los datos personales de los titulares y dar trámite a sus solicitudes, a través
+          de los siguientes medios de contacto:
+        </p>
+
+        <ul>
+          <li>Carrera CR 19 NO 26B – 53- Barrio Los Naranjos.</li>
+          <li>Teléfono 4394152</li>
+          <li>Correo electrónico: serviciosintegrales_saludmagdale@yahoo.com</li>
+        </ul>
+
+        <h3>5.1. Autorización:</h3>
+
+        <p>
+          Los deberes de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.I.S.M, como responsable del Tratamiento de los
+          Datos Personales son:
+        </p>
+
+        <ol class="alpha-list">
+          <li><strong>a)</strong> Garantizar al Titular, en todo tiempo, el pleno y efectivo ejercicio del derecho de
+            hábeas data.</li>
+          <li><strong>b)</strong> Solicitar y conservar copia de la respectiva autorización otorgada por el Titular.
+          </li>
+          <li><strong>c)</strong> Informar debidamente al Titular sobre la finalidad de la recolección y los derechos
+            que le asisten por virtud de la autorización otorgada.</li>
+          <li><strong>d)</strong> Conservar la información bajo las condiciones de seguridad necesarias para impedir su
+            adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento.</li>
+          <li><strong>e)</strong> Garantizar que la información que se suministre a los encargados del Tratamiento sea
+            veraz, completa, exacta, actualizada, comprobable y comprensible.</li>
+          <li><strong>f)</strong> Actualizar la información, comunicando de forma oportuna a los encargados del
+            Tratamiento, todas las novedades respecto de los datos que previamente le haya suministrado y adoptar las
+            demás medidas necesarias para que la información suministrada a este se mantenga actualizada.</li>
+          <li><strong>g)</strong> Rectificar la información cuando sea incorrecta y comunicar lo pertinente a los
+            encargados del Tratamiento.</li>
+          <li><strong>h)</strong> Suministrar a los encargados del Tratamiento, según el caso, únicamente datos cuyo
+            Tratamiento esté previamente autorizado.</li>
+          <li><strong>i)</strong> Exigir a los encargados del Tratamiento en todo momento, el respeto a las condiciones
+            de seguridad y privacidad de la información del Titular.</li>
+          <li><strong>j)</strong> Tramitar las consultas y reclamos formulados en los términos señalados en la Ley y en
+            el presente documento.</li>
+          <li><strong>k)</strong> Adoptar un manual interno de políticas y procedimientos para garantizar el adecuado
+            cumplimiento de la Ley, especialmente para la atención de consultas y reclamos.</li>
+          <li><strong>l)</strong> Informar a los encargados del Tratamiento cuando determinada información se encuentra
+            en discusión por parte del Titular, una vez se haya presentado la reclamación y no haya finalizado el
+            trámite respectivo.</li>
+          <li><strong>m)</strong> Informar a solicitud del Titular sobre el uso dado a sus datos.</li>
+          <li><strong>n)</strong> Informar a la autoridad de protección de datos cuando se presenten violaciones a los
+            códigos de seguridad y existan riesgos en la administración de la información de los Titulares.</li>
+          <li><strong>o)</strong> Cumplir las instrucciones y requerimientos que imparta la Superintendencia de
+            Industria y Comercio.</li>
+        </ol>
+
+        <h2>4. Datos Personales.</h2>
+
+        <p>
+          La información y/o datos personales que se recoge de los titulares de la información, específicamente de los
+          pacientes, por conducto de las diversas fuentes puede incluir, pero no limitarse a:
+        </p>
+
+        <ul>
+          <li>Nombre, sexo y culto religioso.</li>
+          <li>Lugar, fecha de nacimiento y género.</li>
+          <li>Dirección física, de correo electrónico, números de teléfonos, celular, fax y de localizadores personales.
+          </li>
+          <li>Empleador, su ubicación y datos de contacto.</li>
+          <li>Información SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-S.I.S.M del paciente incluidos
+            antecedentes, resultados de exámenes como son patológicos y clínicos, consultas, formulaciones,
+            diagnósticos, atenciones médicas y de enfermería generales y especiales, consultas entre especialistas, etc.
+          </li>
+          <li>Contactos familiares o de responsables legales.</li>
+          <li>Grado de educación básica, secundaria o universitaria. Profesión.</li>
+          <li>Información necesaria para facilitar la prestación de servicios, incluyendo información familiar o
+            laboral.</li>
+          <li>Número de cédula, pasaporte o NIT, nacionalidad y país de residencia.</li>
+          <li>Aseguradora o prestadora de servicios de salud.</li>
+          <li>Uso de productos y servicios.</li>
+        </ul>
+
+        <p>
+          En relación con los demás titulares de la información, exclusivamente se recogen datos personales que se
+          requieran para el manejo de la relación laboral, civil, comercial, etc.
+        </p>
+
+        <h2>5. Tratamiento</h2>
+
+        <p>
+          En atención a lo establecido en la normatividad aplicable, SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-
+          S.I.S.M considera necesario efectuar las siguientes precisiones de alcance, en relación con el Tratamiento de
+          los datos personales objeto de esta POLITICA.
+        </p>
+
+        <h3>5.1. Autorización:</h3>
+
+        <p>
+          <strong>5.1.1.</strong> El Tratamiento de los datos personales debe ser autorizado por el Titular, de manera
+          previa, expresa e informada. Esta autorización se realizará:
+        </p>
+
+        <ol class="alpha-list">
+          <li><strong>a)</strong> En forma escrita.</li>
+          <li><strong>b)</strong> De forma oral</li>
+          <li><strong>c)</strong> Mediante conductas inequívocas que permitan concluir de forma razonable que el titular
+            de la información otorgó la autorización.</li>
+        </ol>
+
+        <p><strong>5.1.2.</strong> Se debe conservar prueba de esta autorización.</p>
+
+        <p><strong>5.1.3.</strong> No se requerirá autorización del Titular cuando:</p>
+
+        <ol class="alpha-list">
+          <li><strong>a)</strong> Se trate de información de naturaleza pública.</li>
+          <li><strong>b)</strong> Sea información requerida por una entidad pública o administrativa en ejercicio de sus
+            funciones legales o por orden judicial.</li>
+          <li><strong>c)</strong> En los casos de urgencia médica o sanitaria.</li>
+          <li><strong>d)</strong> Tratamiento de información autorizado por la ley para fines históricos, estadísticos o
+            científicos.</li>
+          <li><strong>e)</strong> Los datos relacionados con el Registro Civil de las personas.</li>
+        </ol>
+
+        <p>
+          Aunque el Tratamiento de esta información no requiere una autorización previa, su disposición y uso estará
+          alineado con la Ley.
+        </p>
+
+        <h3>5.2. Revocatoria de la autorización y/o supresión de los datos personales:</h3>
+
+        <p>
+          Los titulares de los datos personales, podrán solicitar en cualquier momento a SERVICIOS INTEGRALES DE SALUD
+          DEL MAGDALENA- S.A.S- S.I.S.M, la revocatoria de la autorización y/o la remoción parcial o total de la
+          información de sus bases de datos, siempre y cuando no exista un mandato legal o una obligación contractual
+          que haga necesaria la permanencia del dato, mediante el procedimiento dispuesto en el numeral 7 de la presente
+          Política y de conformidad con lo establecido en la Ley 1581 de 2012 Artículo 15 y demás disposiciones
+          concordantes y complementarias sobre la materia.
+        </p>
+
+        <p>
+          Una vez agotado el trámite de consulta o reclamo el Titular de los datos personales podrá elevar su queja ante
+          la Superintendencia de Industria y Comercio con el fin de solicitar la revocatoria de la autorización y en
+          consecuencia la eliminación del o los datos personales de las bases de datos de SERVICIOS INTEGRALES DE SALUD
+          DEL MAGDALENA-S.A.S- S.I.S.M.
+        </p>
+
+        <h3>5.3. Tipo de Tratamiento.</h3>
+
+        <p>
+          Los datos personales podrán ser objeto de las siguientes operaciones de Tratamiento: recolección,
+          almacenamiento, conservación, uso, modificación, actualización, circulación y supresión, conforme a los
+          procesos establecidos al respecto.
+        </p>
+
+        <h3>5.4. Finalidad del Tratamiento.</h3>
+
+        <p>
+          Teniendo en cuenta el objeto social de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M y las
+          distintas categorías de titulares, a continuación se especificará, sin ser taxativa, la finalidad con la cual
+          se efectúa al Tratamiento de datos personales para cada caso. Se precisa que el tratamiento y sus finalidades
+          pueden ejecutarse directamente o por un tercero encargado ubicado en Colombia o en el extranjero, pero siempre
+          bajo la responsabilidad de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M y de conformidad con la
+          Ley.
+        </p>
+
+        <p>
+          Adicionalmente, la información personal podrá almacenarse y/o tratarse en países diferentes a Colombia, donde
+          SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA-S.A.S- S.I.S.M, los accionistas, empresas vinculadas o proveedores
+          de servicios, tengan sus instalaciones, por lo que al usar nuestros servicios o entablar una relación laboral,
+          comercial u otra afín, el titular autoriza transferir y/o transmitir la información a otros países, los cuales
+          podrán tener medidas diferentes para garantizar la protección de datos personales.
+        </p>
+
+        <h3>a) Finalidades generales para el tratamiento de datos personales:</h3>
+
+        <ul>
+          <li>Garantizar la seguridad en el marco de las políticas de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA-
+            S.A.S- S.I.S.M, de seguridad de personas, bienes de la IPS, instalaciones, salud ocupacional, seguridad
+            industrial, informática y de la información.</li>
+          <li>Controlar el acceso a las instalaciones y establecer medidas de seguridad, incluyendo el establecimiento
+            de zonas video-vigiladas.</li>
+          <li>Prevenir, monitorear, detectar, investigar, analizar y/o controlar amenazas o incidentes de seguridad
+            informática o de la información y ejecutar las medidas pertinentes para solucionarlos.</li>
+          <li>Efectuar el proceso de conocimiento y debida diligencia.</li>
+          <li>Prevención, detección, monitoreo y control del lavado de activos y el financiamiento del terrorismo.</li>
+          <li>Enviar al correo físico, electrónico, dispositivo móvil vía mensajes de texto (SMS y/o MMS) o a través de
+            cualquier otro medio de comunicación existente o que llegare a existir, información institucional,
+            publicitaria o comercial sobre los servicios de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-S.I.S.M,
+            sus socios comerciales, proyectos o eventos en los cuales participa y son invitados.</li>
+          <li>Dar respuesta a consultas, peticiones, quejas y reclamos que sean realizadas por los Titulares y
+            organismos de control y trasmitir los Datos Personales a las demás autoridades que en virtud de la ley
+            aplicable deban recibir los Datos Personales.</li>
+          <li>Administrar sistemas de información, contabilidad, facturación y auditorias, procesamiento y verificación
+            de medios de pago, registro contable y control de pagos, liquidación y reportes de impuestos, beneficios.
+          </li>
+          <li>Suministrar, compartir, enviar o entregar sus datos personales a Compañías de seguros, asesores jurídicos,
+            autoridades fiscales, autoridades administrativas, autoridades judiciales, y proveedores o terceros en
+            operaciones conjuntas que procesen, administren o utilicen la información, para la ejecución de contratos o
+            acuerdos suscritos con SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M</li>
+          <li>Transferir y/o transmitir la información recolectada a distintas áreas de SERVICIOS INTEGRALES DE SALUD
+            DEL MAGDALENA- S.A.S- S.I.S.M, y/o a la compañía matriz, sus filiales, subsidiarias, así como a compañías
+            vinculadas en Colombia y en el exterior, cuando ello sea necesario para el desarrollo de sus operaciones
+            (recaudo de cartera y cobros administrativos, tesorería, contabilidad, analítica y estadísticas,
+            inteligencia de negocios, análisis de riesgos, seguridad, entre otros).</li>
+          <li>Así mismo podrán ser destinatarios de la información personal recolectada por SERVICIOS INTEGRALES DE
+            SALUD DEL MAGDALENA- S.A.S- S.I.S.M, todos los accionistas, sus filiales, subsidiarias y sus empresas
+            vinculadas en Colombia y en el exterior, aun aquellas ubicadas en países que no cuenten con los mismos
+            niveles de protección de datos, así como también aquellos proveedores nacionales o internacionales
+            autorizados por éstos, para garantizar la seguridad de la información, la revisión de incidentes de
+            seguridad y, en todo caso, velar por los intereses de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA-
+            S.A.S-S.I.S.M y de los titulares.</li>
+          <li>Cualquier otra actividad de naturaleza similar a las anteriormente descritas que sean necesarias para
+            desarrollar el objeto social de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M.</li>
+        </ul>
+
+        <h3>b) Datos personales de pacientes, familiares y/o acompañantes:</h3>
+
+        <ul>
+          <li>Procesar, confirmar, programar y prestar los servicios de salud solicitados.</li>
+          <li>Solicitar autorización a quien corresponda, ubicado en el país o en el extranjero, dependiendo del
+            asegurador, para la prestación de los servicios de salud requeridos.</li>
+          <li>Solicitar a terceros los insumos, productos o servicios requeridos para la prestación de los servicios de
+            salud.</li>
+          <li>Efectuar estudios, investigaciones, publicaciones, mensajes publicitarios.</li>
+          <li>Realizar y presentar informes estadísticos, analíticos, epidemiológicos, de riesgo, construcción de GRD
+            (Grupos Relacionados por el Diagnóstico), entre otros, que permitan la optimización de los servicios
+            brindados por SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M</li>
+          <li>Contactar al Titular con el fin de evaluar la calidad y/o satisfacción de los servicios de salud
+            recibidos.</li>
+          <li>Asesorar y/o apoyar la necesidad de servicios distintos del objeto social de SERVICIOS INTEGRALES DE SALUD
+            DEL MAGDALENA- S.A.S- S.I.S.M o que no sean prestados por ésta, pero sean requeridos por los pacientes,
+            familiares y/o acompañantes.</li>
+        </ul>
+
+        <h3>c) Datos personales de empleados o de personas que participan en procesos de selección:</h3>
+
+        <ul>
+          <li>Desarrollar el proceso de selección, evaluación y vinculación laboral, incluyendo la evaluación y
+            calificación de los participantes y la verificación de referencias laborales y personales, y la realización
+            de estudios de seguridad.</li>
+          <li>Cumplir a cabalidad con todas las obligaciones laborales de orden legal, contractual, judicial y
+            administrativo incluyendo pero sin limitarse a: pago de nómina, aportes y reportes al sistema de seguridad
+            social (salud, pensiones, administración de riesgos laborales, cesantías, cajas de compensación familiar,
+            entre otros); declaraciones de impuestos; atención de programas de compensación; bienestar laboral; medición
+            de productividad y promoción; programas de fidelización; salud ocupacional y seguridad industrial;
+            prevención de acoso laboral; acreditación de órdenes judiciales y administrativas, entre otros.</li>
+          <li>Administrar usuarios, correo electrónico, aplicativos internos.</li>
+          <li>Publicar información en el directorio institucional.</li>
+          <li>Contratar beneficios laborales con terceros, tales como seguros de vida, gastos médicos, entre otros.</li>
+          <li>Reproducir fotografías o publicar información en comunicaciones, boletines o publicaciones
+            institucionales.</li>
+        </ul>
+
+        <h3>d) Datos personales de médicos adscritos o de personas que participan en procesos de adscripción:</h3>
+
+        <ul>
+          <li>Desarrollar el proceso de adscripción.</li>
+          <li>Prestar en debida forma los servicios por parte de La IPS.</li>
+          <li>Realizar informes de gestión del esquema de adscripción.</li>
+          <li>Administrar usuarios y aplicativos internos.</li>
+          <li>Publicar información en el directorio institucional.</li>
+          <li>Publicar información de interés para los pacientes y la comunidad en la página web u otros medios de
+            comunicación de la IPS.</li>
+          <li>Medir productividad y ejecutar programas de fidelización.</li>
+          <li>Reproducir fotografías o publicar información en comunicaciones, boletines o publicaciones de SERVICIOS
+            INTEGRALES DE SALUD DEL MAGDALENA-S.A.S- S.I.S.M.</li>
+          <li>Compartir los Datos Personales a terceros para la celebración y/o ejecución de actos o negocios jurídicos
+            relacionados con el desarrollo de planes de beneficios de cualquier naturaleza, en favor del Titular.</li>
+        </ul>
+
+        <h3>e) Datos personales de proveedores:</h3>
+
+        <ul>
+          <li>Cumplir con las disposiciones contractuales para las adquisiciones de bienes y servicios demandados por
+            SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M, para su normal funcionamiento: obligaciones
+            contractuales, judiciales y administrativas, incluyendo registro contable y control de pagos, liquidación y
+            reportes de impuestos, salud ocupacional, seguridad industrial y prevención de riesgos, acreditación de
+            órdenes judiciales y administrativas, entre otros.</li>
+          <li>Efectuar estudios, investigaciones e informes de mercado, financieros, estadísticos y de riesgos, entre
+            otros.</li>
+          <li>Consultas, auditorias y revisiones derivadas de la relación con el proveedor.</li>
+          <li>Evaluar la ejecución y calidad de los servicios y bienes contratados.</li>
+          <li>Administrar usuarios, correos electrónicos y aplicativos internos.</li>
+        </ul>
+
+        <h3>f) Datos personales de empleados en misión y de empleados de nuestros proveedores.</h3>
+
+        <ul>
+          <li>Asegurar, en general, el cumplimiento de las normas que resulten aplicables conforme a la vinculación
+            contractual y al tipo de servicio que se relacione.</li>
+        </ul>
+
+        <h3>5.5. Conservación de los datos.</h3>
+
+        <p>
+          Los datos personales sólo podrán ser tratados durante el tiempo que permanezca vigente la finalidad para la
+          que fueron registrados. En este sentido, SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M podrá
+          mantener en sus bases de datos los datos personales de los titulares durante el tiempo que sea razonable y
+          necesario, de acuerdo con las finalidades del tratamiento consagradas en la Política, salvo disposiciones
+          legales que establezcan términos particulares. Una vez transcurrido este tiempo SERVICIOS INTEGRALES DE SALUD
+          DEL MAGDALENA- S.A.S- S.I.S.M procederá, para los casos de documentación manual, a su remisión al archivo
+          inactivo de conformidad a las tablas de retención documental; para el caso de información contenida en medios
+          digitales se aplicarán los lineamientos fijados por la organización para el almacenamiento definitivo de los
+          mismos y su eventual eliminación. No obstante lo anterior, de ser necesario SERVICIOS INTEGRALES DE SALUD DEL
+          MAGDALENA-S.A.S- S.I.S.M podrá solicitar nuevamente la autorización al titular de los datos personales, con el
+          objetivo de conservarla por un período igual al inicialmente autorizado.
+        </p>
+
+        <h2>6. Seguridad de la Información</h2>
+
+        <p>
+          SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M cuenta con procedimientos de seguridad y
+          confidencialidad de la información, para garantizar el correcto uso de la información y el tratamiento de los
+          datos personales, y evitar el acceso a terceros no autorizados que puedan conocer, vulnerar, modificar
+          divulgar y/o destruir la información que reposa en nuestras bases de datos.
+        </p>
+
+        <p>
+          Así mismo, para los eventos en los que se deba transferir o transmitir bases de datos y/o datos personales a
+          encargados y/o responsables del tratamiento para cumplir con actividades específicas, SERVICIOS INTEGRALES DE
+          SALUD DEL MAGDALENA-S.A.S- S.I.S.M garantizará que éstos cuenten con los mismos o mejores estándares y
+          protocolos de seguridad que impidan la adulteración, pérdida, consulta, uso o acceso no autorizado o
+          fraudulento por cualquier sujeto.
+        </p>
+
+        <p>
+          Análogamente, los Titulares de los Datos Personales, en aras de proteger la información, se comprometen a: 1)
+          Abstenerse de realizar actividades que pongan en peligro o afecten la seguridad de la información, en
+          particular, aquellas ejecutadas a través de las redes informáticas, dispositivos electrónicos, aplicaciones,
+          softwares y correos electrónicos del Responsable; 2) Reportar al Responsable del Tratamiento aquellas
+          conductas o eventos que puedan afectar o afecten la integridad, disponibilidad y confidencialidad de la
+          información; 3) Cumplir con las demás obligaciones establecidas en la Política y en la Ley.
+        </p>
+
+        <h2>7. Derechos de los Titulares</h2>
+
+        <p>
+          Sus derechos como titular de los datos personales son los consagrados en la Ley 1581 de 2012, en especial:
+        </p>
+
+        <ul>
+          <li>El efectivo ejercicio del derecho constitucional de Habeas Data.</li>
+          <li>Suministrar la autorización previa y expresa, a través de un medio susceptible de ser reproducido, para
+            que SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M pueda recolectar y otorgar el tratamiento
+            respectivo a los Datos Personales del titular, salvo que se trate de datos públicos, casos de urgencia
+            médica o sanitaria, información relacionada con el Registro Civil de las Personas y cuando la ley ha
+            autorizado que se trate para fines históricos, estadísticos o científicos.</li>
+          <li>Cuando se trate de datos sensibles (incluyendo los biométricos) o de niños, niñas y adolescentes,
+            SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-S.I.S.M informará previamente a su titular o
+            representante legal que no está obligado a autorizar su tratamiento, salvo en los eventos requeridos para la
+            debida y oportuna prestación del servicio de salud.</li>
+          <li>Ejercer sus derechos relativos a conocer, actualizar, rectificar y suprimir la información suministrada.
+          </li>
+          <li>Ejercer el derecho a revocar la autorización suministrada a SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA-
+            S.A.S- S.I.S.M para el tratamiento de sus Datos Personales, siempre y cuando no exista un mandato legal o
+            una obligación contractual que haga necesaria la permanencia del dato.</li>
+          <li>Presentar ante la Superintendencia de Industria y Comercio quejas por infracciones a la Ley 1581 de 2012,
+            el Decreto 1377 de 2013 y las demás normas que las modifiquen o complementen.</li>
+          <li>Obtener copia de la autorización otorgada para la recolección de los Datos Personales.</li>
+          <li>Ser informado, previa solicitud, del uso que le hemos otorgado a los Datos Personales recolectados.</li>
+          <li>Recibir respuesta y atención de las peticiones, consultas y reclamos que formule con relación a sus Datos
+            Personales</li>
+          <li>Que su información sea conservada bajo las condiciones de seguridad necesarias para impedir su
+            adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento.</li>
+        </ul>
+
+        <h2>8. Procedimiento que debe seguir el titular para ejercer sus derechos</h2>
+
+        <p>
+          El Titular que quiera consultar sus datos personales contenidos o almacenados en las bases de datos de
+          SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-S.I.S.M o que quiera presentar un reclamo para que dicha
+          información sea objeto de corrección, actualización o supresión, o que advierta el presunto incumplimiento de
+          cualquiera de los deberes y principios contenidos en la normatividad sobre Protección de Datos Personales por
+          parte de SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M, podrá presentar reclamación mediante un
+          escrito enviado al correo electrónico: serviciosintegrales_saludmagdale@yahoo.com o a la CR 19 NO 26B - 53,
+          Barrio Los Naranjos de Santa Marta, dirigido al Oficial de Cumplimiento de Protección de datos, o quien haga
+          sus veces, adjuntando fotocopia de su documento de identidad o cualquier otro documento equivalente que
+          acredite su identidad y titularidad de los datos personales.
+        </p>
+
+        <h3>8.1 Procedimiento para la realización de consultas:</h3>
+
+        <ol class="roman-list">
+          <li><strong>(i)</strong> El Titular podrá consultar sus datos personales en cualquier momento. Para tal fin,
+            podrá elevar una solicitud indicando la información que desea conocer, a través de cualquiera de los
+            mecanismos arriba señalados.</li>
+          <li><strong>(ii)</strong> El Titular deberá acreditar su identidad, la de su representante, la representación
+            o estipulación a favor de otro o para otro. Cuando la solicitud sea formulada por persona distinta del
+            Titular y no se acredite que la misma actúa en representación de aquél, se tendrá por no presentada.</li>
+          <li><strong>(iii)</strong> La consulta debe contener como mínimo el nombre y dirección de contacto del Titular
+            o cualquier otro medio para recibir la respuesta, así como una descripción clara y precisa de los datos
+            personales respecto de los cuales el Titular busca ejercer su derecho de consulta.</li>
+          <li><strong>(iv)</strong> Si la consulta realizada por el Titular del dato resulta incompleta, La IPS
+            requerirá al interesado dentro de los cinco (5) días siguientes a la recepción de la consulta para que
+            subsane las fallas. Transcurridos dos (2) meses desde la fecha del requerimiento, sin que el solicitante
+            presente la información requerida, se entenderá que ha desistido de su consulta.</li>
+          <li><strong>(v)</strong> Las consultas serán atendida por SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-
+            S.I.S.M en un término máximo de diez (10) días hábiles contados a partir de la fecha de recibo de la misma.
+            Cuando no fuere posible atender la consulta dentro de dicho término, este hecho se informará al solicitante,
+            expresando los motivos de la demora y señalando la fecha en que se atenderá su consulta, la cual en ningún
+            caso podrá superar los cinco (5) días hábiles siguientes al vencimiento del primer término.</li>
+        </ol>
+
+        <h3>8.2 Procedimiento para la realización de quejas y reclamos:</h3>
+
+        <p>
+          De conformidad con lo establecido en el Artículo 14 de la Ley 1581 de 2012, cuando el Titular considere que la
+          información tratada por SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M deba ser objeto de
+          corrección, actualización o supresión, o cuando deba ser revocada por advertirse el presunto incumplimiento de
+          cualquiera de los deberes contenidos en la Ley, podrán presentar una solicitud ante la IPS, la cual será
+          tramitada bajo las siguientes reglas:
+        </p>
+
+        <ol class="roman-list">
+          <li><strong>(i)</strong> El Titular o su representante deberán acreditar su identidad, la de su representante,
+            la representación o estipulación a favor de otro o para otro. Cuando la solicitud sea formulada por persona
+            distinta del Titular y no se acredite que la misma actúa en representación de aquél, se tendrá por no
+            presentada.</li>
+          <li>
+            <strong>(ii)</strong> La solicitud de rectificación, actualización, supresión o revocatoria debe ser
+            presentada a través de los medios habilitados por SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-
+            S.I.S.M indicados en el presente documento y contener, como mínimo, la siguiente información:
+            <ul>
+              <li>El nombre y dirección de domicilio del Titular o cualquier otro medio para recibir la respuesta.</li>
+              <li>Los documentos que acrediten la identidad del solicitante y en caso dado, la de su representante con
+                la respectiva autorización.</li>
+              <li>La descripción clara y precisa de los datos personales respecto de los cuales el Titular busca ejercer
+                alguno de los derechos y la solicitud concreta.</li>
+            </ul>
+          </li>
+          <li><strong>(iii)</strong> Si la solicitud se presenta incompleta, SERVICIOS INTEGRALES DE SALUD DEL
+            MAGDALENA- S.A.S- S.I.S.M deberá requerir al interesado dentro de los cinco (5) días siguientes a su
+            recepción para que subsane las fallas. Transcurridos dos (2) meses desde la fecha del requerimiento, sin que
+            el solicitante presente la información requerida, se entenderá que ha desistido de su solicitud.</li>
+          <li><strong>(iv)</strong> El término máximo para atender esta solicitud será de quince (15) días hábiles
+            contados a partir del día siguiente a la fecha de su recibo. Cuando no fuere posible atenderla dentro de
+            dicho término, se informará al interesado sobre los motivos de la demora y la fecha en que se atenderá su
+            reclamo, la cual en ningún caso podrá superar los ocho (8) días hábiles siguientes al vencimiento del primer
+            término.</li>
+        </ol>
+
+        <h3>8.3 Procedimiento para la solicitud de supresión, modificación y/o actualización de datos de la historia
+          clínica.</h3>
+
+        <p>
+          Si se trata de una solicitud para la supresión, modificación y/o actualización de datos de la historia
+          clínica; SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S-S.I.S.M, previo el estudio de la misma y las
+          pruebas aportadas, tomará la decisión a que haya lugar y dará respuesta en los términos de ley.
+        </p>
+
+        <p>
+          No obstante, y teniendo en cuenta la obligatoriedad del registro de la historia clínica, establecida en la Ley
+          23 de 1981 y demás normas complementarias, no será sujeto de modificación y/o supresión los diagnósticos y
+          conceptos médicos impartidos por los profesionales de la salud, los resultados de los paraclínicos, los
+          antecedentes médicos y, en general todas las condiciones clínicas del paciente.
+        </p>
+
+        <h2>9. Vigencia de la Política</h2>
+
+        <p>
+          La actualización de la presente Política ha sido aprobada por la Junta Directiva de la Sociedad, en sesión del
+          01 Noviembre de 2021; SERVICIOS INTEGRALES DE SALUD DEL MAGDALENA- S.A.S- S.I.S.M, se reserva el derecho de
+          modificar esta política en cualquier momento y sin previo aviso para lo cual notificará a sus clientes,
+          usuarios, pacientes y demás titulares mencionados en esta Política, actualizando el contenido en <a
+            href="http://www.sism.com.co/" rel="noopener noreferrer">http://www.sism.com.co/</a>
+        </p>
+
+        <div class="footer-note">
+          <p>Fecha de publicación en página web: Enero del 2026</p>
+          <p>Fecha de entrada en vigencia: Noviembre del 2021</p>
+        </div>
+      </section>
+    </article>
+  </main>
+</body>
+
+</html>
