@@ -5,13 +5,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Embedded Signup WhatsApp - Test SISM</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 720px;
+      max-width: 760px;
       margin: 60px auto;
       padding: 24px;
       line-height: 1.5;
+      color: #1f2937;
+    }
+
+    h1 {
+      color: #0f172a;
+      margin-bottom: 12px;
     }
 
     button {
@@ -25,97 +32,129 @@
       font-weight: 700;
     }
 
+    button:hover {
+      background: #145dbf;
+    }
+
     pre {
       background: #f4f4f4;
       padding: 16px;
       border-radius: 8px;
       overflow: auto;
       margin-top: 20px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .note {
+      background: #eff6ff;
+      border-left: 4px solid #1877f2;
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin: 18px 0;
     }
   </style>
 </head>
 
 <body>
+  <div id="fb-root"></div>
+
   <h1>Prueba de Coexistencia WhatsApp</h1>
 
   <p>
-    Usa este botón para iniciar el flujo de WhatsApp Embedded Signup
+    Usa este botón para iniciar el flujo oficial de WhatsApp Embedded Signup
     con WhatsApp Business App onboarding.
   </p>
 
-  <button onclick="launchWhatsAppSignup()">
+  <div class="note">
+    Este flujo usa Facebook Login SDK. Si el número está en WhatsApp Business App,
+    Meta debería mostrar el paso para conectar con QR o código.
+  </div>
+
+  <button type="button" onclick="launchWhatsAppSignup()">
     Conectar WhatsApp por coexistencia
   </button>
 
   <pre id="result">Esperando respuesta...</pre>
 
   <script>
+    const APP_ID = "1493676222207328";
+    const CONFIG_ID = "995234289624567";
+    const API_VERSION = "v25.0";
+
+    const result = document.getElementById("result");
+
     window.fbAsyncInit = function () {
       FB.init({
-        appId: "1898748107455708",
-        autoLogAppEvents: true,
+        appId: APP_ID,
+        cookie: true,
         xfbml: true,
-        version: "v25.0"
+        version: API_VERSION
       });
+
+      result.textContent = "SDK de Facebook cargado. Puedes iniciar el flujo.";
     };
 
+    (function (d, s, id) {
+      const fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+
+      const js = d.createElement(s);
+      js.id = id;
+      js.src = "https://connect.facebook.net/es_LA/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    })(document, "script", "facebook-jssdk");
+
     window.addEventListener("message", function (event) {
-      if (
-        event.origin !== "https://www.facebook.com" &&
-        event.origin !== "https://web.facebook.com"
-      ) {
-        return;
-      }
+      if (!event.origin.includes("facebook.com")) return;
 
       try {
-        const data = JSON.parse(event.data);
+        const data = typeof event.data === "string"
+          ? JSON.parse(event.data)
+          : event.data;
 
-        if (data.type === "WA_EMBEDDED_SIGNUP") {
-          document.getElementById("result").textContent =
-            JSON.stringify(data, null, 2);
-
+        if (data && data.type === "WA_EMBEDDED_SIGNUP") {
           console.log("WA_EMBEDDED_SIGNUP:", data);
+          result.textContent =
+            "EVENTO WA_EMBEDDED_SIGNUP:\n\n" +
+            JSON.stringify(data, null, 2);
         }
       } catch (error) {
-        console.log("Mensaje no JSON:", event.data);
+        console.log("Mensaje recibido:", event.data);
       }
     });
 
     function launchWhatsAppSignup() {
+      result.textContent = "Abriendo Embedded Signup...";
+
       FB.login(
         function (response) {
-          document.getElementById("result").textContent =
-            JSON.stringify(response, null, 2);
+          console.log("FB.login response:", response);
 
           if (response.authResponse && response.authResponse.code) {
-            console.log("Código recibido:", response.authResponse.code);
+            result.textContent =
+              "CODE RECIBIDO:\n\n" +
+              response.authResponse.code +
+              "\n\nRevisa si Meta mostró el QR/código durante el flujo.";
+            return;
           }
+
+          result.textContent =
+            "RESPUESTA SIN CODE:\n\n" +
+            JSON.stringify(response, null, 2);
         },
         {
-          config_id: "1341062241217716",
+          config_id: CONFIG_ID,
           response_type: "code",
           override_default_response_type: true,
           extras: {
-            version: "v3",
+            setup: {},
             featureType: "whatsapp_business_app_onboarding",
-            sessionInfoVersion: "3",
-            setup: {}
+            sessionInfoVersion: "3"
           }
         }
       );
     }
-
-    const params = new URLSearchParams(window.location.search);
-    const returnedCode = params.get("code");
-
-    if (returnedCode) {
-      document.getElementById("result").textContent =
-        "CODE RECIBIDO:\n\n" + returnedCode;
-      console.log("CODE RECIBIDO:", returnedCode);
-    }
-  </script>
-
-  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/es_LA/sdk.js">
   </script>
 </body>
 

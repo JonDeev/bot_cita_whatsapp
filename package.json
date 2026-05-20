@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "pnpm prisma:generate:all && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -27,6 +27,7 @@
     "prisma:bot:generate": "prisma generate --schema prisma/bot/schema.prisma --config prisma.bot.config.ts",
     "prisma:bot:migrate:dev": "prisma migrate dev --schema prisma/bot/schema.prisma --config prisma.bot.config.ts",
     "prisma:bot:migrate:deploy": "prisma migrate deploy --schema prisma/bot/schema.prisma --config prisma.bot.config.ts",
+    "prisma:generate:all": "pnpm prisma:generate && pnpm prisma:bot:generate",
     "prisma:validate": "prisma validate",
     "prisma:format": "prisma format",
     "prisma:pull": "prisma db pull",

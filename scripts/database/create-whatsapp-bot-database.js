@@ -94,6 +94,7 @@ async function main() {
       port: Number(requiredEnv('MYSQL_ADMIN_PORT')),
       user: requiredEnv('MYSQL_ADMIN_USER'),
       password: requiredEnv('MYSQL_ADMIN_PASSWORD'),
+      allowPublicKeyRetrieval: true,
       multipleStatements: false,
     });
 
