@@ -25,6 +25,8 @@ import { MetaSignatureVerifierService } from './infrastructure/security/meta-sig
 import { RedisWebhookIdempotencyStoreAdapter } from './infrastructure/idempotency/redis-webhook-idempotency-store.adapter';
 import { PrismaBotWebhookInboxRepository } from './infrastructure/persistence/mysql/prisma-bot-webhook-inbox.repository';
 import { MetaWhatsappCloudApiAdapter } from './infrastructure/whatsapp-cloud-api/meta-whatsapp-cloud-api.adapter';
+import { ConversationIdlePolicyScheduler } from './infrastructure/scheduling/conversation-idle-policy.scheduler';
+import { ConversationIdlePolicySchedulerConfigService } from './infrastructure/scheduling/conversation-idle-policy-scheduler-config.service';
 import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.controller';
 
 @Module({
@@ -46,6 +48,8 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
     SendWhatsappTextMessageUseCase,
     WebhookIdempotencyKeyFactory,
     ConversationOrchestratorService,
+    ConversationIdlePolicySchedulerConfigService,
+    ConversationIdlePolicyScheduler,
     {
       provide: WHATSAPP_SIGNATURE_VERIFIER,
       useClass: MetaSignatureVerifierService,

@@ -10,6 +10,9 @@ export interface ConversationSession {
   state: ConversationState;
   status: ConversationStatus;
   context?: ConversationSessionContext;
+  lastInboundAt?: string;
+  idleReminderSentAt?: string;
+  idleExpiresAt?: string;
   createdAt: string;
   updatedAt: string;
 }

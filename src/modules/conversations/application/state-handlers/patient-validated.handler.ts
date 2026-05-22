@@ -3,12 +3,14 @@ import { ListFutureAssignedAppointmentsByPatientUseCase } from '../../../appoint
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { ResolveAssignedDispensaryByPatientUseCase } from '../../../patients/application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from '../../../patients/application/use-cases/resolve-eligible-specialties-by-patient.use-case';
+import { ResolvePatientContactProfileUseCase } from '../../../patients/application/use-cases/resolve-patient-contact-profile.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import { AssignedDispensaryMessageFactory } from '../services/assigned-dispensary-message.factory';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { NAVIGATION_OPTION_IDS } from '../services/conversation-navigation.service';
+import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
 import type {
   ConversationStateHandler,
@@ -23,8 +25,10 @@ export class PatientValidatedHandler implements ConversationStateHandler {
     private readonly listFutureAssignedAppointmentsByPatient: ListFutureAssignedAppointmentsByPatientUseCase,
     private readonly resolveAssignedDispensaryByPatient: ResolveAssignedDispensaryByPatientUseCase,
     private readonly resolveEligibleSpecialtiesByPatient: ResolveEligibleSpecialtiesByPatientUseCase,
+    private readonly resolvePatientContactProfile: ResolvePatientContactProfileUseCase,
     private readonly assignedAppointmentListFactory: AssignedAppointmentListFactory,
     private readonly assignedDispensaryMessageFactory: AssignedDispensaryMessageFactory,
+    private readonly patientContactConfirmationMessageFactory: PatientContactConfirmationMessageFactory,
     private readonly specialtyListFactory: SpecialtyListFactory,
     private readonly auditService: AuditService,
   ) {}
@@ -34,6 +38,12 @@ export class PatientValidatedHandler implements ConversationStateHandler {
     event: NormalizedWhatsappEvent,
   ): Promise<ConversationStateHandlerResult> {
     void event;
+
+    const contactVerificationGate =
+      await this.resolveContactVerificationGate(session);
+    if (contactVerificationGate) {
+      return contactVerificationGate;
+    }
 
     if (session.context?.flowIntent === 'CHECK_APPOINTMENTS') {
       return this.handleCheckAppointmentsIntent(session);
@@ -126,6 +136,88 @@ export class PatientValidatedHandler implements ConversationStateHandler {
       },
       outboundMessages: [
         this.specialtyListFactory.build(specialtyResult.specialties),
+      ],
+    };
+  }
+
+  private async resolveContactVerificationGate(
+    session: ConversationSession,
+  ): Promise<ConversationStateHandlerResult | null> {
+    const flowIntent = session.context?.flowIntent;
+    const contactVerification = session.context?.contactVerification;
+    if (contactVerification?.completedForCurrentFlow) {
+      return null;
+    }
+
+    const patientId = session.context?.patientValidation?.patientId ?? null;
+    const contactProfileResult =
+      await this.resolvePatientContactProfile.execute({
+        patientId,
+      });
+
+    if (contactProfileResult.status !== 'FOUND') {
+      await this.auditService.record('patient.contact_update.failed', {
+        conversationKey: session.conversationKey,
+        patientId,
+        flowIntent: flowIntent ?? null,
+        reason: contactProfileResult.reason,
+      });
+
+      return {
+        nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
+        nextContext: {
+          ...session.context,
+          patientValidation: {
+            failedAttempts: 0,
+          },
+          contactVerification: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'No fue posible preparar la confirmacion de contacto. Escribe nuevamente tu numero de documento para continuar.',
+          },
+        ],
+      };
+    }
+
+    await this.auditService.record('patient.contact_confirmation.prompted', {
+      conversationKey: session.conversationKey,
+      patientId: contactProfileResult.patientId,
+      flowIntent: flowIntent ?? null,
+      requiresPhoneUpdate: !contactProfileResult.isPrimaryPhoneValid,
+      requiresEmailUpdate: !contactProfileResult.isPrimaryEmailValid,
+    });
+
+    return {
+      nextState: CONVERSATION_STATES.CONFIRMING_PATIENT_CONTACT,
+      nextContext: {
+        ...session.context,
+        contactVerification: {
+          fullName: contactProfileResult.fullName,
+          primaryPhone: contactProfileResult.primaryPhone,
+          primaryEmail: contactProfileResult.primaryEmail,
+          requiresPhoneUpdate: !contactProfileResult.isPrimaryPhoneValid,
+          requiresEmailUpdate: !contactProfileResult.isPrimaryEmailValid,
+          selectedUpdateMode: undefined,
+          pendingPhone: undefined,
+          completedForCurrentFlow: false,
+          invalidPhoneAttempts: 0,
+          invalidEmailAttempts: 0,
+        },
+      },
+      outboundMessages: [
+        this.patientContactConfirmationMessageFactory.build({
+          fullName: contactProfileResult.fullName,
+          primaryPhone: contactProfileResult.primaryPhone,
+          primaryEmail: contactProfileResult.primaryEmail,
+        }),
       ],
     };
   }
@@ -380,6 +472,7 @@ export class PatientValidatedHandler implements ConversationStateHandler {
         nextContext: {
           ...session.context,
           flowIntent: undefined,
+          contactVerification: undefined,
           assignedAppointmentSelection: undefined,
           appointmentReschedule: undefined,
           specialtySelection: undefined,
@@ -410,6 +503,7 @@ export class PatientValidatedHandler implements ConversationStateHandler {
         nextContext: {
           ...session.context,
           flowIntent: undefined,
+          contactVerification: undefined,
           assignedAppointmentSelection: undefined,
           appointmentReschedule: undefined,
           specialtySelection: undefined,
@@ -436,6 +530,7 @@ export class PatientValidatedHandler implements ConversationStateHandler {
       nextContext: {
         ...session.context,
         flowIntent: undefined,
+        contactVerification: undefined,
         assignedAppointmentSelection: undefined,
         appointmentReschedule: undefined,
         specialtySelection: undefined,

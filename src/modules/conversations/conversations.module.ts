@@ -7,7 +7,9 @@ import {
   CONVERSATION_PERSISTENCE_REPOSITORY,
 } from './domain/conversations.tokens';
 import { HandleIncomingConversationMessageUseCase } from './application/use-cases/handle-incoming-conversation-message.use-case';
+import { ReconcileConversationIdlePolicyUseCase } from './application/use-cases/reconcile-conversation-idle-policy.use-case';
 import { ConversationConfigService } from './application/services/conversation-config.service';
+import { ConversationIdlePolicyConfigService } from './application/services/conversation-idle-policy-config.service';
 import { ConversationKeyFactory } from './application/services/conversation-key.factory';
 import { AppointmentAvailabilityMessageFactory } from './application/services/appointment-availability-message.factory';
 import { AppointmentAssignmentConfirmationMessageFactory } from './application/services/appointment-assignment-confirmation-message.factory';
@@ -23,20 +25,28 @@ import { AppointmentReschedulingTimeSelectionService } from './application/servi
 import { AppointmentTimeListFactory } from './application/services/appointment-time-list.factory';
 import { AssignedDispensaryMessageFactory } from './application/services/assigned-dispensary-message.factory';
 import { MainMenuListFactory } from './application/services/main-menu-list.factory';
+import { PatientContactConfirmationMessageFactory } from './application/services/patient-contact-confirmation-message.factory';
+import { PatientContactUpdateOptionsListFactory } from './application/services/patient-contact-update-options-list.factory';
+import { PatientContactUpdateSuccessMessageFactory } from './application/services/patient-contact-update-success-message.factory';
 import { ConversationStatePromptService } from './application/services/conversation-state-prompt.service';
+import { InteractivePromptWindowService } from './application/services/interactive-prompt-window.service';
 import { SpecialtyListFactory } from './application/services/specialty-list.factory';
 import { ConversationNavigationService } from './application/services/conversation-navigation.service';
 import { PendingAppointmentBlockMessageFactory } from './application/services/pending-appointment-block-message.factory';
+import { ConfirmingPatientContactHandler } from './application/state-handlers/confirming-patient-contact.handler';
 import { MainMenuHandler } from './application/state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from './application/state-handlers/patient-validated.handler';
 import { ReviewingAssignedAppointmentDetailsHandler } from './application/state-handlers/reviewing-assigned-appointment-details.handler';
 import { ReviewingAssignedAppointmentActionsHandler } from './application/state-handlers/reviewing-assigned-appointment-actions.handler';
 import { RequestingWhatsappAppointmentNotificationsOptInHandler } from './application/state-handlers/requesting-whatsapp-appointment-notifications-opt-in.handler';
+import { SelectingContactUpdateFieldHandler } from './application/state-handlers/selecting-contact-update-field.handler';
 import { SelectingAssignedAppointmentHandler } from './application/state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from './application/state-handlers/selecting-appointment-date.handler';
 import { SelectingAppointmentDoctorHandler } from './application/state-handlers/selecting-appointment-doctor.handler';
 import { SelectingAppointmentTimeHandler } from './application/state-handlers/selecting-appointment-time.handler';
 import { SelectingSpecialtyHandler } from './application/state-handlers/selecting-specialty.handler';
+import { UpdatingContactEmailHandler } from './application/state-handlers/updating-contact-email.handler';
+import { UpdatingContactPhoneHandler } from './application/state-handlers/updating-contact-phone.handler';
 import { WaitingBirthDateHandler } from './application/state-handlers/waiting-birth-date.handler';
 import { WaitingDocumentHandler } from './application/state-handlers/waiting-document.handler';
 import { ConversationStateHandlerResolverService } from './application/services/conversation-state-handler-resolver.service';
@@ -57,6 +67,7 @@ import { PatientsModule } from '../patients/patients.module';
   ],
   providers: [
     ConversationConfigService,
+    ConversationIdlePolicyConfigService,
     ConversationKeyFactory,
     AppointmentAvailabilityMessageFactory,
     AppointmentAssignmentConfirmationMessageFactory,
@@ -72,7 +83,11 @@ import { PatientsModule } from '../patients/patients.module';
     AppointmentTimeListFactory,
     AssignedDispensaryMessageFactory,
     MainMenuListFactory,
+    PatientContactConfirmationMessageFactory,
+    PatientContactUpdateOptionsListFactory,
+    PatientContactUpdateSuccessMessageFactory,
     ConversationStatePromptService,
+    InteractivePromptWindowService,
     SpecialtyListFactory,
     ConversationNavigationService,
     PendingAppointmentBlockMessageFactory,
@@ -80,6 +95,10 @@ import { PatientsModule } from '../patients/patients.module';
     WaitingDocumentHandler,
     WaitingBirthDateHandler,
     PatientValidatedHandler,
+    ConfirmingPatientContactHandler,
+    SelectingContactUpdateFieldHandler,
+    UpdatingContactPhoneHandler,
+    UpdatingContactEmailHandler,
     SelectingAssignedAppointmentHandler,
     ReviewingAssignedAppointmentDetailsHandler,
     ReviewingAssignedAppointmentActionsHandler,
@@ -90,6 +109,7 @@ import { PatientsModule } from '../patients/patients.module';
     SelectingAppointmentTimeHandler,
     ConversationStateHandlerResolverService,
     HandleIncomingConversationMessageUseCase,
+    ReconcileConversationIdlePolicyUseCase,
     {
       provide: CONVERSATION_SESSION_REPOSITORY,
       useClass: RedisConversationSessionRepository,
@@ -105,6 +125,7 @@ import { PatientsModule } from '../patients/patients.module';
   ],
   exports: [
     HandleIncomingConversationMessageUseCase,
+    ReconcileConversationIdlePolicyUseCase,
     ConversationKeyFactory,
     CONVERSATION_MESSAGE_REPOSITORY,
     CONVERSATION_PERSISTENCE_REPOSITORY,

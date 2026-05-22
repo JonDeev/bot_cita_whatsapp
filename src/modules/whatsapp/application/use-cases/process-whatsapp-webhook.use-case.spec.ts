@@ -43,7 +43,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       record: jest.fn().mockResolvedValue(undefined),
     } as unknown as AuditService;
     const orchestrator = {
-      handleEvents: jest.fn().mockResolvedValue(undefined),
+      handleEvent: jest.fn().mockResolvedValue({
+        processingStatus: 'PROCESSED',
+      }),
     } as unknown as ConversationOrchestratorService;
 
     const useCase = new ProcessWhatsappWebhookUseCase(
@@ -63,8 +65,8 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       payload: {},
     });
 
-    expect(orchestrator.handleEvents).toHaveBeenCalledTimes(1);
-    expect(orchestrator.handleEvents).toHaveBeenCalledWith([event]);
+    expect(orchestrator.handleEvent).toHaveBeenCalledTimes(1);
+    expect(orchestrator.handleEvent).toHaveBeenCalledWith(event);
     expect(webhookInboxRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         processingStatus: 'PROCESSED',
@@ -89,7 +91,7 @@ describe('ProcessWhatsappWebhookUseCase', () => {
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
     const orchestrator = {
-      handleEvents: jest.fn(),
+      handleEvent: jest.fn(),
     } as unknown as ConversationOrchestratorService;
 
     const useCase = new ProcessWhatsappWebhookUseCase(
@@ -142,7 +144,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       record: jest.fn().mockResolvedValue(undefined),
     } as unknown as AuditService;
     const orchestrator = {
-      handleEvents: jest.fn().mockResolvedValue(undefined),
+      handleEvent: jest.fn().mockResolvedValue({
+        processingStatus: 'PROCESSED',
+      }),
     } as unknown as ConversationOrchestratorService;
 
     const useCase = new ProcessWhatsappWebhookUseCase(
@@ -162,7 +166,7 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       payload: {},
     });
 
-    expect(orchestrator.handleEvents).not.toHaveBeenCalled();
+    expect(orchestrator.handleEvent).not.toHaveBeenCalled();
     expect(webhookInboxRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         processingStatus: 'SKIPPED_STALE',
@@ -204,7 +208,9 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       record: jest.fn().mockResolvedValue(undefined),
     } as unknown as AuditService;
     const orchestrator = {
-      handleEvents: jest.fn().mockResolvedValue(undefined),
+      handleEvent: jest.fn().mockResolvedValue({
+        processingStatus: 'PROCESSED',
+      }),
     } as unknown as ConversationOrchestratorService;
 
     const useCase = new ProcessWhatsappWebhookUseCase(
@@ -224,10 +230,71 @@ describe('ProcessWhatsappWebhookUseCase', () => {
       payload: {},
     });
 
-    expect(orchestrator.handleEvents).toHaveBeenCalledWith([event]);
+    expect(orchestrator.handleEvent).toHaveBeenCalledWith(event);
     expect(webhookInboxRepository.updateStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         processingStatus: 'PROCESSED',
+      }),
+    );
+  });
+
+  it('marks webhook as skipped invalid context when conversation rejects interactive context', async () => {
+    const event: NormalizedWhatsappEvent = {
+      kind: 'incoming_message_received',
+      messageId: 'wamid-invalid-context',
+      from: '573001112233',
+      timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
+      messageType: 'interactive',
+      interactiveReplyId: 'nav_main_menu',
+      phoneNumberId: '123',
+    };
+
+    const signatureVerifier = {
+      verifySignature: jest.fn().mockReturnValue(true),
+    };
+    const payloadParser = { parse: jest.fn().mockReturnValue([event]) };
+    const webhookInboxRepository = {
+      saveIfFirstSeen: jest.fn().mockResolvedValue({ created: true }),
+      updateStatus: jest.fn().mockResolvedValue(undefined),
+    };
+    const idempotencyStore = { tryAcquire: jest.fn().mockResolvedValue(true) };
+    const whatsappConfig = {
+      shouldStoreWebhookPayloads: jest.fn().mockReturnValue(false),
+      getInteractiveEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
+      getTextEventMaxAgeSeconds: jest.fn().mockReturnValue(null),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+    const orchestrator = {
+      handleEvent: jest.fn().mockResolvedValue({
+        processingStatus: 'SKIPPED_INVALID_CONTEXT',
+        rejectionReason: 'MISSING_ACTIVE_PROMPT',
+      }),
+    } as unknown as ConversationOrchestratorService;
+
+    const useCase = new ProcessWhatsappWebhookUseCase(
+      signatureVerifier,
+      payloadParser,
+      webhookInboxRepository,
+      idempotencyStore,
+      new WebhookIdempotencyKeyFactory(),
+      whatsappConfig as any,
+      auditService,
+      orchestrator,
+    );
+
+    await useCase.execute({
+      rawBody: Buffer.from('{}'),
+      signatureHeader: 'sha256=test',
+      payload: {},
+    });
+
+    expect(webhookInboxRepository.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        processingStatus: 'SKIPPED_INVALID_CONTEXT',
+        rejectionReason: 'MISSING_ACTIVE_PROMPT',
       }),
     );
   });

@@ -12,7 +12,23 @@ export type ConversationFlowIntent =
   | 'REQUEST_APPOINTMENT'
   | 'CANCEL_OR_RESCHEDULE'
   | 'CHECK_APPOINTMENTS'
-  | 'CHECK_DISPENSARY';
+  | 'CHECK_DISPENSARY'
+  | 'UPDATE_CONTACT';
+
+export type ContactUpdateMode = 'PHONE' | 'EMAIL' | 'BOTH';
+
+export interface ContactVerificationSessionContext {
+  fullName: string;
+  primaryPhone: string | null;
+  primaryEmail: string | null;
+  requiresPhoneUpdate: boolean;
+  requiresEmailUpdate: boolean;
+  selectedUpdateMode?: ContactUpdateMode;
+  pendingPhone?: string;
+  completedForCurrentFlow: boolean;
+  invalidPhoneAttempts: number;
+  invalidEmailAttempts: number;
+}
 
 export interface OfferedSpecialtySessionContext {
   code: string;
@@ -90,13 +106,40 @@ export interface AppointmentRescheduleSessionContext {
   originalAppointmentTimeHHmm: string;
 }
 
+export const INTERACTIVE_PROMPT_SOURCES = {
+  ORIGINAL: 'ORIGINAL',
+  IDLE_REMINDER_REISSUE: 'IDLE_REMINDER_REISSUE',
+} as const;
+
+export type InteractivePromptSource =
+  (typeof INTERACTIVE_PROMPT_SOURCES)[keyof typeof INTERACTIVE_PROMPT_SOURCES];
+
+export interface InteractivePromptWindowItem {
+  promptId: string;
+  logicalStepKey: string;
+  promptKind: string;
+  state: string;
+  outboundMessageId: string;
+  allowedReplyIds: string[];
+  issuedAt: string;
+  source: InteractivePromptSource;
+  validUntil?: string;
+}
+
+export interface InteractivePromptWindow {
+  currentPromptId: string;
+  prompts: InteractivePromptWindowItem[];
+}
+
 export interface ConversationSessionContext {
   flowIntent?: ConversationFlowIntent;
   patientValidation?: PatientValidationSessionContext;
+  contactVerification?: ContactVerificationSessionContext;
   assignedAppointmentSelection?: AssignedAppointmentSelectionSessionContext;
   appointmentReschedule?: AppointmentRescheduleSessionContext;
   specialtySelection?: SpecialtySelectionSessionContext;
   appointmentDoctorSelection?: AppointmentDoctorSelectionSessionContext;
   appointmentDateSelection?: AppointmentDateSelectionSessionContext;
   appointmentTimeSelection?: AppointmentTimeSelectionSessionContext;
+  interactivePromptWindow?: InteractivePromptWindow;
 }

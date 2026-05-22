@@ -81,4 +81,27 @@ describe('PrismaBotConversationMessageRepository', () => {
       ),
     ).resolves.toBe(true);
   });
+
+  it('resolves outbound message occurredAt for known context id', async () => {
+    const occurredAt = new Date('2026-05-22T12:41:18.160Z');
+    const prismaBot = {
+      botConversation: {
+        upsert: jest.fn().mockResolvedValue({ id: 10 }),
+      },
+      botMessage: {
+        upsert: jest.fn(),
+        create: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue({ occurredAt }),
+      },
+    } as unknown as PrismaBotService;
+
+    const repository = new PrismaBotConversationMessageRepository(prismaBot);
+
+    await expect(
+      repository.findOutboundMessageOccurredAt?.(
+        'whatsapp:123:573001112233',
+        'wamid.out.1',
+      ),
+    ).resolves.toBe('2026-05-22T12:41:18.160Z');
+  });
 });

@@ -162,6 +162,7 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
           userType: validationResult.userType,
           sex: validationResult.sex,
         },
+        contactVerification: undefined,
         specialtySelection: undefined,
         appointmentDoctorSelection: undefined,
         appointmentDateSelection: undefined,

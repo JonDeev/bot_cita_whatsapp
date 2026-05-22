@@ -80,6 +80,9 @@ model BotConversation {
   state            String             @db.VarChar(64)
   status           String             @db.VarChar(32)
   context          Json?              @db.Json
+  lastInboundAt    DateTime?          @map("last_inbound_at") @db.DateTime(3)
+  idleReminderSentAt DateTime?        @map("idle_reminder_sent_at") @db.DateTime(3)
+  idleExpiresAt    DateTime?          @map("idle_expires_at") @db.DateTime(3)
   createdAt        DateTime           @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt        DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
   messages         BotMessage[]
@@ -89,6 +92,8 @@ model BotConversation {
 
   @@index([participantPhone], map: "idx_bot_conversations_participant_phone")
   @@index([updatedAt], map: "idx_bot_conversations_updated_at")
+  @@index([status, idleExpiresAt], map: "idx_bot_conversations_status_idle_expires_at")
+  @@index([status, lastInboundAt], map: "idx_bot_conversations_status_last_inbound_at")
   @@map("bot_conversations")
 }
 

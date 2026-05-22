@@ -122,6 +122,30 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
     return Boolean(message);
   }
 
+  async findOutboundMessageOccurredAt(
+    conversationKey: string,
+    whatsappMessageId: string,
+  ): Promise<string | null> {
+    const message = await this.prismaBot.botMessage.findFirst({
+      where: {
+        whatsappMessageId,
+        direction: BotMessageDirection.OUTBOUND,
+        conversation: {
+          conversationKey,
+        },
+      },
+      select: {
+        occurredAt: true,
+      },
+    });
+
+    if (!message) {
+      return null;
+    }
+
+    return message.occurredAt.toISOString();
+  }
+
   private async ensureConversationId(
     conversationKey: string,
     participantPhone: string,

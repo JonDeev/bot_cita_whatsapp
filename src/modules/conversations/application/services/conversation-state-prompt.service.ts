@@ -14,6 +14,8 @@ import { AppointmentDateListFactory } from './appointment-date-list.factory';
 import { AppointmentNotificationOptInMessageFactory } from './appointment-notification-opt-in-message.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
 import { MainMenuListFactory } from './main-menu-list.factory';
+import { PatientContactConfirmationMessageFactory } from './patient-contact-confirmation-message.factory';
+import { PatientContactUpdateOptionsListFactory } from './patient-contact-update-options-list.factory';
 import { SpecialtyListFactory } from './specialty-list.factory';
 
 export interface ConversationStatePromptResult {
@@ -34,6 +36,8 @@ export class ConversationStatePromptService {
     private readonly appointmentDateListFactory: AppointmentDateListFactory,
     private readonly appointmentTimeListFactory: AppointmentTimeListFactory,
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
+    private readonly patientContactConfirmationMessageFactory: PatientContactConfirmationMessageFactory,
+    private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
   ) {}
 
   buildForState(
@@ -72,6 +76,57 @@ export class ConversationStatePromptService {
             {
               type: 'text',
               body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY.',
+            },
+          ],
+        };
+
+      case CONVERSATION_STATES.CONFIRMING_PATIENT_CONTACT: {
+        const contactVerification = session.context?.contactVerification;
+        if (!contactVerification) {
+          return this.buildForState(
+            session,
+            CONVERSATION_STATES.WAITING_DOCUMENT,
+          );
+        }
+
+        return {
+          nextState: CONVERSATION_STATES.CONFIRMING_PATIENT_CONTACT,
+          outboundMessages: [
+            this.patientContactConfirmationMessageFactory.build({
+              fullName: contactVerification.fullName,
+              primaryPhone: contactVerification.primaryPhone,
+              primaryEmail: contactVerification.primaryEmail,
+            }),
+          ],
+        };
+      }
+
+      case CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD:
+        return {
+          nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+          outboundMessages: [
+            this.patientContactUpdateOptionsListFactory.build(),
+          ],
+        };
+
+      case CONVERSATION_STATES.UPDATING_CONTACT_PHONE:
+        return {
+          nextState: CONVERSATION_STATES.UPDATING_CONTACT_PHONE,
+          outboundMessages: [
+            {
+              type: 'text',
+              body: 'Escribe tu nuevo numero celular en formato 3001234567.',
+            },
+          ],
+        };
+
+      case CONVERSATION_STATES.UPDATING_CONTACT_EMAIL:
+        return {
+          nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
+          outboundMessages: [
+            {
+              type: 'text',
+              body: 'Escribe tu nuevo correo electronico.',
             },
           ],
         };

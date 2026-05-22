@@ -193,6 +193,7 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         nextContext: {
           ...session.context,
           flowIntent: undefined,
+          contactVerification: undefined,
           appointmentReschedule: undefined,
           specialtySelection: undefined,
           appointmentDoctorSelection: undefined,

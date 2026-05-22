@@ -9,6 +9,8 @@ import { ConversationStatePromptService } from './conversation-state-prompt.serv
 import { AppointmentDateListFactory } from './appointment-date-list.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
 import { MainMenuListFactory } from './main-menu-list.factory';
+import { PatientContactConfirmationMessageFactory } from './patient-contact-confirmation-message.factory';
+import { PatientContactUpdateOptionsListFactory } from './patient-contact-update-options-list.factory';
 import { SpecialtyListFactory } from './specialty-list.factory';
 
 describe('ConversationStatePromptService', () => {
@@ -25,6 +27,8 @@ describe('ConversationStatePromptService', () => {
       new AppointmentDateListFactory(),
       new AppointmentTimeListFactory(),
       new AppointmentNotificationOptInMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
+      new PatientContactUpdateOptionsListFactory(),
     );
   }
 
@@ -67,6 +71,43 @@ describe('ConversationStatePromptService', () => {
           ],
         },
       ],
+    });
+  });
+
+  it('builds contact confirmation prompt for confirming state', () => {
+    const service = buildService();
+
+    const result = service.buildForState(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.CONFIRMING_PATIENT_CONTACT,
+        status: 'BOT_ACTIVE',
+        context: {
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: false,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      CONVERSATION_STATES.CONFIRMING_PATIENT_CONTACT,
+    );
+
+    expect(result.nextState).toBe(
+      CONVERSATION_STATES.CONFIRMING_PATIENT_CONTACT,
+    );
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_buttons',
     });
   });
 
@@ -299,25 +340,25 @@ describe('ConversationStatePromptService', () => {
       CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
     );
 
-    expect(result).toEqual({
-      nextState:
-        CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
-      outboundMessages: [
+    expect(result.nextState).toBe(
+      CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
+    );
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_buttons',
+      buttons: [
         {
-          type: 'interactive_buttons',
-          body: expect.stringContaining('recordatorios'),
-          buttons: [
-            {
-              id: 'appointment_notifications_opt_in:accept',
-              title: 'Si autorizo',
-            },
-            {
-              id: 'appointment_notifications_opt_in:decline',
-              title: 'No autorizo',
-            },
-          ],
+          id: 'appointment_notifications_opt_in:accept',
+          title: 'Si autorizo',
+        },
+        {
+          id: 'appointment_notifications_opt_in:decline',
+          title: 'No autorizo',
         },
       ],
     });
+    if (result.outboundMessages[0]?.type !== 'interactive_buttons') {
+      throw new Error('Expected interactive buttons message');
+    }
+    expect(result.outboundMessages[0].body).toContain('recordatorios');
   });
 });

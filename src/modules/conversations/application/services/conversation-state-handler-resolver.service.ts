@@ -2,14 +2,18 @@ import { Injectable } from '@nestjs/common';
 import type { ConversationState } from '../../domain/conversation-state';
 import { MainMenuHandler } from '../state-handlers/main-menu.handler';
 import { PatientValidatedHandler } from '../state-handlers/patient-validated.handler';
+import { ConfirmingPatientContactHandler } from '../state-handlers/confirming-patient-contact.handler';
 import { ReviewingAssignedAppointmentDetailsHandler } from '../state-handlers/reviewing-assigned-appointment-details.handler';
 import { ReviewingAssignedAppointmentActionsHandler } from '../state-handlers/reviewing-assigned-appointment-actions.handler';
 import { RequestingWhatsappAppointmentNotificationsOptInHandler } from '../state-handlers/requesting-whatsapp-appointment-notifications-opt-in.handler';
+import { SelectingContactUpdateFieldHandler } from '../state-handlers/selecting-contact-update-field.handler';
 import { SelectingAssignedAppointmentHandler } from '../state-handlers/selecting-assigned-appointment.handler';
 import { SelectingAppointmentDateHandler } from '../state-handlers/selecting-appointment-date.handler';
 import { SelectingAppointmentDoctorHandler } from '../state-handlers/selecting-appointment-doctor.handler';
 import { SelectingAppointmentTimeHandler } from '../state-handlers/selecting-appointment-time.handler';
 import { SelectingSpecialtyHandler } from '../state-handlers/selecting-specialty.handler';
+import { UpdatingContactEmailHandler } from '../state-handlers/updating-contact-email.handler';
+import { UpdatingContactPhoneHandler } from '../state-handlers/updating-contact-phone.handler';
 import { WaitingBirthDateHandler } from '../state-handlers/waiting-birth-date.handler';
 import { WaitingDocumentHandler } from '../state-handlers/waiting-document.handler';
 import type { ConversationStateHandler } from '../state-handlers/conversation-state-handler';
@@ -26,6 +30,10 @@ export class ConversationStateHandlerResolverService {
     waitingDocumentHandler: WaitingDocumentHandler,
     waitingBirthDateHandler: WaitingBirthDateHandler,
     patientValidatedHandler: PatientValidatedHandler,
+    confirmingPatientContactHandler: ConfirmingPatientContactHandler,
+    selectingContactUpdateFieldHandler: SelectingContactUpdateFieldHandler,
+    updatingContactPhoneHandler: UpdatingContactPhoneHandler,
+    updatingContactEmailHandler: UpdatingContactEmailHandler,
     selectingAssignedAppointmentHandler: SelectingAssignedAppointmentHandler,
     reviewingAssignedAppointmentDetailsHandler: ReviewingAssignedAppointmentDetailsHandler,
     reviewingAssignedAppointmentActionsHandler: ReviewingAssignedAppointmentActionsHandler,
@@ -51,6 +59,22 @@ export class ConversationStateHandlerResolverService {
     this.handlersByState.set(
       patientValidatedHandler.state,
       patientValidatedHandler,
+    );
+    this.handlersByState.set(
+      confirmingPatientContactHandler.state,
+      confirmingPatientContactHandler,
+    );
+    this.handlersByState.set(
+      selectingContactUpdateFieldHandler.state,
+      selectingContactUpdateFieldHandler,
+    );
+    this.handlersByState.set(
+      updatingContactPhoneHandler.state,
+      updatingContactPhoneHandler,
+    );
+    this.handlersByState.set(
+      updatingContactEmailHandler.state,
+      updatingContactEmailHandler,
     );
     this.handlersByState.set(
       selectingAssignedAppointmentHandler.state,

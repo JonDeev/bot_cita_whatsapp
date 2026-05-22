@@ -1,6 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ConversationOutboundMessage } from '../../../conversations/domain/value-objects/conversation-outbound-message';
-import { HandleIncomingConversationMessageUseCase } from '../../../conversations/application/use-cases/handle-incoming-conversation-message.use-case';
+import {
+  HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES,
+  HandleIncomingConversationMessageUseCase,
+} from '../../../conversations/application/use-cases/handle-incoming-conversation-message.use-case';
 import { CONVERSATION_MESSAGE_REPOSITORY } from '../../../conversations/domain/conversations.tokens';
 import type { ConversationMessageRepository } from '../../../conversations/domain/ports/conversation-message.repository';
 import { SendWhatsappInteractiveListMessageUseCase } from '../use-cases/outbound/send-whatsapp-interactive-list-message.use-case';
@@ -9,6 +12,14 @@ import { SendWhatsappTextMessageUseCase } from '../use-cases/outbound/send-whats
 import { WhatsappConfigService } from './whatsapp-config.service';
 import type { NormalizedWhatsappEvent } from '../../domain/events/normalized-whatsapp.event';
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from '../../../surveys/application/use-cases/record-satisfaction-survey-flow-submission.use-case';
+import { WEBHOOK_PROCESSING_STATUSES } from '../../domain/ports/webhook-inbox.repository.port';
+
+export interface ConversationOrchestrationResult {
+  processingStatus:
+    | typeof WEBHOOK_PROCESSING_STATUSES.PROCESSED
+    | typeof WEBHOOK_PROCESSING_STATUSES.SKIPPED_INVALID_CONTEXT;
+  rejectionReason?: string;
+}
 
 @Injectable()
 export class ConversationOrchestratorService {
@@ -27,41 +38,87 @@ export class ConversationOrchestratorService {
 
   async handleEvents(events: NormalizedWhatsappEvent[]): Promise<void> {
     for (const event of events) {
-      this.logger.log(
-        `Received event kind=${event.kind} messageId=${event.messageId} phoneNumberId=${event.phoneNumberId ?? 'n/a'}`,
+      await this.handleEvent(event);
+    }
+  }
+
+  async handleEvent(
+    event: NormalizedWhatsappEvent,
+  ): Promise<ConversationOrchestrationResult> {
+    this.logger.log(
+      `Received event kind=${event.kind} messageId=${event.messageId} phoneNumberId=${event.phoneNumberId ?? 'n/a'}`,
+    );
+
+    if (event.kind !== 'incoming_message_received') {
+      return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+    }
+
+    if (event.messageType !== 'text' && event.messageType !== 'interactive') {
+      return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+    }
+
+    const surveyFlowSubmissionResult =
+      await this.recordSatisfactionSurveyFlowSubmission.execute(event);
+    if (surveyFlowSubmissionResult.handled) {
+      return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+    }
+
+    if (!this.whatsappConfig.isAutoReplyEnabled()) {
+      return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+    }
+
+    const result = await this.handleIncomingConversationMessage.execute(event);
+
+    const dispatchedInteractivePrompts: Array<{
+      outboundMessage: ConversationOutboundMessage;
+      whatsappMessageId: string;
+      source: 'ORIGINAL';
+      issuedAt: string;
+    }> = [];
+
+    for (const outboundMessage of result.outboundMessages) {
+      const dispatchResult = await this.dispatchOutboundMessage(
+        {
+          conversationKey: result.conversationKey,
+          to: event.from,
+        },
+        outboundMessage,
       );
 
-      if (event.kind !== 'incoming_message_received') {
-        continue;
-      }
-
-      if (event.messageType !== 'text' && event.messageType !== 'interactive') {
-        continue;
-      }
-
-      const surveyFlowSubmissionResult =
-        await this.recordSatisfactionSurveyFlowSubmission.execute(event);
-      if (surveyFlowSubmissionResult.handled) {
-        continue;
-      }
-
-      if (!this.whatsappConfig.isAutoReplyEnabled()) {
-        continue;
-      }
-
-      const result =
-        await this.handleIncomingConversationMessage.execute(event);
-
-      for (const outboundMessage of result.outboundMessages) {
-        await this.dispatchOutboundMessage(
-          {
-            conversationKey: `whatsapp:${event.phoneNumberId ?? 'unknown'}:${event.from}`,
-            to: event.from,
-          },
+      if (
+        dispatchResult &&
+        outboundMessage.type !== 'text' &&
+        dispatchResult.whatsappMessageId
+      ) {
+        dispatchedInteractivePrompts.push({
           outboundMessage,
-        );
+          whatsappMessageId: dispatchResult.whatsappMessageId,
+          source: 'ORIGINAL',
+          issuedAt: dispatchResult.sentAt,
+        });
       }
     }
+
+    if (dispatchedInteractivePrompts.length > 0) {
+      await this.handleIncomingConversationMessage.registerDispatchedInteractivePrompts(
+        {
+          session: result.session,
+          dispatchedInteractivePrompts,
+        },
+      );
+    }
+
+    if (
+      result.status ===
+      HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES.REJECTED_INVALID_CONTEXT
+    ) {
+      return {
+        processingStatus: WEBHOOK_PROCESSING_STATUSES.SKIPPED_INVALID_CONTEXT,
+        rejectionReason: result.skipReason,
+      };
+    }
+
+    return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
   }
 
   private async dispatchOutboundMessage(
@@ -70,7 +127,7 @@ export class ConversationOrchestratorService {
       to: string;
     },
     outboundMessage: ConversationOutboundMessage,
-  ): Promise<void> {
+  ): Promise<{ whatsappMessageId: string; sentAt: string } | null> {
     const sentAt = new Date().toISOString();
 
     try {
@@ -90,7 +147,7 @@ export class ConversationOrchestratorService {
           body: outboundMessage.body,
           sentAt,
         });
-        return;
+        return { whatsappMessageId: response.messageId, sentAt };
       }
 
       if (outboundMessage.type === 'interactive_buttons') {
@@ -109,7 +166,7 @@ export class ConversationOrchestratorService {
           body: outboundMessage.body,
           sentAt,
         });
-        return;
+        return { whatsappMessageId: response.messageId, sentAt };
       }
 
       const response = await this.sendWhatsappTextMessage.execute({
@@ -125,11 +182,13 @@ export class ConversationOrchestratorService {
         body: outboundMessage.body,
         sentAt,
       });
+      return { whatsappMessageId: response.messageId, sentAt };
     } catch (error) {
       this.logger.error(
         `Failed to dispatch outbound WhatsApp message to ${input.to}.`,
         error instanceof Error ? error.stack : undefined,
       );
+      return null;
     }
   }
 }

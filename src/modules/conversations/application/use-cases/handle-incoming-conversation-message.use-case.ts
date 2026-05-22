@@ -10,6 +10,7 @@ import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import type { ConversationSessionContext } from '../../domain/entities/conversation-session-context.entity';
+import type { InteractivePromptSource } from '../../domain/entities/conversation-session-context.entity';
 import type { ConversationMessageRepository } from '../../domain/ports/conversation-message.repository';
 import type { ConversationPersistenceRepository } from '../../domain/ports/conversation-persistence.repository';
 import type { ConversationSessionRepository } from '../../domain/ports/conversation-session.repository';
@@ -24,11 +25,40 @@ import {
 } from '../services/conversation-navigation.service';
 import { ConversationStatePromptService } from '../services/conversation-state-prompt.service';
 import { ConversationStateHandlerResolverService } from '../services/conversation-state-handler-resolver.service';
+import {
+  INTERACTIVE_PROMPT_INVALID_REASONS,
+  type InteractivePromptInvalidReason,
+  InteractivePromptWindowService,
+} from '../services/interactive-prompt-window.service';
 import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import type { ConversationStateHandlerResult } from '../state-handlers/conversation-state-handler';
 
+export const HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES = {
+  HANDLED: 'HANDLED',
+  RECOVERED_INVALID_CONTEXT: 'RECOVERED_INVALID_CONTEXT',
+  REJECTED_INVALID_CONTEXT: 'REJECTED_INVALID_CONTEXT',
+  SKIPPED_CONVERSATION_STATUS: 'SKIPPED_CONVERSATION_STATUS',
+} as const;
+
+export type HandleIncomingConversationMessageStatus =
+  (typeof HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES)[keyof typeof HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES];
+
 export interface HandleIncomingConversationMessageResult {
+  status: HandleIncomingConversationMessageStatus;
+  conversationKey: string;
   outboundMessages: ConversationOutboundMessage[];
+  session: ConversationSession;
+  skipReason?: string;
+}
+
+export interface RegisterDispatchedInteractivePromptsInput {
+  session: ConversationSession;
+  dispatchedInteractivePrompts: Array<{
+    outboundMessage: ConversationOutboundMessage;
+    whatsappMessageId: string;
+    source: InteractivePromptSource;
+    issuedAt: string;
+  }>;
 }
 
 interface ResolvedConversationSession {
@@ -52,6 +82,7 @@ export class HandleIncomingConversationMessageUseCase {
     private readonly conversationStateHandlerResolver: ConversationStateHandlerResolverService,
     private readonly conversationNavigationService: ConversationNavigationService,
     private readonly conversationStatePromptService: ConversationStatePromptService,
+    private readonly interactivePromptWindowService: InteractivePromptWindowService,
     private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly conversationConfigService: ConversationConfigService,
     private readonly auditService: AuditService,
@@ -61,7 +92,9 @@ export class HandleIncomingConversationMessageUseCase {
     event: NormalizedWhatsappEvent,
   ): Promise<HandleIncomingConversationMessageResult> {
     if (event.kind !== 'incoming_message_received') {
-      return { outboundMessages: [] };
+      throw new Error(
+        'HandleIncomingConversationMessageUseCase only supports inbound conversation messages.',
+      );
     }
 
     const conversationKey =
@@ -70,13 +103,16 @@ export class HandleIncomingConversationMessageUseCase {
         event.from,
       );
     const resolvedSession = await this.resolveSession(conversationKey, event);
-    const session = resolvedSession.session;
+    const sessionWithInactivity = this.refreshInactivityByInboundWhenApplicable(
+      resolvedSession.session,
+      event.receivedAt ?? new Date().toISOString(),
+    );
 
     await this.auditService.record('conversation.inbound.message_received', {
       conversationKey,
       messageId: event.messageId,
-      state: session.state,
-      status: session.status,
+      state: sessionWithInactivity.state,
+      status: sessionWithInactivity.status,
     });
 
     if (resolvedSession.wasRestoredFromPersistence) {
@@ -84,8 +120,8 @@ export class HandleIncomingConversationMessageUseCase {
         'conversation.session.restored_from_persistence',
         {
           conversationKey,
-          state: session.state,
-          status: session.status,
+          state: sessionWithInactivity.state,
+          status: sessionWithInactivity.status,
         },
       );
     }
@@ -93,8 +129,8 @@ export class HandleIncomingConversationMessageUseCase {
     if (resolvedSession.wasCreated) {
       await this.auditService.record('conversation.session.created', {
         conversationKey,
-        state: session.state,
-        status: session.status,
+        state: sessionWithInactivity.state,
+        status: sessionWithInactivity.status,
       });
     }
 
@@ -112,30 +148,96 @@ export class HandleIncomingConversationMessageUseCase {
       receivedAt: event.receivedAt ?? new Date().toISOString(),
     });
 
-    const hasValidInteractiveContext = await this.hasValidInteractiveContext(
-      conversationKey,
+    const reopenedSession = await this.reopenIfNeeded(
+      sessionWithInactivity,
       event,
     );
-    if (!hasValidInteractiveContext) {
-      await this.auditService.record(
-        'conversation.interactive.invalid_context_skipped',
-        {
-          conversationKey,
-          messageId: event.messageId,
-          contextMessageId: event.contextMessageId ?? null,
-        },
-      );
-      return { outboundMessages: [] };
-    }
+    const sessionToProcess = this.refreshInactivityByInboundWhenApplicable(
+      reopenedSession,
+      event.receivedAt ?? new Date().toISOString(),
+    );
 
-    const sessionToProcess = await this.reopenIfClosed(session, event);
+    if (sessionToProcess.status === CONVERSATION_STATUSES.EXPIRED) {
+      const reopenResult = this.buildUpdatedSession(
+        sessionToProcess,
+        CONVERSATION_STATES.MAIN_MENU,
+        event.phoneNumberId,
+        CONVERSATION_STATUSES.BOT_ACTIVE,
+        this.interactivePromptWindowService.clear({
+          ...sessionToProcess.context,
+          flowIntent: undefined,
+          contactVerification: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        }),
+      );
+      const normalizedReopenSession = this.refreshInactivityByInboundWhenApplicable(
+        reopenResult,
+        event.receivedAt ?? new Date().toISOString(),
+      );
+      await this.auditService.record('conversation.reopened.after_expiration', {
+        conversationKey,
+        triggerMessageId: event.messageId,
+      });
+      const outboundMessages: ConversationOutboundMessage[] = [
+        {
+          type: 'text',
+          body: 'Tu sesion anterior finalizo por inactividad. Te comparto nuevamente el menu principal para continuar.',
+        },
+        this.mainMenuListFactory.build(),
+      ];
+
+      await this.persistSession(normalizedReopenSession);
+      return {
+        status: HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES.HANDLED,
+        conversationKey,
+        outboundMessages,
+        session: normalizedReopenSession,
+      };
+    }
 
     if (sessionToProcess.status !== CONVERSATION_STATUSES.BOT_ACTIVE) {
       await this.auditService.record('conversation.processing.skipped', {
         conversationKey,
         reason: sessionToProcess.status,
       });
-      return { outboundMessages: [] };
+      await this.persistSession(sessionToProcess);
+      return {
+        status:
+          HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES.SKIPPED_CONVERSATION_STATUS,
+        conversationKey,
+        outboundMessages: [],
+        session: sessionToProcess,
+        skipReason: sessionToProcess.status,
+      };
+    }
+
+    const interactiveContextValidation = this.validateInteractiveContext(
+      sessionToProcess,
+      event,
+    );
+    if (!interactiveContextValidation.isValid) {
+      const recoveryResult = await this.buildInvalidContextRecoveryResult(
+        sessionToProcess,
+        event,
+        interactiveContextValidation.reason,
+      );
+      await this.persistSession(recoveryResult.session);
+      return recoveryResult;
+    }
+
+    if (event.messageType === 'interactive' && !event.interactiveFlowToken) {
+      await this.auditService.record('conversation.interactive.reply_accepted', {
+        conversationKey,
+        messageId: event.messageId,
+        interactiveReplyId: event.interactiveReplyId ?? null,
+        contextMessageId: event.contextMessageId ?? null,
+        state: sessionToProcess.state,
+      });
     }
 
     const navigationCommand = await this.handleNavigationCommand(
@@ -153,9 +255,6 @@ export class HandleIncomingConversationMessageUseCase {
       handlerResult.outboundMessages,
     );
 
-    await this.conversationSessionRepository.save(updatedSession);
-    await this.conversationPersistenceRepository.upsert(updatedSession);
-
     if (updatedSession.state !== sessionToProcess.state) {
       await this.auditService.record('conversation.state.changed', {
         conversationKey,
@@ -170,8 +269,21 @@ export class HandleIncomingConversationMessageUseCase {
       sessionTtlSeconds: this.conversationConfigService.getSessionTtlSeconds(),
     });
 
+    const preparedSession = {
+      ...updatedSession,
+      context: this.prepareContextForDispatch(
+        updatedSession.context,
+        outboundMessagesWithNavigation,
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    await this.persistSession(preparedSession);
+
     return {
+      status: HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES.HANDLED,
+      conversationKey,
       outboundMessages: outboundMessagesWithNavigation,
+      session: preparedSession,
     };
   }
 
@@ -294,46 +406,235 @@ export class HandleIncomingConversationMessageUseCase {
     return { finalSession: currentSession, finalResult: currentResult };
   }
 
-  private async reopenIfClosed(
+  private async reopenIfNeeded(
     session: ConversationSession,
     event: Extract<
       NormalizedWhatsappEvent,
       { kind: 'incoming_message_received' }
     >,
   ): Promise<ConversationSession> {
-    if (session.status !== CONVERSATION_STATUSES.CLOSED) {
+    if (
+      session.status !== CONVERSATION_STATUSES.CLOSED &&
+      session.status !== CONVERSATION_STATUSES.EXPIRED
+    ) {
       return session;
     }
 
-    await this.auditService.record('conversation.reopened.by_inbound_message', {
-      conversationKey: session.conversationKey,
-      triggerMessageId: event.messageId,
-    });
+    if (session.status === CONVERSATION_STATUSES.CLOSED) {
+      await this.auditService.record('conversation.reopened.by_inbound_message', {
+        conversationKey: session.conversationKey,
+        triggerMessageId: event.messageId,
+      });
+    }
 
     return this.buildUpdatedSession(
       session,
-      CONVERSATION_STATES.MAIN_MENU,
+      session.status === CONVERSATION_STATUSES.CLOSED
+        ? CONVERSATION_STATES.MAIN_MENU
+        : session.state,
       event.phoneNumberId,
-      CONVERSATION_STATUSES.BOT_ACTIVE,
+      session.status === CONVERSATION_STATUSES.CLOSED
+        ? CONVERSATION_STATUSES.BOT_ACTIVE
+        : session.status,
       undefined,
     );
   }
 
-  private async hasValidInteractiveContext(
-    conversationKey: string,
+  private validateInteractiveContext(
+    session: ConversationSession,
     event: Extract<
       NormalizedWhatsappEvent,
       { kind: 'incoming_message_received' }
     >,
-  ): Promise<boolean> {
-    if (event.messageType !== 'interactive' || !event.contextMessageId) {
-      return true;
+  ): { isValid: boolean; reason: InteractivePromptInvalidReason | null } {
+    if (event.messageType !== 'interactive' || event.interactiveFlowToken) {
+      return { isValid: true, reason: null };
     }
 
-    return this.conversationMessageRepository.hasKnownOutboundMessage(
-      conversationKey,
-      event.contextMessageId,
+    return this.interactivePromptWindowService.validateReply({
+      state: session.state,
+      interactiveReplyId: event.interactiveReplyId,
+      contextMessageId: event.contextMessageId,
+      context: session.context,
+    });
+  }
+
+  private async buildInvalidContextRecoveryResult(
+    session: ConversationSession,
+    event: Extract<
+      NormalizedWhatsappEvent,
+      { kind: 'incoming_message_received' }
+    >,
+    reason: InteractivePromptInvalidReason | null,
+  ): Promise<HandleIncomingConversationMessageResult> {
+    const resolvedReason =
+      reason ?? INTERACTIVE_PROMPT_INVALID_REASONS.MISSING_ACTIVE_PROMPT;
+
+    if (!event.interactiveReplyId) {
+      await this.auditService.record(
+        'conversation.interactive.invalid_context_rejected',
+        {
+          conversationKey: session.conversationKey,
+          messageId: event.messageId,
+          contextMessageId: event.contextMessageId ?? null,
+          reason: resolvedReason,
+          recoveryAction: 'NONE',
+        },
+      );
+
+      return {
+        status:
+          HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES.REJECTED_INVALID_CONTEXT,
+        conversationKey: session.conversationKey,
+        outboundMessages: [],
+        session,
+        skipReason: resolvedReason,
+      };
+    }
+    let recoveredOutboundMessages: ConversationOutboundMessage[];
+    try {
+      const promptResult = this.conversationStatePromptService.buildForState(
+        session,
+        session.state,
+      );
+      recoveredOutboundMessages = [
+        {
+          type: 'text',
+          body: 'Esa opcion ya no esta activa. Te envio el paso actualizado.',
+        },
+        ...this.appendNavigationButtons(
+          promptResult.nextState,
+          session.status,
+          promptResult.outboundMessages,
+        ),
+      ];
+    } catch (error) {
+      await this.auditService.record(
+        'conversation.interactive.recovery_prompt_reissued',
+        {
+          conversationKey: session.conversationKey,
+          reason: 'PROMPT_REBUILD_FAILED_FALLBACK_MAIN_MENU',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Unknown prompt rebuild error',
+        },
+      );
+      recoveredOutboundMessages = [
+        {
+          type: 'text',
+          body: 'No pudimos continuar con esa opcion. Te envio el menu principal para seguir.',
+        },
+        this.mainMenuListFactory.build(),
+      ];
+    }
+    const recoverySession: ConversationSession = {
+      ...session,
+      context: this.prepareContextForDispatch(
+        session.context,
+        recoveredOutboundMessages,
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.auditService.record(
+      'conversation.interactive.invalid_context_recovered',
+      {
+        conversationKey: session.conversationKey,
+        messageId: event.messageId,
+        interactiveReplyId: event.interactiveReplyId ?? null,
+        contextMessageId: event.contextMessageId ?? null,
+        reason: resolvedReason,
+        recoveryAction: 'REISSUE_CURRENT_STATE_PROMPT',
+        state: session.state,
+      },
     );
+
+    return {
+      status:
+        HANDLE_INCOMING_CONVERSATION_MESSAGE_STATUSES.RECOVERED_INVALID_CONTEXT,
+      conversationKey: session.conversationKey,
+      outboundMessages: recoveredOutboundMessages,
+      session: recoverySession,
+      skipReason: resolvedReason,
+    };
+  }
+
+  private prepareContextForDispatch(
+    context: ConversationSessionContext | undefined,
+    outboundMessages: ConversationOutboundMessage[],
+  ): ConversationSessionContext | undefined {
+    if (outboundMessages.length === 0) {
+      return context;
+    }
+
+    const hasInteractivePrompt = outboundMessages.some(
+      (message) => message.type !== 'text',
+    );
+    if (hasInteractivePrompt) {
+      // Avoid leaving stale prompt instances while outbound dispatch happens.
+      return this.interactivePromptWindowService.clear(context);
+    }
+
+    return this.interactivePromptWindowService.clear(context);
+  }
+
+  async registerDispatchedInteractivePrompts(
+    input: RegisterDispatchedInteractivePromptsInput,
+  ): Promise<ConversationSession> {
+    let nextContext = input.session.context;
+
+    for (const prompt of input.dispatchedInteractivePrompts) {
+      nextContext = this.interactivePromptWindowService.registerPrompt({
+        state: input.session.state,
+        outboundMessageId: prompt.whatsappMessageId,
+        outboundMessage: prompt.outboundMessage,
+        context: nextContext,
+        source: prompt.source,
+        issuedAt: prompt.issuedAt,
+      });
+    }
+
+    const updatedSession: ConversationSession = {
+      ...input.session,
+      context: nextContext,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.persistSession(updatedSession);
+
+    return updatedSession;
+  }
+
+  private refreshInactivityByInbound(
+    session: ConversationSession,
+    inboundAt: string,
+  ): ConversationSession {
+    const idleExpiresAt = new Date(
+      Date.parse(inboundAt) + 20 * 60 * 1000,
+    ).toISOString();
+
+    return {
+      ...session,
+      lastInboundAt: inboundAt,
+      idleReminderSentAt: undefined,
+      idleExpiresAt,
+    };
+  }
+
+  private refreshInactivityByInboundWhenApplicable(
+    session: ConversationSession,
+    inboundAt: string,
+  ): ConversationSession {
+    if (session.status !== CONVERSATION_STATUSES.BOT_ACTIVE) {
+      return session;
+    }
+
+    return this.refreshInactivityByInbound(session, inboundAt);
+  }
+
+  private async persistSession(session: ConversationSession): Promise<void> {
+    await this.conversationSessionRepository.save(session);
+    await this.conversationPersistenceRepository.upsert(session);
   }
 
   private appendNavigationButtons(
@@ -429,6 +730,7 @@ export class HandleIncomingConversationMessageUseCase {
         {
           ...session.context,
           flowIntent: undefined,
+          contactVerification: undefined,
           assignedAppointmentSelection: undefined,
           appointmentReschedule: undefined,
           specialtySelection: undefined,

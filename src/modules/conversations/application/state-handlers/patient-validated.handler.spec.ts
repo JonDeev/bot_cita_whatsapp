@@ -2,8 +2,10 @@ import { ListFutureAssignedAppointmentsByPatientUseCase } from '../../../appoint
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { ResolveAssignedDispensaryByPatientUseCase } from '../../../patients/application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from '../../../patients/application/use-cases/resolve-eligible-specialties-by-patient.use-case';
+import { ResolvePatientContactProfileUseCase } from '../../../patients/application/use-cases/resolve-patient-contact-profile.use-case';
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { AssignedDispensaryMessageFactory } from '../services/assigned-dispensary-message.factory';
+import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
 import { PatientValidatedHandler } from './patient-validated.handler';
 
@@ -30,8 +32,20 @@ describe('PatientValidatedHandler', () => {
           ],
         }),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientId: 10,
+          fullName: 'DANIEL CASTANO',
+          primaryPhone: '3001234567',
+          primaryEmail: 'daniel@example.com',
+          isPrimaryPhoneValid: true,
+          isPrimaryEmailValid: true,
+        }),
+      } as unknown as ResolvePatientContactProfileUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedDispensaryMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -45,6 +59,16 @@ describe('PatientValidatedHandler', () => {
         state: 'PATIENT_VALIDATED',
         status: 'BOT_ACTIVE',
         context: {
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
           patientValidation: {
             failedAttempts: 0,
             documentNumber: '1234567',
@@ -104,8 +128,20 @@ describe('PatientValidatedHandler', () => {
       {
         execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientId: 10,
+          fullName: 'DANIEL CASTANO',
+          primaryPhone: '3001234567',
+          primaryEmail: 'daniel@example.com',
+          isPrimaryPhoneValid: true,
+          isPrimaryEmailValid: true,
+        }),
+      } as unknown as ResolvePatientContactProfileUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedDispensaryMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -120,6 +156,16 @@ describe('PatientValidatedHandler', () => {
         status: 'BOT_ACTIVE',
         context: {
           flowIntent: 'CANCEL_OR_RESCHEDULE',
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
           patientValidation: {
             failedAttempts: 0,
             documentNumber: '1234567',
@@ -176,8 +222,20 @@ describe('PatientValidatedHandler', () => {
       {
         execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientId: 10,
+          fullName: 'DANIEL CASTANO',
+          primaryPhone: '3001234567',
+          primaryEmail: 'daniel@example.com',
+          isPrimaryPhoneValid: true,
+          isPrimaryEmailValid: true,
+        }),
+      } as unknown as ResolvePatientContactProfileUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedDispensaryMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -192,6 +250,16 @@ describe('PatientValidatedHandler', () => {
         status: 'BOT_ACTIVE',
         context: {
           flowIntent: 'CHECK_APPOINTMENTS',
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
           patientValidation: {
             failedAttempts: 0,
             documentNumber: '1234567',
@@ -235,8 +303,20 @@ describe('PatientValidatedHandler', () => {
       {
         execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientId: 10,
+          fullName: 'DANIEL CASTANO',
+          primaryPhone: '3001234567',
+          primaryEmail: 'daniel@example.com',
+          isPrimaryPhoneValid: true,
+          isPrimaryEmailValid: true,
+        }),
+      } as unknown as ResolvePatientContactProfileUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedDispensaryMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -251,6 +331,16 @@ describe('PatientValidatedHandler', () => {
         status: 'BOT_ACTIVE',
         context: {
           flowIntent: 'CHECK_APPOINTMENTS',
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
           patientValidation: {
             failedAttempts: 0,
             patientId: 10,
@@ -302,8 +392,20 @@ describe('PatientValidatedHandler', () => {
       {
         execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientId: 10,
+          fullName: 'DANIEL CASTANO',
+          primaryPhone: '3001234567',
+          primaryEmail: 'daniel@example.com',
+          isPrimaryPhoneValid: true,
+          isPrimaryEmailValid: true,
+        }),
+      } as unknown as ResolvePatientContactProfileUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedDispensaryMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -318,6 +420,16 @@ describe('PatientValidatedHandler', () => {
         status: 'BOT_ACTIVE',
         context: {
           flowIntent: 'CHECK_DISPENSARY',
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
           patientValidation: {
             failedAttempts: 0,
             patientId: 10,
@@ -368,8 +480,20 @@ describe('PatientValidatedHandler', () => {
       {
         execute: jest.fn(),
       } as unknown as ResolveEligibleSpecialtiesByPatientUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'FOUND',
+          patientId: 10,
+          fullName: 'DANIEL CASTANO',
+          primaryPhone: '3001234567',
+          primaryEmail: 'daniel@example.com',
+          isPrimaryPhoneValid: true,
+          isPrimaryEmailValid: true,
+        }),
+      } as unknown as ResolvePatientContactProfileUseCase,
       new AssignedAppointmentListFactory(),
       new AssignedDispensaryMessageFactory(),
+      new PatientContactConfirmationMessageFactory(),
       new SpecialtyListFactory(),
       buildAuditService(),
     );
@@ -384,6 +508,16 @@ describe('PatientValidatedHandler', () => {
         status: 'BOT_ACTIVE',
         context: {
           flowIntent: 'CHECK_DISPENSARY',
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
           patientValidation: {
             failedAttempts: 0,
             patientId: 10,

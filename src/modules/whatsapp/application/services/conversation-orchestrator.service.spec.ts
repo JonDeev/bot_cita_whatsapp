@@ -9,6 +9,18 @@ describe('ConversationOrchestratorService', () => {
   it('does not throw when outbound interactive list dispatch fails', async () => {
     const handleIncomingConversationMessage = {
       execute: jest.fn().mockResolvedValue({
+        status: 'HANDLED',
+        conversationKey: 'whatsapp:123:573001112233',
+        session: {
+          conversationKey: 'whatsapp:123:573001112233',
+          channel: 'whatsapp',
+          participantPhone: '573001112233',
+          phoneNumberId: '123',
+          state: 'MAIN_MENU',
+          status: 'BOT_ACTIVE',
+          createdAt: '2026-05-07T12:00:00.000Z',
+          updatedAt: '2026-05-07T12:00:00.000Z',
+        },
         outboundMessages: [
           {
             type: 'interactive_list',
@@ -28,6 +40,9 @@ describe('ConversationOrchestratorService', () => {
           },
         ],
       }),
+      registerDispatchedInteractivePrompts: jest
+        .fn()
+        .mockResolvedValue(undefined),
     } as unknown as HandleIncomingConversationMessageUseCase;
 
     const sendWhatsappInteractiveListMessage = {
@@ -83,6 +98,18 @@ describe('ConversationOrchestratorService', () => {
   it('dispatches interactive buttons messages', async () => {
     const handleIncomingConversationMessage = {
       execute: jest.fn().mockResolvedValue({
+        status: 'HANDLED',
+        conversationKey: 'whatsapp:123:573001112233',
+        session: {
+          conversationKey: 'whatsapp:123:573001112233',
+          channel: 'whatsapp',
+          participantPhone: '573001112233',
+          phoneNumberId: '123',
+          state: 'SELECTING_SPECIALTY',
+          status: 'BOT_ACTIVE',
+          createdAt: '2026-05-07T12:00:00.000Z',
+          updatedAt: '2026-05-07T12:00:00.000Z',
+        },
         outboundMessages: [
           {
             type: 'interactive_buttons',
@@ -94,6 +121,9 @@ describe('ConversationOrchestratorService', () => {
           },
         ],
       }),
+      registerDispatchedInteractivePrompts: jest
+        .fn()
+        .mockResolvedValue(undefined),
     } as unknown as HandleIncomingConversationMessageUseCase;
 
     const sendWhatsappInteractiveListMessage = {
@@ -153,8 +183,23 @@ describe('ConversationOrchestratorService', () => {
   it('skips conversation state handling when survey flow submission was handled', async () => {
     const handleIncomingConversationMessage = {
       execute: jest.fn().mockResolvedValue({
+        status: 'HANDLED',
+        conversationKey: 'whatsapp:123:573001112233',
+        session: {
+          conversationKey: 'whatsapp:123:573001112233',
+          channel: 'whatsapp',
+          participantPhone: '573001112233',
+          phoneNumberId: '123',
+          state: 'MAIN_MENU',
+          status: 'BOT_ACTIVE',
+          createdAt: '2026-05-07T12:00:00.000Z',
+          updatedAt: '2026-05-07T12:00:00.000Z',
+        },
         outboundMessages: [],
       }),
+      registerDispatchedInteractivePrompts: jest
+        .fn()
+        .mockResolvedValue(undefined),
     } as unknown as HandleIncomingConversationMessageUseCase;
 
     const service = new ConversationOrchestratorService(

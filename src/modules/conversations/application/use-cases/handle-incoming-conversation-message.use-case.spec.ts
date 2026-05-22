@@ -12,6 +12,9 @@ import { ConversationKeyFactory } from '../services/conversation-key.factory';
 import { ConversationNavigationService } from '../services/conversation-navigation.service';
 import { ConversationStatePromptService } from '../services/conversation-state-prompt.service';
 import { MainMenuListFactory } from '../services/main-menu-list.factory';
+import { InteractivePromptWindowService } from '../services/interactive-prompt-window.service';
+import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
+import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
 import { MainMenuHandler } from '../state-handlers/main-menu.handler';
 import { HandleIncomingConversationMessageUseCase } from './handle-incoming-conversation-message.use-case';
@@ -30,6 +33,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       saveInbound: jest.Mock;
       saveOutbound: jest.Mock;
       hasKnownOutboundMessage: jest.Mock;
+      findOutboundMessageOccurredAt?: jest.Mock;
     },
     conversationStateHandlerResolver: { resolve: jest.Mock },
     auditService: AuditService,
@@ -53,7 +57,10 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         new AppointmentDateListFactory(),
         new AppointmentTimeListFactory(),
         new AppointmentNotificationOptInMessageFactory(),
+        new PatientContactConfirmationMessageFactory(),
+        new PatientContactUpdateOptionsListFactory(),
       ),
+      new InteractivePromptWindowService(),
       new MainMenuListFactory(),
       new ConversationConfigService(),
       auditService,
@@ -183,6 +190,23 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         phoneNumberId: '123',
         state: 'SELECTING_SPECIALTY',
         status: 'BOT_ACTIVE',
+        context: {
+          interactivePromptWindow: {
+            currentPromptId: 'prompt:wamid-nav',
+            prompts: [
+              {
+                promptId: 'prompt:wamid-nav',
+                logicalStepKey: 'NAVIGATION:SELECTING_SPECIALTY',
+                promptKind: 'NAVIGATION',
+                state: 'SELECTING_SPECIALTY',
+                outboundMessageId: 'wamid-nav',
+                allowedReplyIds: ['nav_main_menu', 'nav_finish'],
+                issuedAt: '2026-05-04T10:00:00.000Z',
+                source: 'ORIGINAL',
+              },
+            ],
+          },
+        },
         createdAt: '2026-05-04T10:00:00.000Z',
         updatedAt: '2026-05-04T10:00:00.000Z',
       }),
@@ -295,6 +319,86 @@ describe('HandleIncomingConversationMessageUseCase', () => {
     );
   });
 
+  it('reopens an expired conversation at main menu and does not continue old flow state', async () => {
+    const repository = {
+      findByKey: jest.fn().mockResolvedValue({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'SELECTING_SPECIALTY',
+        status: 'EXPIRED',
+        context: {
+          flowIntent: 'REQUEST_APPOINTMENT',
+          interactivePromptWindow: {
+            currentPromptId: 'prompt:wamid-old',
+            prompts: [
+              {
+                promptId: 'prompt:wamid-old',
+                logicalStepKey: 'SELECTING_SPECIALTY:ROOT',
+                promptKind: 'SPECIALTY_SELECTION',
+                state: 'SELECTING_SPECIALTY',
+                outboundMessageId: 'wamid-old',
+                allowedReplyIds: ['specialty:890201'],
+                issuedAt: '2026-05-22T11:50:00.000Z',
+                source: 'ORIGINAL',
+              },
+            ],
+          },
+        },
+        createdAt: '2026-05-22T11:40:00.000Z',
+        updatedAt: '2026-05-22T12:00:00.000Z',
+      }),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationMessageRepository = {
+      saveInbound: jest.fn().mockResolvedValue(undefined),
+      saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
+    };
+    const conversationStateHandlerResolver = {
+      resolve: jest.fn(),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const useCase = buildUseCase(
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
+      conversationStateHandlerResolver,
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-expired-reopen',
+      from: '573001112233',
+      timestamp: '1779453468',
+      receivedAt: '2026-05-22T12:42:43.148Z',
+      messageType: 'text',
+      textBody: 'hola',
+      phoneNumberId: '123',
+    });
+
+    expect(result.status).toBe('HANDLED');
+    expect(result.outboundMessages).toHaveLength(2);
+    expect(result.outboundMessages[0]).toMatchObject({ type: 'text' });
+    expect(result.outboundMessages[1]).toMatchObject({ type: 'interactive_list' });
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'BOT_ACTIVE',
+        state: 'MAIN_MENU',
+      }),
+    );
+    expect(conversationStateHandlerResolver.resolve).not.toHaveBeenCalled();
+  });
+
   it('rebuilds the specialty prompt when user navigates back from appointment date selection', async () => {
     const repository = {
       findByKey: jest.fn().mockResolvedValue({
@@ -317,6 +421,21 @@ describe('HandleIncomingConversationMessageUseCase', () => {
             ],
             offeredDates: [
               { isoDate: '2026-05-06', displayDate: '06/05/2026' },
+            ],
+          },
+          interactivePromptWindow: {
+            currentPromptId: 'prompt:wamid-outbound-1',
+            prompts: [
+              {
+                promptId: 'prompt:wamid-outbound-1',
+                logicalStepKey: 'NAVIGATION:SELECTING_APPOINTMENT_DATE',
+                promptKind: 'NAVIGATION',
+                state: 'SELECTING_APPOINTMENT_DATE',
+                outboundMessageId: 'wamid-outbound-1',
+                allowedReplyIds: ['nav_back', 'nav_main_menu', 'nav_finish'],
+                issuedAt: '2026-05-04T10:00:00.000Z',
+                source: 'ORIGINAL',
+              },
             ],
           },
         },
@@ -465,7 +584,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
     expect(result.outboundMessages[0]).toMatchObject({ type: 'text' });
   });
 
-  it('skips interactive replies with unknown outbound context', async () => {
+  it('recovers conversation when interactive reply has invalid context', async () => {
     const repository = {
       findByKey: jest.fn().mockResolvedValue({
         conversationKey: 'whatsapp:123:573001112233',
@@ -516,8 +635,66 @@ describe('HandleIncomingConversationMessageUseCase', () => {
       phoneNumberId: '123',
     });
 
-    expect(result.outboundMessages).toEqual([]);
+    expect(result.status).toBe('RECOVERED_INVALID_CONTEXT');
+    expect(result.outboundMessages[0]).toMatchObject({ type: 'text' });
     expect(conversationStateHandlerResolver.resolve).not.toHaveBeenCalled();
-    expect(repository.save).not.toHaveBeenCalled();
+    expect(repository.save).toHaveBeenCalled();
+  });
+
+  it('recovers conversation when interactive reply does not match active prompt window', async () => {
+    const repository = {
+      findByKey: jest.fn().mockResolvedValue({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'MAIN_MENU',
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationMessageRepository = {
+      saveInbound: jest.fn().mockResolvedValue(undefined),
+      saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
+    };
+    const conversationStateHandlerResolver = {
+      resolve: jest.fn(),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const useCase = buildUseCase(
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
+      conversationStateHandlerResolver,
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-old-context',
+      from: '573001112233',
+      timestamp: '1779453468',
+      receivedAt: '2026-05-22T12:42:43.148Z',
+      messageType: 'interactive',
+      interactiveReplyId: 'main_menu_update_contact',
+      interactiveReplyTitle: 'Actualizar contacto',
+      contextMessageId: 'wamid-outbound-old',
+      phoneNumberId: '123',
+    });
+
+    expect(result.status).toBe('RECOVERED_INVALID_CONTEXT');
+    expect(result.outboundMessages[0]).toMatchObject({ type: 'text' });
+    expect(conversationStateHandlerResolver.resolve).not.toHaveBeenCalled();
+    expect(repository.save).toHaveBeenCalled();
   });
 });

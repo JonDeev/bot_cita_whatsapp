@@ -56,6 +56,13 @@ export class MainMenuHandler implements ConversationStateHandler {
       return this.buildDocumentRequestResponse('CANCEL_OR_RESCHEDULE');
     }
 
+    if (
+      event.messageType === 'interactive' &&
+      event.interactiveReplyId === MAIN_MENU_OPTION_IDS.UPDATE_CONTACT
+    ) {
+      return this.buildDocumentRequestResponse('UPDATE_CONTACT');
+    }
+
     if (event.messageType === 'interactive' && event.interactiveReplyId) {
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
@@ -80,7 +87,8 @@ export class MainMenuHandler implements ConversationStateHandler {
       | 'REQUEST_APPOINTMENT'
       | 'CANCEL_OR_RESCHEDULE'
       | 'CHECK_APPOINTMENTS'
-      | 'CHECK_DISPENSARY',
+      | 'CHECK_DISPENSARY'
+      | 'UPDATE_CONTACT',
   ): ConversationStateHandlerResult {
     return {
       nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
@@ -89,6 +97,7 @@ export class MainMenuHandler implements ConversationStateHandler {
         patientValidation: {
           failedAttempts: 0,
         },
+        contactVerification: undefined,
         assignedAppointmentSelection: undefined,
         appointmentReschedule: undefined,
         specialtySelection: undefined,

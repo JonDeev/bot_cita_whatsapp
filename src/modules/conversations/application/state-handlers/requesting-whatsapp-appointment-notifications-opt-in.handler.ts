@@ -84,6 +84,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
       nextContext: {
         ...session.context,
         flowIntent: undefined,
+        contactVerification: undefined,
         assignedAppointmentSelection: undefined,
         appointmentReschedule: undefined,
         specialtySelection: undefined,

@@ -28,4 +28,8 @@ export interface ConversationMessageRepository {
     conversationKey: string,
     whatsappMessageId: string,
   ): Promise<boolean>;
+  findOutboundMessageOccurredAt?(
+    conversationKey: string,
+    whatsappMessageId: string,
+  ): Promise<string | null>;
 }

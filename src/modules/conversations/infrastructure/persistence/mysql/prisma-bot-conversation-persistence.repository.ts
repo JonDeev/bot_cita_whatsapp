@@ -29,6 +29,9 @@ export class PrismaBotConversationPersistenceRepository implements ConversationP
       context:
         (conversation.context as ConversationSession['context'] | null) ??
         undefined,
+      lastInboundAt: conversation.lastInboundAt?.toISOString(),
+      idleReminderSentAt: conversation.idleReminderSentAt?.toISOString(),
+      idleExpiresAt: conversation.idleExpiresAt?.toISOString(),
       createdAt: conversation.createdAt.toISOString(),
       updatedAt: conversation.updatedAt.toISOString(),
     };
@@ -45,6 +48,15 @@ export class PrismaBotConversationPersistenceRepository implements ConversationP
         state: session.state,
         status: session.status,
         context: this.serializeContext(session.context),
+        lastInboundAt: session.lastInboundAt
+          ? new Date(session.lastInboundAt)
+          : null,
+        idleReminderSentAt: session.idleReminderSentAt
+          ? new Date(session.idleReminderSentAt)
+          : null,
+        idleExpiresAt: session.idleExpiresAt
+          ? new Date(session.idleExpiresAt)
+          : null,
         createdAt: new Date(session.createdAt),
         updatedAt: new Date(session.updatedAt),
       },
@@ -54,9 +66,102 @@ export class PrismaBotConversationPersistenceRepository implements ConversationP
         state: session.state,
         status: session.status,
         context: this.serializeContext(session.context),
+        lastInboundAt: session.lastInboundAt
+          ? new Date(session.lastInboundAt)
+          : null,
+        idleReminderSentAt: session.idleReminderSentAt
+          ? new Date(session.idleReminderSentAt)
+          : null,
+        idleExpiresAt: session.idleExpiresAt
+          ? new Date(session.idleExpiresAt)
+          : null,
         updatedAt: new Date(session.updatedAt),
       },
     });
+  }
+
+  async findBotActiveConversationsDueForIdleReminder(
+    reminderThresholdAt: string,
+    nowIso: string,
+    limit: number,
+  ): Promise<ConversationSession[]> {
+    const conversations = await this.prismaBot.botConversation.findMany({
+      where: {
+        status: 'BOT_ACTIVE',
+        lastInboundAt: {
+          lte: new Date(reminderThresholdAt),
+        },
+        idleExpiresAt: {
+          gt: new Date(nowIso),
+        },
+        OR: [
+          {
+            idleReminderSentAt: null,
+          },
+          {
+            idleReminderSentAt: {
+              lt: new Date(reminderThresholdAt),
+            },
+          },
+        ],
+      },
+      take: limit,
+      orderBy: {
+        lastInboundAt: 'asc',
+      },
+    });
+
+    return conversations.map((conversation) => ({
+      conversationKey: conversation.conversationKey,
+      channel: 'whatsapp',
+      participantPhone: conversation.participantPhone,
+      phoneNumberId: conversation.phoneNumberId,
+      state: conversation.state as ConversationSession['state'],
+      status: conversation.status as ConversationSession['status'],
+      context:
+        (conversation.context as ConversationSession['context'] | null) ??
+        undefined,
+      lastInboundAt: conversation.lastInboundAt?.toISOString(),
+      idleReminderSentAt: conversation.idleReminderSentAt?.toISOString(),
+      idleExpiresAt: conversation.idleExpiresAt?.toISOString(),
+      createdAt: conversation.createdAt.toISOString(),
+      updatedAt: conversation.updatedAt.toISOString(),
+    }));
+  }
+
+  async findBotActiveConversationsDueForExpiration(
+    nowIso: string,
+    limit: number,
+  ): Promise<ConversationSession[]> {
+    const conversations = await this.prismaBot.botConversation.findMany({
+      where: {
+        status: 'BOT_ACTIVE',
+        idleExpiresAt: {
+          lte: new Date(nowIso),
+        },
+      },
+      take: limit,
+      orderBy: {
+        idleExpiresAt: 'asc',
+      },
+    });
+
+    return conversations.map((conversation) => ({
+      conversationKey: conversation.conversationKey,
+      channel: 'whatsapp',
+      participantPhone: conversation.participantPhone,
+      phoneNumberId: conversation.phoneNumberId,
+      state: conversation.state as ConversationSession['state'],
+      status: conversation.status as ConversationSession['status'],
+      context:
+        (conversation.context as ConversationSession['context'] | null) ??
+        undefined,
+      lastInboundAt: conversation.lastInboundAt?.toISOString(),
+      idleReminderSentAt: conversation.idleReminderSentAt?.toISOString(),
+      idleExpiresAt: conversation.idleExpiresAt?.toISOString(),
+      createdAt: conversation.createdAt.toISOString(),
+      updatedAt: conversation.updatedAt.toISOString(),
+    }));
   }
 
   private serializeContext(

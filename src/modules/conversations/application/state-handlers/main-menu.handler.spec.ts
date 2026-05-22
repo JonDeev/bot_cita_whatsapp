@@ -160,4 +160,36 @@ describe('MainMenuHandler', () => {
       flowIntent: 'CHECK_DISPENSARY',
     });
   });
+
+  it('moves to WAITING_DOCUMENT when update contact option is selected', async () => {
+    const handler = new MainMenuHandler(new MainMenuListFactory());
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'MAIN_MENU',
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-5',
+        from: '573001112233',
+        timestamp: '1711111115',
+        messageType: 'interactive',
+        interactiveReplyId: 'main_menu_update_contact',
+        interactiveReplyTitle: '📝 Actualizar contacto',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('WAITING_DOCUMENT');
+    expect(result.nextContext).toMatchObject({
+      flowIntent: 'UPDATE_CONTACT',
+    });
+  });
 });

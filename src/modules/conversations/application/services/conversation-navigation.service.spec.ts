@@ -16,6 +16,16 @@ describe('ConversationNavigationService', () => {
     expect(birthDateStepMessage).toBeNull();
   });
 
+  it('does not build navigation buttons for contact update list step', () => {
+    const service = new ConversationNavigationService();
+
+    const message = service.buildNavigationMessage(
+      CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+    );
+
+    expect(message).toBeNull();
+  });
+
   it('builds menu+finish buttons for specialty selection step', () => {
     const service = new ConversationNavigationService();
 

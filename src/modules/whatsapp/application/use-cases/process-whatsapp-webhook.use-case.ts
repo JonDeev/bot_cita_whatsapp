@@ -132,11 +132,24 @@ export class ProcessWhatsappWebhookUseCase {
       });
 
       try {
-        await this.orchestrator.handleEvents([event]);
+        const orchestrationResult = await this.orchestrator.handleEvent(event);
+        const processedAt = new Date().toISOString();
+        if (
+          orchestrationResult.processingStatus === 'SKIPPED_INVALID_CONTEXT'
+        ) {
+          await this.markWebhookEvent(
+            idempotencyKey,
+            'SKIPPED_INVALID_CONTEXT',
+            processedAt,
+            orchestrationResult.rejectionReason ?? 'INVALID_INTERACTIVE_CONTEXT',
+          );
+          continue;
+        }
+
         await this.markWebhookEvent(
           idempotencyKey,
           'PROCESSED',
-          new Date().toISOString(),
+          processedAt,
         );
       } catch (error) {
         await this.markWebhookEvent(
