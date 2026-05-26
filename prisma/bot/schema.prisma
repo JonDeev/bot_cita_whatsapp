@@ -71,6 +71,22 @@ enum BotContactSuppressionReason {
   MANUAL_BLOCK
 }
 
+enum BotAppointmentReminderDispatchStatus {
+  PENDING
+  LOCKED
+  PHONE_VERIFICATION_PENDING
+  PHONE_VERIFICATION_EXPIRED
+  SENT
+  SKIPPED_NO_OPT_IN
+  SKIPPED_INVALID_PHONE
+  SKIPPED_APPOINTMENT_CANCELLED
+  SKIPPED_APPOINTMENT_RESCHEDULED
+  SKIPPED_LATE_CONFIRMATION
+  SKIPPED_SUPPRESSED_CONTACT
+  SKIPPED_HANDOFF_ACTIVE
+  FAILED
+}
+
 model BotConversation {
   id               Int                @id @default(autoincrement())
   conversationKey  String             @unique(map: "uq_bot_conversations_conversation_key") @map("conversation_key") @db.VarChar(191)
@@ -426,4 +442,57 @@ model BotContactSuppression {
   @@index([phone, channel, active], map: "idx_bot_contact_suppressions_phone_channel_active")
   @@index([patientLegacyUserId, active], map: "idx_bot_contact_suppressions_patient_active")
   @@map("bot_contact_suppressions")
+}
+
+model BotAppointmentReminderDispatch {
+  id                         Int                                @id @default(autoincrement())
+  legacyAgendaId             Int                                @map("legacy_agenda_id")
+  patientLegacyUserId        Int                                @map("patient_legacy_user_id")
+  conversationKey            String?                            @map("conversation_key") @db.VarChar(191)
+  recipientPhoneRaw          String                             @map("recipient_phone_raw") @db.VarChar(32)
+  recipientPhoneE164         String?                            @map("recipient_phone_e164") @db.VarChar(32)
+  appointmentStartsAt        DateTime                           @map("appointment_starts_at") @db.DateTime(3)
+  scheduledFor               DateTime                           @map("scheduled_for") @db.DateTime(3)
+  reminderType               String                             @map("reminder_type") @db.VarChar(32)
+  status                     BotAppointmentReminderDispatchStatus @default(PENDING)
+  templateName               String                             @map("template_name") @db.VarChar(128)
+  verificationTemplateName   String                             @map("verification_template_name") @db.VarChar(128)
+  metaMessageId              String?                            @map("meta_message_id") @db.VarChar(191)
+  verificationMessageId      String?                            @map("verification_message_id") @db.VarChar(191)
+  attempts                   Int                                @default(0)
+  nextAttemptAt              DateTime?                          @map("next_attempt_at") @db.DateTime(3)
+  lastError                  String?                            @map("last_error") @db.Text
+  lockAcquiredAt             DateTime?                          @map("lock_acquired_at") @db.DateTime(3)
+  lockExpiresAt              DateTime?                          @map("lock_expires_at") @db.DateTime(3)
+  lockedBy                   String?                            @map("locked_by") @db.VarChar(64)
+  lockVersion                Int                                @default(0) @map("lock_version")
+  verificationTokenHash      String?                            @map("verification_token_hash") @db.VarChar(191)
+  verificationRequestedAt    DateTime?                          @map("verification_requested_at") @db.DateTime(3)
+  verificationExpiresAt      DateTime?                          @map("verification_expires_at") @db.DateTime(3)
+  sentAt                     DateTime?                          @map("sent_at") @db.DateTime(3)
+  createdAt                  DateTime                           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                  DateTime                           @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@unique([legacyAgendaId, reminderType, appointmentStartsAt], map: "uq_bot_appt_reminder_dispatch_business")
+  @@index([status, scheduledFor], map: "idx_bot_appt_reminder_status_scheduled_for")
+  @@index([status, nextAttemptAt], map: "idx_bot_appt_reminder_status_next_attempt_at")
+  @@index([verificationExpiresAt, status], map: "idx_bot_appt_reminder_verification_expires_status")
+  @@index([lockExpiresAt, status], map: "idx_bot_appt_reminder_lock_expires_status")
+  @@index([verificationTokenHash], map: "idx_bot_appt_reminder_verification_token_hash")
+  @@map("bot_appointment_reminder_dispatches")
+}
+
+model BotWebhookInboundDedup {
+  id               Int      @id @default(autoincrement())
+  provider         String   @db.VarChar(32)
+  inboundMessageId String   @map("inbound_message_id") @db.VarChar(191)
+  buttonPayloadId  String   @map("button_payload_id") @db.VarChar(191)
+  receivedAt       DateTime @map("received_at") @db.DateTime(3)
+  processedAt      DateTime? @map("processed_at") @db.DateTime(3)
+  resultStatus     String   @map("result_status") @db.VarChar(64)
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@unique([provider, inboundMessageId, buttonPayloadId], map: "uq_bot_webhook_inbound_dedup_key")
+  @@index([provider, receivedAt], map: "idx_bot_webhook_inbound_dedup_provider_received_at")
+  @@map("bot_webhook_inbound_dedup")
 }

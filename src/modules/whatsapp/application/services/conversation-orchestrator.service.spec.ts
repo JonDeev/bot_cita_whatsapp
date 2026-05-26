@@ -69,6 +69,9 @@ describe('ConversationOrchestratorService', () => {
     const recordSatisfactionSurveyFlowSubmission = {
       execute: jest.fn().mockResolvedValue({ handled: false }),
     };
+    const handleAppointmentReminderVerificationReply = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
 
     const service = new ConversationOrchestratorService(
       handleIncomingConversationMessage,
@@ -77,6 +80,7 @@ describe('ConversationOrchestratorService', () => {
       sendWhatsappInteractiveButtonsMessage,
       sendWhatsappTextMessage,
       recordSatisfactionSurveyFlowSubmission as any,
+      handleAppointmentReminderVerificationReply as any,
       whatsappConfig,
     );
 
@@ -129,8 +133,11 @@ describe('ConversationOrchestratorService', () => {
     const sendWhatsappInteractiveListMessage = {
       execute: jest.fn(),
     } as unknown as SendWhatsappInteractiveListMessageUseCase;
+    const sendInteractiveButtonsExecute = jest
+      .fn()
+      .mockResolvedValue({ messageId: 'wamid-btn-1' });
     const sendWhatsappInteractiveButtonsMessage = {
-      execute: jest.fn().mockResolvedValue({ messageId: 'wamid-btn-1' }),
+      execute: sendInteractiveButtonsExecute,
     } as unknown as SendWhatsappInteractiveButtonsMessageUseCase;
     const conversationMessageRepository = {
       saveInbound: jest.fn(),
@@ -146,6 +153,9 @@ describe('ConversationOrchestratorService', () => {
     const recordSatisfactionSurveyFlowSubmission = {
       execute: jest.fn().mockResolvedValue({ handled: false }),
     };
+    const handleAppointmentReminderVerificationReply = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
 
     const service = new ConversationOrchestratorService(
       handleIncomingConversationMessage,
@@ -154,6 +164,7 @@ describe('ConversationOrchestratorService', () => {
       sendWhatsappInteractiveButtonsMessage,
       sendWhatsappTextMessage,
       recordSatisfactionSurveyFlowSubmission as any,
+      handleAppointmentReminderVerificationReply as any,
       whatsappConfig,
     );
 
@@ -169,9 +180,7 @@ describe('ConversationOrchestratorService', () => {
       },
     ]);
 
-    expect(sendWhatsappInteractiveButtonsMessage.execute).toHaveBeenCalledTimes(
-      1,
-    );
+    expect(sendInteractiveButtonsExecute).toHaveBeenCalledTimes(1);
     expect(conversationMessageRepository.saveOutbound).toHaveBeenCalledWith(
       expect.objectContaining({
         messageType: 'interactive',
@@ -181,8 +190,9 @@ describe('ConversationOrchestratorService', () => {
   });
 
   it('skips conversation state handling when survey flow submission was handled', async () => {
-    const handleIncomingConversationMessage = {
-      execute: jest.fn().mockResolvedValue({
+    const handleIncomingConversationMessageExecute = jest
+      .fn()
+      .mockResolvedValue({
         status: 'HANDLED',
         conversationKey: 'whatsapp:123:573001112233',
         session: {
@@ -196,7 +206,9 @@ describe('ConversationOrchestratorService', () => {
           updatedAt: '2026-05-07T12:00:00.000Z',
         },
         outboundMessages: [],
-      }),
+      });
+    const handleIncomingConversationMessage = {
+      execute: handleIncomingConversationMessageExecute,
       registerDispatchedInteractivePrompts: jest
         .fn()
         .mockResolvedValue(undefined),
@@ -217,6 +229,7 @@ describe('ConversationOrchestratorService', () => {
       } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
       { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
       { execute: jest.fn().mockResolvedValue({ handled: true }) } as any,
+      { execute: jest.fn().mockResolvedValue({ handled: false }) } as any,
       {
         isAutoReplyEnabled: jest.fn().mockReturnValue(true),
       } as unknown as WhatsappConfigService,
@@ -235,6 +248,59 @@ describe('ConversationOrchestratorService', () => {
       },
     ]);
 
-    expect(handleIncomingConversationMessage.execute).not.toHaveBeenCalled();
+    expect(handleIncomingConversationMessageExecute).not.toHaveBeenCalled();
+  });
+
+  it('routes interactive reminder replies to reminders use case before conversation flow', async () => {
+    const handleIncomingConversationMessageExecute = jest.fn();
+    const handleIncomingConversationMessage = {
+      execute: handleIncomingConversationMessageExecute,
+      registerDispatchedInteractivePrompts: jest.fn(),
+    } as unknown as HandleIncomingConversationMessageUseCase;
+
+    const reminderReplyExecute = jest.fn().mockResolvedValue({ handled: true });
+    const handleAppointmentReminderVerificationReply = {
+      execute: reminderReplyExecute,
+    };
+
+    const service = new ConversationOrchestratorService(
+      handleIncomingConversationMessage,
+      {
+        saveInbound: jest.fn(),
+        saveOutbound: jest.fn(),
+        hasKnownOutboundMessage: jest.fn(),
+      },
+      {
+        execute: jest.fn(),
+      } as unknown as SendWhatsappInteractiveListMessageUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
+      { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
+      { execute: jest.fn().mockResolvedValue({ handled: false }) } as any,
+      handleAppointmentReminderVerificationReply as any,
+      {
+        isAutoReplyEnabled: jest.fn().mockReturnValue(true),
+      } as unknown as WhatsappConfigService,
+    );
+
+    await service.handleEvent({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-reminder-1',
+      from: '573001112233',
+      timestamp: '1711111111',
+      messageType: 'interactive',
+      interactiveReplyId: 'appt_reminder_confirm:signed_payload',
+      receivedAt: '2026-05-26T10:00:00.000Z',
+      phoneNumberId: '123',
+    });
+
+    expect(reminderReplyExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inboundMessageId: 'wamid-reminder-1',
+        interactiveReplyId: 'appt_reminder_confirm:signed_payload',
+      }),
+    );
+    expect(handleIncomingConversationMessageExecute).not.toHaveBeenCalled();
   });
 });

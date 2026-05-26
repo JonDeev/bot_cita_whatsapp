@@ -9,6 +9,7 @@ describe('SendWhatsappTextMessageUseCase', () => {
       sendInteractiveListMessage: jest.fn(),
       sendInteractiveButtonsMessage: jest.fn(),
       sendFlowTemplateMessage: jest.fn(),
+      sendTemplateMessage: jest.fn(),
     };
     const auditService = {
       record: jest.fn().mockResolvedValue(undefined),
@@ -39,6 +40,7 @@ describe('SendWhatsappTextMessageUseCase', () => {
       sendInteractiveListMessage: jest.fn(),
       sendInteractiveButtonsMessage: jest.fn(),
       sendFlowTemplateMessage: jest.fn(),
+      sendTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
     const useCase = new SendWhatsappTextMessageUseCase(sender, auditService);

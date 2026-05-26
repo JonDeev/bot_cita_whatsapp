@@ -104,6 +104,16 @@ model especialidad_empleados {
   @@id([C_digo_empleado, C_digo_especialidad, IdCentro])
 }
 
+model sedes {
+  IdCentro        Int?
+  Sede            String? @db.VarChar(50)
+  CodHabilitacion String? @db.VarChar(50)
+  IdSede          Int     @id @default(autoincrement())
+  Direccion       String? @db.VarChar(225)
+  CodMunicipio    String? @db.VarChar(225)
+  telefono        String? @db.VarChar(50)
+}
+
 model tventidades {
   Codigo        String   @id @db.VarChar(6)
   NombreEntidad String?  @db.VarChar(255)
@@ -215,6 +225,8 @@ model usuarios {
   ORIENTACION_SEXUAL           String?   @default("NO REFIERE") @map("ORIENTACION SEXUAL") @db.VarChar(255)
   Barrio                       String?   @db.VarChar(50)
   confirmacion_telefono        String?   @default("'SIN CONFIRMAR'") @db.VarChar(50)
+  correo_verificado_en         DateTime? @db.Timestamp(0)
+  telefono_verificado_en       DateTime? @db.Timestamp(0)
   poll                         String?   @default("No enviado") @db.VarChar(45)
   Clave                        String?   @db.VarChar(50)
   codPaisResidencia            String?   @default("057") @db.VarChar(3)

@@ -17,6 +17,7 @@ const STRICT_READ_ONLY_MODELS = new Set([
   'empleados',
   'tvespecialidades',
   'especialidad_empleados',
+  'sedes',
   'tventidades',
 ]);
 

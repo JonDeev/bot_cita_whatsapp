@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ConversationsModule } from '../conversations/conversations.module';
 import { SurveysModule } from '../surveys/surveys.module';
+import { RemindersModule } from '../reminders/reminders.module';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
 import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
 import { ProcessWhatsappWebhookUseCase } from './application/use-cases/process-whatsapp-webhook.use-case';
@@ -18,6 +19,7 @@ import {
 import { WebhookIdempotencyKeyFactory } from './application/services/idempotency/webhook-idempotency-key.factory';
 import { SendWhatsappInteractiveButtonsMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-buttons-message.use-case';
 import { SendWhatsappFlowTemplateMessageUseCase } from './application/use-cases/outbound/send-whatsapp-flow-template-message.use-case';
+import { SendWhatsappTemplateMessageUseCase } from './application/use-cases/outbound/send-whatsapp-template-message.use-case';
 import { SendWhatsappInteractiveListMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-list-message.use-case';
 import { SendWhatsappTextMessageUseCase } from './application/use-cases/outbound/send-whatsapp-text-message.use-case';
 import { MetaWhatsappPayloadParser } from './infrastructure/parsers/meta-whatsapp-payload.parser';
@@ -34,6 +36,7 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
     AuditModule,
     ConversationsModule,
     forwardRef(() => SurveysModule),
+    forwardRef(() => RemindersModule),
     PrismaBotModule,
     RedisModule,
   ],
@@ -43,6 +46,7 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
     VerifyWebhookChallengeUseCase,
     ProcessWhatsappWebhookUseCase,
     SendWhatsappFlowTemplateMessageUseCase,
+    SendWhatsappTemplateMessageUseCase,
     SendWhatsappInteractiveButtonsMessageUseCase,
     SendWhatsappInteractiveListMessageUseCase,
     SendWhatsappTextMessageUseCase,
@@ -71,6 +75,10 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
       useClass: MetaWhatsappCloudApiAdapter,
     },
   ],
-  exports: [SendWhatsappFlowTemplateMessageUseCase, WhatsappConfigService],
+  exports: [
+    SendWhatsappFlowTemplateMessageUseCase,
+    SendWhatsappTemplateMessageUseCase,
+    WhatsappConfigService,
+  ],
 })
 export class WhatsappModule {}

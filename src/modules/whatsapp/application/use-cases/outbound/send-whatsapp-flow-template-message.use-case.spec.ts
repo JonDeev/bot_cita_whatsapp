@@ -11,6 +11,7 @@ describe('SendWhatsappFlowTemplateMessageUseCase', () => {
       sendFlowTemplateMessage: jest
         .fn()
         .mockResolvedValue({ messageId: 'wamid-flow-123' }),
+      sendTemplateMessage: jest.fn(),
     };
     const auditService = {
       record: jest.fn().mockResolvedValue(undefined),
@@ -52,6 +53,7 @@ describe('SendWhatsappFlowTemplateMessageUseCase', () => {
       sendInteractiveListMessage: jest.fn(),
       sendInteractiveButtonsMessage: jest.fn(),
       sendFlowTemplateMessage: jest.fn(),
+      sendTemplateMessage: jest.fn(),
     };
     const auditService = { record: jest.fn() } as unknown as AuditService;
 

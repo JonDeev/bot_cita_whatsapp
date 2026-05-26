@@ -12,6 +12,7 @@ import { SendWhatsappTextMessageUseCase } from '../use-cases/outbound/send-whats
 import { WhatsappConfigService } from './whatsapp-config.service';
 import type { NormalizedWhatsappEvent } from '../../domain/events/normalized-whatsapp.event';
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from '../../../surveys/application/use-cases/record-satisfaction-survey-flow-submission.use-case';
+import { HandleAppointmentReminderVerificationReplyUseCase } from '../../../reminders/application/use-cases/handle-appointment-reminder-verification-reply.use-case';
 import { WEBHOOK_PROCESSING_STATUSES } from '../../domain/ports/webhook-inbox.repository.port';
 
 export interface ConversationOrchestrationResult {
@@ -33,6 +34,7 @@ export class ConversationOrchestratorService {
     private readonly sendWhatsappInteractiveButtonsMessage: SendWhatsappInteractiveButtonsMessageUseCase,
     private readonly sendWhatsappTextMessage: SendWhatsappTextMessageUseCase,
     private readonly recordSatisfactionSurveyFlowSubmission: RecordSatisfactionSurveyFlowSubmissionUseCase,
+    private readonly handleAppointmentReminderVerificationReply: HandleAppointmentReminderVerificationReplyUseCase,
     private readonly whatsappConfig: WhatsappConfigService,
   ) {}
 
@@ -61,6 +63,19 @@ export class ConversationOrchestratorService {
       await this.recordSatisfactionSurveyFlowSubmission.execute(event);
     if (surveyFlowSubmissionResult.handled) {
       return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+    }
+
+    if (event.messageType === 'interactive' && event.interactiveReplyId) {
+      const reminderReplyResult =
+        await this.handleAppointmentReminderVerificationReply.execute({
+          inboundMessageId: event.messageId,
+          fromPhone: event.from,
+          interactiveReplyId: event.interactiveReplyId,
+          receivedAtIso: event.receivedAt ?? new Date().toISOString(),
+        });
+      if (reminderReplyResult.handled) {
+        return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+      }
     }
 
     if (!this.whatsappConfig.isAutoReplyEnabled()) {

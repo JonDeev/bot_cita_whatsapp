@@ -42,6 +42,19 @@ export interface OutboundWhatsappFlowTemplateMessage {
   flowActionData?: Record<string, string | number | boolean>;
 }
 
+export interface OutboundWhatsappTemplateQuickReplyButton {
+  index: string;
+  payload: string;
+}
+
+export interface OutboundWhatsappTemplateMessage {
+  to: string;
+  templateName: string;
+  languageCode: string;
+  bodyTextParameters?: string[];
+  quickReplyButtons?: OutboundWhatsappTemplateQuickReplyButton[];
+}
+
 export interface OutboundWhatsappSendResult {
   messageId: string;
 }

@@ -11,6 +11,7 @@ import {
   OutboundWhatsappInteractiveButtonsMessage,
   OutboundWhatsappInteractiveListMessage,
   OutboundWhatsappSendResult,
+  OutboundWhatsappTemplateMessage,
   OutboundWhatsappTextMessage,
 } from '../../domain/value-objects/outbound-whatsapp-message';
 
@@ -165,6 +166,51 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
           code: message.languageCode,
         },
         components,
+      },
+    });
+  }
+
+  async sendTemplateMessage(
+    message: OutboundWhatsappTemplateMessage,
+  ): Promise<OutboundWhatsappSendResult> {
+    const components: Array<Record<string, unknown>> = [];
+
+    if (message.bodyTextParameters && message.bodyTextParameters.length > 0) {
+      components.push({
+        type: 'body',
+        parameters: message.bodyTextParameters.map((text) => ({
+          type: 'text',
+          text,
+        })),
+      });
+    }
+
+    if (message.quickReplyButtons && message.quickReplyButtons.length > 0) {
+      for (const button of message.quickReplyButtons) {
+        components.push({
+          type: 'button',
+          sub_type: 'quick_reply',
+          index: button.index,
+          parameters: [
+            {
+              type: 'payload',
+              payload: button.payload,
+            },
+          ],
+        });
+      }
+    }
+
+    return this.send({
+      messaging_product: 'whatsapp',
+      to: message.to,
+      type: 'template',
+      template: {
+        name: message.templateName,
+        language: {
+          code: message.languageCode,
+        },
+        ...(components.length > 0 ? { components } : {}),
       },
     });
   }

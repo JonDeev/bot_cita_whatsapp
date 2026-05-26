@@ -3,6 +3,7 @@ import {
   OutboundWhatsappInteractiveButtonsMessage,
   OutboundWhatsappInteractiveListMessage,
   OutboundWhatsappSendResult,
+  OutboundWhatsappTemplateMessage,
   OutboundWhatsappTextMessage,
 } from '../value-objects/outbound-whatsapp-message';
 
@@ -18,5 +19,8 @@ export interface WhatsappMessageSenderPort {
   ): Promise<OutboundWhatsappSendResult>;
   sendFlowTemplateMessage(
     message: OutboundWhatsappFlowTemplateMessage,
+  ): Promise<OutboundWhatsappSendResult>;
+  sendTemplateMessage(
+    message: OutboundWhatsappTemplateMessage,
   ): Promise<OutboundWhatsappSendResult>;
 }
