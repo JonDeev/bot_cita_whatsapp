@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+:root {
+  --bg: #f6f8fb;
+  --panel: #ffffff;
+  --panel-muted: #f1f5f9;
+  --text: #0f172a;
+  --muted: #475569;
+  --accent: #0f766e;
+  --danger: #b91c1c;
+  --border: #dbe3ef;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 100% -10%, #cffafe, transparent 35%),
+    radial-gradient(circle at -10% 120%, #dbeafe, transparent 40%),
+    var(--bg);
+  color: var(--text);
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}

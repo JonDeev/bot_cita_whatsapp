@@ -24,6 +24,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
       interactiveReplyTitle: input.interactiveReplyTitle,
       contextMessageId: input.contextMessageId,
     };
+    const body = this.resolveInboundBody(input);
 
     await this.prismaBot.botMessage.upsert({
       where: { whatsappMessageId: input.messageId },
@@ -32,7 +33,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
         direction: BotMessageDirection.INBOUND,
         whatsappMessageId: input.messageId,
         messageType: input.messageType,
-        body: input.textBody,
+        body,
         payload,
         occurredAt,
         providerOccurredAt: occurredAt,
@@ -41,7 +42,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
       update: {
         conversationId,
         messageType: input.messageType,
-        body: input.textBody,
+        body,
         payload,
         occurredAt,
         providerOccurredAt: occurredAt,
@@ -58,6 +59,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
       input.to,
     );
     const occurredAt = new Date(input.sentAt);
+    const body = this.resolveOutboundBody(input);
     const payload = {
       to: input.to,
       messageType: input.messageType,
@@ -72,7 +74,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
           direction: BotMessageDirection.OUTBOUND,
           whatsappMessageId: input.whatsappMessageId,
           messageType: input.messageType,
-          body: input.body,
+          body,
           payload,
           occurredAt,
           sentAt: occurredAt,
@@ -80,7 +82,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
         update: {
           conversationId,
           messageType: input.messageType,
-          body: input.body,
+          body,
           payload,
           occurredAt,
           sentAt: occurredAt,
@@ -94,7 +96,7 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
         conversationId,
         direction: BotMessageDirection.OUTBOUND,
         messageType: input.messageType,
-        body: input.body,
+        body,
         payload,
         occurredAt,
         sentAt: occurredAt,
@@ -175,5 +177,44 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
     }
 
     return new Date(milliseconds);
+  }
+
+  private resolveInboundBody(input: SaveInboundConversationMessageInput): string | null {
+    const normalizedText = this.normalizeVisibleText(input.textBody);
+    if (normalizedText) {
+      return normalizedText;
+    }
+
+    const interactiveTitle = this.normalizeVisibleText(input.interactiveReplyTitle);
+    if (interactiveTitle) {
+      return interactiveTitle;
+    }
+
+    const interactiveId = this.normalizeVisibleText(input.interactiveReplyId);
+    return interactiveId;
+  }
+
+  private resolveOutboundBody(input: SaveOutboundConversationMessageInput): string | null {
+    const normalizedText = this.normalizeVisibleText(input.body);
+    if (normalizedText) {
+      return normalizedText;
+    }
+
+    if (input.messageType === 'interactive') {
+      return 'Mensaje interactivo';
+    }
+
+    return null;
+  }
+
+  private normalizeVisibleText(value: string | null | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const withoutInvisibleChars = value.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    const trimmed = withoutInvisibleChars.trim();
+
+    return trimmed.length > 0 ? trimmed : null;
   }
 }

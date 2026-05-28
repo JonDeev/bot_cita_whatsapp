@@ -1,0 +1,1 @@
+export const ADMIN_LOGS_REPOSITORY = Symbol('ADMIN_LOGS_REPOSITORY');

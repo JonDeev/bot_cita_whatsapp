@@ -1,0 +1,20 @@
+# Traefik dynamic configuration for admin SSE route.
+#
+# Notes:
+# - Do not attach buffering middleware to this route.
+# - Do not attach compression middleware to this route.
+
+http:
+  routers:
+    admin-observability-stream:
+      rule: "Path(`/api/admin/stream`)"
+      entryPoints:
+        - websecure
+      service: admin-backend
+      tls: true
+
+  services:
+    admin-backend:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3000"

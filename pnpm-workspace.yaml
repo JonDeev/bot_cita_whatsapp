@@ -1,17 +1,10 @@
-
 packages:
-
   - "."
-
-
+  - "apps/*"
+  - "packages/*"
 
 onlyBuiltDependencies:
-
   - '@nestjs/core'
-
   - '@prisma/engines'
-
   - prisma
-
   - unrs-resolver
-

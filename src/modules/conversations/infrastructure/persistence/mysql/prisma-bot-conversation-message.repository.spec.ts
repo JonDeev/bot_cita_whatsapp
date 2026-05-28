@@ -60,6 +60,72 @@ describe('PrismaBotConversationMessageRepository', () => {
     expect(prismaBot.botMessage.create).not.toHaveBeenCalled();
   });
 
+  it('stores inbound interactive message body using interactive reply title fallback', async () => {
+    const prismaBot = {
+      botConversation: {
+        upsert: jest.fn().mockResolvedValue({ id: 10 }),
+      },
+      botMessage: {
+        upsert: jest.fn().mockResolvedValue(undefined),
+      },
+    } as unknown as PrismaBotService;
+
+    const repository = new PrismaBotConversationMessageRepository(prismaBot);
+
+    await repository.saveInbound({
+      conversationKey: 'whatsapp:123:573001112233',
+      messageId: 'wamid.2',
+      messageType: 'interactive',
+      from: '573001112233',
+      phoneNumberId: '123',
+      textBody: null,
+      interactiveReplyId: 'specialty:890201',
+      interactiveReplyTitle: 'MEDICINA GENERAL',
+      contextMessageId: 'wamid.out.1',
+      providerTimestamp: '1711111112',
+      receivedAt: '2026-05-07T12:44:16.000Z',
+    });
+
+    expect(prismaBot.botMessage.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          body: 'MEDICINA GENERAL',
+        }),
+      }),
+    );
+  });
+
+  it('stores outbound interactive placeholder body as visible fallback', async () => {
+    const prismaBot = {
+      botConversation: {
+        upsert: jest.fn().mockResolvedValue({ id: 10 }),
+      },
+      botMessage: {
+        upsert: jest.fn().mockResolvedValue(undefined),
+        create: jest.fn().mockResolvedValue(undefined),
+      },
+    } as unknown as PrismaBotService;
+
+    const repository = new PrismaBotConversationMessageRepository(prismaBot);
+
+    await repository.saveOutbound({
+      conversationKey: 'whatsapp:123:573001112233',
+      messageType: 'interactive',
+      to: '573001112233',
+      whatsappMessageId: 'wamid.out.2',
+      body: '\u200B',
+      sentAt: '2026-05-07T12:44:18.000Z',
+    });
+
+    expect(prismaBot.botMessage.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          body: 'Mensaje interactivo',
+        }),
+      }),
+    );
+  });
+
   it('checks whether an outbound message id is known for the conversation', async () => {
     const prismaBot = {
       botConversation: {
