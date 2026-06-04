@@ -13,6 +13,8 @@ describe('PrismaLegacyPatientContactProfileRepository', () => {
           Segundo_apellido: null,
           Tel_fono: '3001234567',
           email: 'daniel@example.com',
+          telefono_verificado_en: new Date('2026-05-10T10:00:00.000Z'),
+          correo_verificado_en: new Date('2026-05-11T10:00:00.000Z'),
         }),
       },
     } as unknown as PrismaService;
@@ -28,6 +30,8 @@ describe('PrismaLegacyPatientContactProfileRepository', () => {
       secondLastName: null,
       primaryPhone: '3001234567',
       primaryEmail: 'daniel@example.com',
+      phoneVerifiedAtIso: '2026-05-10T10:00:00.000Z',
+      emailVerifiedAtIso: '2026-05-11T10:00:00.000Z',
     });
   });
 });

@@ -13,6 +13,8 @@ describe('ResolvePatientContactProfileUseCase', () => {
         secondLastName: null,
         primaryPhone: '300-123-4567',
         primaryEmail: 'Daniel@Example.com',
+        phoneVerifiedAtIso: null,
+        emailVerifiedAtIso: null,
       }),
     };
     const useCase = new ResolvePatientContactProfileUseCase(

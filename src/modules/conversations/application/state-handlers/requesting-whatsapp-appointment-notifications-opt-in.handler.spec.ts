@@ -110,4 +110,48 @@ describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
       ],
     });
   });
+
+  it('uses a neutral response when consent persistence is skipped', async () => {
+    const handler = buildHandler({
+      execute: jest.fn().mockResolvedValue({
+        status: 'SKIPPED',
+        reason: 'INVALID_PATIENT_ID',
+      }),
+    } as unknown as RegisterWhatsappPostBookingConsentUseCase);
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+        status: 'BOT_ACTIVE',
+        context: {
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 98,
+          },
+        },
+        createdAt: '2026-05-09T10:00:00.000Z',
+        updatedAt: '2026-05-09T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-202',
+        from: '573001112233',
+        timestamp: '1711120001',
+        messageType: 'interactive',
+        interactiveReplyId: 'appointment_notifications_opt_in:accept',
+        interactiveReplyTitle: 'Si autorizo',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'text',
+      body: expect.stringContaining('Gracias por tu respuesta'),
+    });
+  });
 });

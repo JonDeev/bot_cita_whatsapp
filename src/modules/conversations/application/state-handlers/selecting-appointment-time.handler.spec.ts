@@ -1,12 +1,14 @@
 import { AssignAppointmentSlotAfterTimeSelectionUseCase } from '../../../appointments/application/use-cases/assign-appointment-slot-after-time-selection.use-case';
 import { ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase } from '../../../appointments/application/use-cases/resolve-available-appointment-times-by-specialty-and-date.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { AppointmentAssignmentConfirmationMessageFactory } from '../services/appointment-assignment-confirmation-message.factory';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
 import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
 import { AppointmentReschedulingTimeSelectionService } from '../services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
+import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import { SelectingAppointmentTimeHandler } from './selecting-appointment-time.handler';
 
 describe('SelectingAppointmentTimeHandler', () => {
@@ -14,6 +16,7 @@ describe('SelectingAppointmentTimeHandler', () => {
     resolveTimes: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     assignAppointment: AssignAppointmentSlotAfterTimeSelectionUseCase,
     reschedulingTimeSelectionService?: AppointmentReschedulingTimeSelectionService,
+    resolveWhatsappAppointmentNotificationsOptInGate?: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
   ): SelectingAppointmentTimeHandler {
     return new SelectingAppointmentTimeHandler(
       new AppointmentTimeListFactory(),
@@ -21,12 +24,20 @@ describe('SelectingAppointmentTimeHandler', () => {
       new AppointmentAssignmentConfirmationMessageFactory(),
       new AppointmentAvailabilityMessageFactory(),
       new AppointmentNotificationOptInMessageFactory(),
+      new MainMenuListFactory(),
       reschedulingTimeSelectionService ??
         ({
           handleAfterTimeSelection: jest.fn(),
         } as unknown as AppointmentReschedulingTimeSelectionService),
       resolveTimes,
       assignAppointment,
+      resolveWhatsappAppointmentNotificationsOptInGate ??
+        ({
+          execute: jest.fn().mockResolvedValue({
+            status: 'PROMPT_REQUIRED',
+            reason: 'CONSENT_NOT_GRANTED',
+          }),
+        } as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -55,6 +66,14 @@ describe('SelectingAppointmentTimeHandler', () => {
           },
         }),
       } as unknown as AssignAppointmentSlotAfterTimeSelectionUseCase,
+      undefined,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'PROMPT_NOT_REQUIRED',
+          consentGrantedAtIso: '2026-05-02T10:00:00.000Z',
+          phoneVerifiedAtIso: '2026-05-01T10:00:00.000Z',
+        }),
+      } as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     );
 
     const result = await handler.handle(
@@ -112,14 +131,100 @@ describe('SelectingAppointmentTimeHandler', () => {
       },
     );
 
-    expect(result.nextState).toBe(
-      'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
-    );
+    expect(result.nextState).toBe('MAIN_MENU');
     expect(result.nextContext?.appointmentTimeSelection).toBeUndefined();
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'text',
       body: expect.stringContaining('su cita se asignó satisfactoriamente'),
     });
+    expect(result.outboundMessages[1]).toMatchObject({
+      type: 'interactive_list',
+      buttonText: 'Ver opciones',
+    });
+  });
+
+  it('asks for opt-in when consent gate requires re-consent', async () => {
+    const handler = buildHandler(
+      {
+        execute: jest.fn(),
+      } as unknown as ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'ASSIGNED',
+          appointment: {
+            slotRef: '102',
+            specialtyName: 'MEDICINA GENERAL',
+            patientFullName: 'DANIEL ANDRES CASTANO NAVARRO',
+            appointmentDateIso: '2026-04-30',
+            appointmentTimeHHmm: '12:00',
+            appointmentDisplayTime: '12:00 PM',
+            professionalName: 'ALICAN MARIA ZAMBRANO PIZARRO',
+            siteName: 'Santa Marta',
+            siteAddress: 'Carrera 19',
+            usedFallbackSlot: false,
+          },
+        }),
+      } as unknown as AssignAppointmentSlotAfterTimeSelectionUseCase,
+    );
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'SELECTING_APPOINTMENT_TIME',
+        status: 'BOT_ACTIVE',
+        context: {
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 98,
+          },
+          specialtySelection: {
+            offeredSpecialties: [
+              { code: '890201', name: 'MEDICINA GENERAL', cups: '890201' },
+            ],
+            selectedSpecialty: {
+              code: '890201',
+              name: 'MEDICINA GENERAL',
+              cups: '890201',
+            },
+          },
+          appointmentDateSelection: {
+            scope: 'SPECIALTY',
+            specialtyOfferedDates: [
+              { isoDate: '2026-04-30', displayDate: '30/04/2026' },
+            ],
+            offeredDates: [
+              { isoDate: '2026-04-30', displayDate: '30/04/2026' },
+            ],
+            selectedDateIso: '2026-04-30',
+          },
+          appointmentTimeSelection: {
+            offeredTimes: [
+              { slotRef: '102', timeHHmm: '12:00', displayTime: '12:00 PM' },
+            ],
+            hasMoreTimes: false,
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-99',
+        from: '573001112233',
+        timestamp: '1711111129',
+        messageType: 'interactive',
+        interactiveReplyId: 'appointment_time:102',
+        interactiveReplyTitle: '12:00 PM',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe(
+      'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+    );
     expect(result.outboundMessages[1]).toMatchObject({
       type: 'interactive_buttons',
       buttons: [

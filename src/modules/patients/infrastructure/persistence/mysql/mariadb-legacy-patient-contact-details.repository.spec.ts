@@ -31,6 +31,24 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
       envBackup.SISM_CONTACT_WRITE_DATABASE_URL;
   });
 
+  function buildEnabledRepository(columns: string[]) {
+    process.env.ALLOW_LEGACY_PATIENT_CONTACT_WRITE = 'true';
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce(
+        columns.map((columnName) => ({ COLUMN_NAME: columnName })),
+      )
+      .mockResolvedValueOnce({ affectedRows: 1 });
+    const release = jest.fn();
+    const end = jest.fn().mockResolvedValue(undefined);
+    const getConnection = jest.fn().mockResolvedValue({ query, release });
+
+    createPool.mockReturnValue({ getConnection, end });
+
+    const repository = new MariadbLegacyPatientContactDetailsRepository();
+    return { repository, query, release, end };
+  }
+
   it('returns WRITE_DISABLED when guardrail is disabled', async () => {
     const repository = new MariadbLegacyPatientContactDetailsRepository();
 
@@ -44,26 +62,80 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
     expect(createPool).not.toHaveBeenCalled();
   });
 
-  it('updates both phone and email in a single SQL statement when enabled', async () => {
-    process.env.ALLOW_LEGACY_PATIENT_CONTACT_WRITE = 'true';
-    const query = jest
-      .fn()
-      .mockResolvedValueOnce([
-        { COLUMN_NAME: 'Teléfono' },
-        { COLUMN_NAME: 'Telefono Secundario' },
-        { COLUMN_NAME: 'email' },
-        { COLUMN_NAME: 'CorreoElectrónico' },
-        { COLUMN_NAME: 'confirmacion_telefono' },
-        { COLUMN_NAME: 'IdUsuario' },
-      ])
-      .mockResolvedValueOnce({ affectedRows: 1 });
-    const release = jest.fn();
-    const end = jest.fn().mockResolvedValue(undefined);
-    const getConnection = jest.fn().mockResolvedValue({ query, release });
+  it('updates phone verification timestamp without confirmacion_telefono', async () => {
+    const { repository, query, release, end } = buildEnabledRepository([
+      'Teléfono',
+      'Telefono Secundario',
+      'email',
+      'CorreoElectrónico',
+      'telefono_verificado_en',
+      'correo_verificado_en',
+      'IdUsuario',
+    ]);
 
-    createPool.mockReturnValue({ getConnection, end });
+    const result = await repository.updatePatientContactDetails({
+      patientId: 10,
+      mode: 'PHONE',
+      nextPrimaryPhone: '3014445566',
+    });
 
-    const repository = new MariadbLegacyPatientContactDetailsRepository();
+    expect(result).toBe('UPDATED');
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('telefono_verificado_en'),
+      expect.arrayContaining(['3014445566', 10]),
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.not.stringContaining('confirmacion_telefono'),
+      expect.any(Array),
+    );
+    expect(release).toHaveBeenCalledTimes(1);
+
+    await repository.onModuleDestroy();
+    expect(end).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates email verification timestamp without confirmacion_telefono', async () => {
+    const { repository, query } = buildEnabledRepository([
+      'Teléfono',
+      'Telefono Secundario',
+      'email',
+      'CorreoElectrónico',
+      'telefono_verificado_en',
+      'correo_verificado_en',
+      'IdUsuario',
+    ]);
+
+    const result = await repository.updatePatientContactDetails({
+      patientId: 10,
+      mode: 'EMAIL',
+      nextPrimaryEmail: 'nuevo@example.com',
+    });
+
+    expect(result).toBe('UPDATED');
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('correo_verificado_en'),
+      expect.arrayContaining(['nuevo@example.com', 10]),
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.not.stringContaining('confirmacion_telefono'),
+      expect.any(Array),
+    );
+  });
+
+  it('updates both verification timestamps in one SQL statement', async () => {
+    const { repository, query } = buildEnabledRepository([
+      'Teléfono',
+      'Telefono Secundario',
+      'email',
+      'CorreoElectrónico',
+      'telefono_verificado_en',
+      'correo_verificado_en',
+      'IdUsuario',
+    ]);
 
     const result = await repository.updatePatientContactDetails({
       patientId: 10,
@@ -75,20 +147,26 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
     });
 
     expect(result).toBe('UPDATED');
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE `usuarios` SET'),
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('telefono_verificado_en'),
       expect.arrayContaining([
         '3014445566',
         '3001234567',
         'nuevo@example.com',
         'anterior@example.com',
-        'ambos',
         10,
       ]),
     );
-    expect(release).toHaveBeenCalledTimes(1);
-
-    await repository.onModuleDestroy();
-    expect(end).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('correo_verificado_en'),
+      expect.any(Array),
+    );
+    expect(query).toHaveBeenNthCalledWith(
+      2,
+      expect.not.stringContaining('confirmacion_telefono'),
+      expect.any(Array),
+    );
   });
 });

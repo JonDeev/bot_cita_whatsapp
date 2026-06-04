@@ -18,6 +18,8 @@ describe('UpdatePatientContactDetailsUseCase', () => {
           secondLastName: null,
           primaryPhone: '3001234567',
           primaryEmail: 'daniel@example.com',
+          phoneVerifiedAtIso: null,
+          emailVerifiedAtIso: null,
         }),
       },
       dependencies?.updateRepository ?? {

@@ -75,9 +75,10 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
         consentResult.status === 'SKIPPED' ? consentResult.reason : null,
     });
 
-    const responseMessage = decision.granted
-      ? 'Gracias. Registramos tu autorizacion para enviarte notificaciones de citas y encuestas de satisfaccion por WhatsApp.'
-      : 'Gracias. Registramos que no autorizas notificaciones de citas ni encuestas de satisfaccion por WhatsApp.';
+    const responseMessage = this.buildResponseMessage({
+      granted: decision.granted,
+      persistenceStatus: consentResult.status,
+    });
 
     return {
       nextState: CONVERSATION_STATES.MAIN_MENU,
@@ -129,5 +130,20 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
     }
 
     return null;
+  }
+
+  private buildResponseMessage(input: {
+    granted: boolean;
+    persistenceStatus: 'RECORDED' | 'SKIPPED';
+  }): string {
+    if (input.persistenceStatus === 'SKIPPED') {
+      return 'Gracias por tu respuesta. Ya registramos tu preferencia para esta conversacion.';
+    }
+
+    if (input.granted) {
+      return 'Gracias. Registramos tu autorizacion para enviarte notificaciones de citas y encuestas de satisfaccion por WhatsApp.';
+    }
+
+    return 'Gracias. Registramos que no autorizas notificaciones de citas ni encuestas de satisfaccion por WhatsApp.';
   }
 }

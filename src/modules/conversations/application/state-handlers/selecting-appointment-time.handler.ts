@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AssignAppointmentSlotAfterTimeSelectionUseCase } from '../../../appointments/application/use-cases/assign-appointment-slot-after-time-selection.use-case';
 import { ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase } from '../../../appointments/application/use-cases/resolve-available-appointment-times-by-specialty-and-date.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { OfferedAppointmentTimeSessionContext } from '../../domain/entities/conversation-session-context.entity';
@@ -12,6 +13,7 @@ import { AppointmentDateListFactory } from '../services/appointment-date-list.fa
 import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
 import { AppointmentReschedulingTimeSelectionService } from '../services/appointment-rescheduling-time-selection.service';
 import { AppointmentTimeListFactory } from '../services/appointment-time-list.factory';
+import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import { parseAppointmentTimeOptionId } from '../services/appointment-time-option-id';
 import type {
   ConversationStateHandler,
@@ -28,9 +30,11 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     private readonly appointmentAssignmentConfirmationMessageFactory: AppointmentAssignmentConfirmationMessageFactory,
     private readonly appointmentAvailabilityMessageFactory: AppointmentAvailabilityMessageFactory,
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
+    private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly appointmentReschedulingTimeSelectionService: AppointmentReschedulingTimeSelectionService,
     private readonly resolveAvailableAppointmentTimesBySpecialtyAndDate: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     private readonly assignAppointmentSlotAfterTimeSelection: AssignAppointmentSlotAfterTimeSelectionUseCase,
+    private readonly resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     private readonly auditService: AuditService,
   ) {}
 
@@ -187,26 +191,43 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         usedFallbackSlot: assignmentResult.appointment.usedFallbackSlot,
       });
 
+      const shouldPromptOptInResult =
+        await this.resolveWhatsappAppointmentNotificationsOptInGate.execute({
+          patientId: session.context?.patientValidation?.patientId,
+          whatsappPhone: session.participantPhone,
+        });
+
+      await this.auditService.record('conversation.whatsapp_opt_in.gate', {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        status: shouldPromptOptInResult.status,
+        reason:
+          shouldPromptOptInResult.status === 'PROMPT_REQUIRED'
+            ? shouldPromptOptInResult.reason
+            : null,
+      });
+
+      const confirmationMessage = {
+        type: 'text' as const,
+        body: this.appointmentAssignmentConfirmationMessageFactory.buildBody(
+          assignmentResult.appointment,
+        ),
+      };
+
+      if (shouldPromptOptInResult.status === 'PROMPT_NOT_REQUIRED') {
+        return {
+          nextState: CONVERSATION_STATES.MAIN_MENU,
+          nextContext: this.buildPostBookingNextContext(session),
+          outboundMessages: [confirmationMessage, this.mainMenuListFactory.build()],
+        };
+      }
+
       return {
         nextState:
           CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
-        nextContext: {
-          ...session.context,
-          flowIntent: undefined,
-          contactVerification: undefined,
-          appointmentReschedule: undefined,
-          specialtySelection: undefined,
-          appointmentDoctorSelection: undefined,
-          appointmentDateSelection: undefined,
-          appointmentTimeSelection: undefined,
-        },
+        nextContext: this.buildPostBookingNextContext(session),
         outboundMessages: [
-          {
-            type: 'text',
-            body: this.appointmentAssignmentConfirmationMessageFactory.buildBody(
-              assignmentResult.appointment,
-            ),
-          },
+          confirmationMessage,
           this.appointmentNotificationOptInMessageFactory.build(),
         ],
       };
@@ -386,6 +407,19 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
         ],
       };
     }
+  }
+
+  private buildPostBookingNextContext(session: ConversationSession) {
+    return {
+      ...session.context,
+      flowIntent: undefined,
+      contactVerification: undefined,
+      appointmentReschedule: undefined,
+      specialtySelection: undefined,
+      appointmentDoctorSelection: undefined,
+      appointmentDateSelection: undefined,
+      appointmentTimeSelection: undefined,
+    };
   }
 
   private async rebuildTimeSelectionAfterSlotExhausted(

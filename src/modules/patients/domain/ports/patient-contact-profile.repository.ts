@@ -6,6 +6,8 @@ export interface PatientContactProfileRecord {
   secondLastName: string | null;
   primaryPhone: string | null;
   primaryEmail: string | null;
+  phoneVerifiedAtIso: string | null;
+  emailVerifiedAtIso: string | null;
 }
 
 export interface PatientContactProfileRepository {

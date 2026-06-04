@@ -9,9 +9,17 @@ import type {
   RecordWhatsappContactConsentCommand,
   WhatsappContactConsentRepository,
 } from '../../../domain/ports/whatsapp-contact-consent.repository';
+import type {
+  WhatsappContactConsentReaderRepository,
+  WhatsappContactConsentSnapshot,
+} from '../../../domain/ports/whatsapp-contact-consent-reader.repository';
 
 @Injectable()
-export class PrismaBotWhatsappContactConsentRepository implements WhatsappContactConsentRepository {
+export class PrismaBotWhatsappContactConsentRepository
+  implements
+    WhatsappContactConsentRepository,
+    WhatsappContactConsentReaderRepository
+{
   constructor(private readonly prismaBot: PrismaBotService) {}
 
   async recordConsent(
@@ -68,6 +76,46 @@ export class PrismaBotWhatsappContactConsentRepository implements WhatsappContac
         });
       }
     });
+  }
+
+  async findConsentByPatientAndPurpose(input: {
+    patientLegacyUserId: number;
+    channel: 'WHATSAPP';
+    purpose: 'APPOINTMENT_NOTIFICATIONS' | 'SATISFACTION_SURVEYS';
+  }): Promise<WhatsappContactConsentSnapshot | null> {
+    const channel = this.toChannel(input.channel);
+    const purpose = this.toPurpose(input.purpose);
+
+    const consent = await this.prismaBot.botPatientContactConsent.findUnique({
+      where: {
+        patientLegacyUserId_channel_purpose: {
+          patientLegacyUserId: input.patientLegacyUserId,
+          channel,
+          purpose,
+        },
+      },
+      select: {
+        patientLegacyUserId: true,
+        phone: true,
+        granted: true,
+        grantedAt: true,
+        revokedAt: true,
+      },
+    });
+
+    if (!consent) {
+      return null;
+    }
+
+    return {
+      patientLegacyUserId: consent.patientLegacyUserId,
+      phone: consent.phone,
+      channel: input.channel,
+      purpose: input.purpose,
+      granted: consent.granted,
+      grantedAtIso: consent.grantedAt ? consent.grantedAt.toISOString() : null,
+      revokedAtIso: consent.revokedAt ? consent.revokedAt.toISOString() : null,
+    };
   }
 
   private toChannel(value: string): BotContactChannel {

@@ -23,7 +23,7 @@ export class MariadbLegacyAppointmentReminderPatientContactRepository
     try {
       const result = await connection.query<{ affectedRows: number }>(
         `UPDATE \`usuarios\`
-         SET \`telefono_verificado_en\` = ?, \`confirmacion_telefono\` = 'CONFIRMADO'
+         SET \`telefono_verificado_en\` = ?
          WHERE \`IdUsuario\` = ?
          LIMIT 1`,
         [new Date(input.verifiedAtIso), input.patientLegacyUserId],
@@ -47,8 +47,7 @@ export class MariadbLegacyAppointmentReminderPatientContactRepository
       const result = await connection.query<{ affectedRows: number }>(
         `UPDATE \`usuarios\`
          SET \`Teléfono\` = NULL,
-             \`telefono_verificado_en\` = NULL,
-             \`confirmacion_telefono\` = 'SIN CONFIRMAR'
+             \`telefono_verificado_en\` = NULL
          WHERE \`IdUsuario\` = ?
          LIMIT 1`,
         [input.patientLegacyUserId],

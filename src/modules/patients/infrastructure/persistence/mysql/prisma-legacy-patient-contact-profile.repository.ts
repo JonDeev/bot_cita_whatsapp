@@ -22,6 +22,8 @@ export class PrismaLegacyPatientContactProfileRepository implements PatientConta
         Segundo_apellido: true,
         Tel_fono: true,
         email: true,
+        telefono_verificado_en: true,
+        correo_verificado_en: true,
       },
     });
 
@@ -37,6 +39,12 @@ export class PrismaLegacyPatientContactProfileRepository implements PatientConta
       secondLastName: patient.Segundo_apellido?.trim() || null,
       primaryPhone: patient.Tel_fono?.trim() || null,
       primaryEmail: patient.email?.trim() || null,
+      phoneVerifiedAtIso: patient.telefono_verificado_en
+        ? patient.telefono_verificado_en.toISOString()
+        : null,
+      emailVerifiedAtIso: patient.correo_verificado_en
+        ? patient.correo_verificado_en.toISOString()
+        : null,
     };
   }
 }

@@ -16,7 +16,8 @@ type ContactColumnLogicalName =
   | 'SECONDARY_PHONE'
   | 'PRIMARY_EMAIL'
   | 'SECONDARY_EMAIL'
-  | 'CONFIRMATION_FLAG';
+  | 'PHONE_VERIFIED_AT'
+  | 'EMAIL_VERIFIED_AT';
 
 const COLUMN_CANDIDATES: Record<ContactColumnLogicalName, string[]> = {
   PRIMARY_PHONE: ['Teléfono', 'Telefono', 'Tel_fono'],
@@ -27,7 +28,8 @@ const COLUMN_CANDIDATES: Record<ContactColumnLogicalName, string[]> = {
   ],
   PRIMARY_EMAIL: ['email'],
   SECONDARY_EMAIL: ['CorreoElectrónico', 'CorreoElectronico', 'CorreoElectr_nico'],
-  CONFIRMATION_FLAG: ['confirmacion_telefono'],
+  PHONE_VERIFIED_AT: ['telefono_verificado_en'],
+  EMAIL_VERIFIED_AT: ['correo_verificado_en'],
 };
 
 @Injectable()
@@ -137,10 +139,15 @@ export class MariadbLegacyPatientContactDetailsRepository
       availableColumns,
       COLUMN_CANDIDATES.SECONDARY_EMAIL,
     );
-    const confirmationFlagColumn = this.findExistingColumn(
+    const phoneVerifiedAtColumn = this.findExistingColumn(
       availableColumns,
-      COLUMN_CANDIDATES.CONFIRMATION_FLAG,
+      COLUMN_CANDIDATES.PHONE_VERIFIED_AT,
     );
+    const emailVerifiedAtColumn = this.findExistingColumn(
+      availableColumns,
+      COLUMN_CANDIDATES.EMAIL_VERIFIED_AT,
+    );
+    const verifiedAtIso = new Date().toISOString();
 
     if (command.nextPrimaryPhone) {
       if (!primaryPhoneColumn) {
@@ -180,28 +187,21 @@ export class MariadbLegacyPatientContactDetailsRepository
       });
     }
 
-    if (confirmationFlagColumn) {
+    if (command.nextPrimaryPhone && phoneVerifiedAtColumn) {
       assignments.push({
-        columnName: confirmationFlagColumn,
-        value: this.resolveConfirmationValue(command.mode),
+        columnName: phoneVerifiedAtColumn,
+        value: verifiedAtIso,
+      });
+    }
+
+    if (command.nextPrimaryEmail && emailVerifiedAtColumn) {
+      assignments.push({
+        columnName: emailVerifiedAtColumn,
+        value: verifiedAtIso,
       });
     }
 
     return assignments;
-  }
-
-  private resolveConfirmationValue(
-    mode: UpdatePatientContactDetailsCommand['mode'],
-  ): string {
-    if (mode === 'PHONE') {
-      return 'telefono';
-    }
-
-    if (mode === 'EMAIL') {
-      return 'correo';
-    }
-
-    return 'ambos';
   }
 
   private async resolveAvailableColumns(
