@@ -31,6 +31,25 @@ export interface AppointmentReminderTemplateDeliveryResult extends OutboundWhats
   deliveryMode: 'live' | 'mock';
 }
 
+interface AppointmentReminderOutboxQuickReplyButton {
+  index: string;
+  payload: string;
+}
+
+interface AppointmentReminderOutboxPayload {
+  kind: 'appointment_reminder_template';
+  dispatchId: number;
+  conversationKey: string;
+  recipientPhone: string;
+  templateName: string;
+  languageCode: string;
+  trigger: string;
+  bodyTextParameters: string[];
+  quickReplyButtons: AppointmentReminderOutboxQuickReplyButton[];
+  deliveryMode: 'live' | 'mock';
+  messageId: string | null;
+}
+
 @Injectable()
 export class AppointmentReminderTemplateDeliveryService {
   private readonly logger = new Logger(
@@ -201,7 +220,7 @@ export class AppointmentReminderTemplateDeliveryService {
     deliveryMode: 'live' | 'mock',
     messageId: string | null,
   ): Prisma.InputJsonValue {
-    return {
+    const payload: AppointmentReminderOutboxPayload = {
       kind: 'appointment_reminder_template',
       dispatchId: input.dispatchId,
       conversationKey: input.conversationKey,
@@ -214,6 +233,8 @@ export class AppointmentReminderTemplateDeliveryService {
       deliveryMode,
       messageId,
     };
+
+    return payload;
   }
 
   private async persistOutboundTemplateMessage(input: {
