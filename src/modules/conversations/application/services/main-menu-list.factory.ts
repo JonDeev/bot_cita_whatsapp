@@ -9,7 +9,7 @@ export class MainMenuListFactory {
       body: [
         '👋🏻 ¡Hola! Soy *ADRIANA*, tu asistente virtual de 🏥 *IPS SISM*.',
         '',
-        'Al continuar, aceptas nuestra Política de Tratamiento de Datos Personales 👉 https://www.sism.com.co/static/media/politica-tt-datos.74a2dad6.pdf',
+        'Al continuar, aceptas nuestra Política de Tratamiento de Datos Personales 👉 https://api-bot.sism.com.co/politica-privacidad.html',
         '',
         'Seleccione una opción en la lista ⬇️',
       ].join('\n'),

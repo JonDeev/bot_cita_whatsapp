@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import {
+  normalizePatientSexCode as normalizePatientSexCodeValue,
+  type PatientSexCode,
+} from '../../../../shared/domain/patient-sex-code';
 
 export interface ParsedWhatsappBirthDate {
   isoDate: string;
@@ -17,7 +21,7 @@ export class PatientIdentityInputNormalizerService {
 
   parseWhatsappBirthDate(rawValue: string): ParsedWhatsappBirthDate | null {
     const trimmed = rawValue.trim();
-    const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
+    const match = /^(\d{2})[-\/](\d{2})[-\/](\d{4})$/.exec(trimmed);
     if (!match) {
       return null;
     }
@@ -53,6 +57,12 @@ export class PatientIdentityInputNormalizerService {
       .padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 
     return { isoDate };
+  }
+
+  normalizePatientSexCode(
+    rawValue: string | null | undefined,
+  ): PatientSexCode | null {
+    return normalizePatientSexCodeValue(rawValue);
   }
 
   maskDocumentNumber(documentNumber: string): string {

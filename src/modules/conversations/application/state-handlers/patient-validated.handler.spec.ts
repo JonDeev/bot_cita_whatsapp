@@ -76,7 +76,7 @@ describe('PatientValidatedHandler', () => {
             patientId: 10,
             epsCode: 'EPS042',
             userType: '01',
-            sex: 'M',
+            sex: 'F',
           },
         },
         createdAt: '2026-05-04T10:00:00.000Z',

@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { PatientIdentityInputNormalizerService } from '../services/patient-identity-input-normalizer.service';
 import {
   CONTRACTED_EPS_REPOSITORY,
   PATIENT_VALIDATION_REPOSITORY,
@@ -17,7 +18,7 @@ export type ValidatePatientByDocumentAndBirthDateResult =
       patientId: number;
       epsCode: string;
       userType: string;
-      sex: 'H' | 'M';
+      sex: 'F' | 'M' | 'I';
     }
   | {
       isValid: false;
@@ -36,6 +37,7 @@ export class ValidatePatientByDocumentAndBirthDateUseCase {
     private readonly patientValidationRepository: PatientValidationRepository,
     @Inject(CONTRACTED_EPS_REPOSITORY)
     private readonly contractedEpsRepository: ContractedEpsRepository,
+    private readonly inputNormalizer: PatientIdentityInputNormalizerService,
   ) {}
 
   async execute(
@@ -62,8 +64,8 @@ export class ValidatePatientByDocumentAndBirthDateUseCase {
     }
 
     const userType = (patientRecord.userType ?? '').trim().toUpperCase();
-    const sex = (patientRecord.sex ?? '').trim().toUpperCase();
-    if (!userType || (sex !== 'H' && sex !== 'M')) {
+    const sex = this.inputNormalizer.normalizePatientSexCode(patientRecord.sex);
+    if (!userType || !sex) {
       return { isValid: false, reason: 'NOT_FOUND_OR_MISMATCH' };
     }
 

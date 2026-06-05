@@ -3,6 +3,7 @@ import { BotSexRule } from '@whatsapp-bot/prisma-client';
 import { Injectable } from '@nestjs/common';
 import { PrismaBotService } from '../../../../../shared/infrastructure/prisma-bot/prisma-bot.service';
 import { PrismaService } from '../../../../../shared/infrastructure/prisma/prisma.service';
+import type { PatientSexCode } from '../../../../../shared/domain/patient-sex-code';
 import type {
   EligibleSpecialtyRecord,
   PatientSpecialtyEligibilityFilters,
@@ -25,10 +26,7 @@ export class PrismaPatientSpecialtyEligibilityRepository implements PatientSpeci
         userTypeCode: filters.userType,
         isActive: true,
         sexRule: {
-          in: [
-            BotSexRule.ANY,
-            filters.sex === 'H' ? BotSexRule.H : BotSexRule.M,
-          ],
+          in: this.resolveSexRules(filters.sex),
         },
       },
       select: {
@@ -99,6 +97,20 @@ export class PrismaPatientSpecialtyEligibilityRepository implements PatientSpeci
     return eligibleSpecialties.sort((left, right) =>
       left.name.localeCompare(right.name, 'es'),
     );
+  }
+
+  private resolveSexRules(sex: PatientSexCode): BotSexRule[] {
+    // Legacy bot rules still use H/M, so we translate the API contract here.
+    switch (sex) {
+      case 'F':
+        return [BotSexRule.ANY, BotSexRule.M];
+      case 'M':
+        return [BotSexRule.ANY, BotSexRule.H];
+      case 'I':
+        return [BotSexRule.ANY];
+      default:
+        return [BotSexRule.ANY];
+    }
   }
 
   private buildDisplayName(rawName: string | null): string {

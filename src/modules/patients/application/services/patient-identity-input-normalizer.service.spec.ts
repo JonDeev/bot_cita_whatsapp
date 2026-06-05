@@ -12,4 +12,17 @@ describe('PatientIdentityInputNormalizerService', () => {
       isoDate: '1990-11-05',
     });
   });
+
+  it('parses DD/MM/YYYY dates into ISO format', () => {
+    expect(service.parseWhatsappBirthDate('05/11/1990')).toEqual({
+      isoDate: '1990-11-05',
+    });
+  });
+
+  it('normalizes patient sex codes F, M and I', () => {
+    expect(service.normalizePatientSexCode('f')).toBe('F');
+    expect(service.normalizePatientSexCode('M')).toBe('M');
+    expect(service.normalizePatientSexCode(' i ')).toBe('I');
+    expect(service.normalizePatientSexCode('H')).toBeNull();
+  });
 });

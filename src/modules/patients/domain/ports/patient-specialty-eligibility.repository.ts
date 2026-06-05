@@ -7,7 +7,7 @@ export interface EligibleSpecialtyRecord {
 export interface PatientSpecialtyEligibilityFilters {
   epsCode: string;
   userType: string;
-  sex: 'H' | 'M';
+  sex: 'F' | 'M' | 'I';
 }
 
 export interface PatientSpecialtyEligibilityRepository {

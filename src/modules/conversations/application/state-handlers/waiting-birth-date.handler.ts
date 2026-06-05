@@ -85,7 +85,7 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
         outboundMessages: [
           {
             type: 'text',
-            body: 'La fecha no tiene el formato esperado. Escribe tu fecha de nacimiento en DD-MM-YYYY.',
+            body: 'La fecha no tiene el formato esperado. Escribe tu fecha de nacimiento en DD-MM-YYYY o DD/MM/YYYY.',
           },
         ],
       };

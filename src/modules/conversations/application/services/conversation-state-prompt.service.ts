@@ -75,7 +75,7 @@ export class ConversationStatePromptService {
           outboundMessages: [
             {
               type: 'text',
-              body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY.',
+              body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY o DD/MM/YYYY.',
             },
           ],
         };

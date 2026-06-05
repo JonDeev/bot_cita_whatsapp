@@ -8,11 +8,12 @@ import type {
   EligibleSpecialtyRecord,
   PatientSpecialtyEligibilityRepository,
 } from '../../domain/ports/patient-specialty-eligibility.repository';
+import type { PatientSexCode } from '../../../../shared/domain/patient-sex-code';
 
 export interface ResolveEligibleSpecialtiesByPatientInput {
   epsCode: string;
   userType: string;
-  sex: string;
+  sex: PatientSexCode;
 }
 
 export type ResolveEligibleSpecialtiesByPatientFailureReason =
@@ -44,9 +45,9 @@ export class ResolveEligibleSpecialtiesByPatientUseCase {
   ): Promise<ResolveEligibleSpecialtiesByPatientResult> {
     const epsCode = input.epsCode.trim().toUpperCase();
     const userType = input.userType.trim().toUpperCase();
-    const sex = input.sex.trim().toUpperCase();
+    const sex = input.sex;
 
-    if (!epsCode || !userType || (sex !== 'H' && sex !== 'M')) {
+    if (!epsCode || !userType) {
       return { isEligible: false, reason: 'INVALID_PATIENT_PROFILE' };
     }
 

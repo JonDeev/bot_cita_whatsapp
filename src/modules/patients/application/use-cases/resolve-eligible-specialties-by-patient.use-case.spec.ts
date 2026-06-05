@@ -21,7 +21,7 @@ describe('ResolveEligibleSpecialtiesByPatientUseCase', () => {
     const result = await useCase.execute({
       epsCode: 'eps042',
       userType: '01',
-      sex: 'm',
+      sex: 'F',
     });
 
     expect(result).toEqual({
@@ -48,7 +48,7 @@ describe('ResolveEligibleSpecialtiesByPatientUseCase', () => {
     const result = await useCase.execute({
       epsCode: 'EPS042',
       userType: '04',
-      sex: 'H',
+      sex: 'I',
     });
 
     expect(result).toEqual({

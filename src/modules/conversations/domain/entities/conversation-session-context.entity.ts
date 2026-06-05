@@ -1,3 +1,5 @@
+import type { PatientSexCode } from '../../../../shared/domain/patient-sex-code';
+
 export interface PatientValidationSessionContext {
   failedAttempts: number;
   documentNumber?: string;
@@ -5,7 +7,7 @@ export interface PatientValidationSessionContext {
   patientId?: number;
   epsCode?: string;
   userType?: string;
-  sex?: 'H' | 'M';
+  sex?: PatientSexCode;
 }
 
 export type ConversationFlowIntent =

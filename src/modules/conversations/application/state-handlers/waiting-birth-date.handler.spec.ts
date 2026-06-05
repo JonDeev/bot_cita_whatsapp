@@ -13,7 +13,7 @@ describe('WaitingBirthDateHandler', () => {
           patientId: 10,
           epsCode: 'EPS042',
           userType: '01',
-          sex: 'M',
+          sex: 'F',
         }),
       } as unknown as ValidatePatientByDocumentAndBirthDateUseCase,
       {
