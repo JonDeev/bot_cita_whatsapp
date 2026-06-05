@@ -26,7 +26,7 @@ Incluye:
 - Envio de plantilla `Utility` con botones para verificar telefono.
 - Uso de `usuarios.telefono_verificado_en` como fuente oficial de verificacion telefonica.
 - Uso de `bot_patient_contact_consents` como fuente oficial de opt-in para notificaciones de cita.
-- Limpieza de `usuarios.Tel_fono` (mapeado a columna legacy `Teléfono`) cuando la respuesta sea `No lo conozco`.
+- Limpieza de `usuarios.Tel_fono` (mapeado a columna legacy `Teléfono`) cuando la respuesta sea `No lo reconozco`.
 - Auditoria, idempotencia, reintentos y control anti-duplicado.
 - Idempotencia inbound para reentregas de webhook de Meta.
 - Recuperacion de locks huerfanos para evitar despachos atascados.
@@ -48,17 +48,21 @@ No incluye:
 4. La verificacion oficial del numero sera `usuarios.telefono_verificado_en`.
 5. El opt-in oficial para recordatorios sera el consentimiento en base bot con finalidad `APPOINTMENT_NOTIFICATIONS`.
 6. Los mensajes iniciales proactivos de recordatorio y de verificacion se enviaran con plantillas aprobadas por Meta categoria `Utility`.
-7. Si el telefono no esta verificado, no se enviaran datos de la cita hasta obtener confirmacion.
-8. Si el paciente responde `No lo conozco`, el sistema limpiara `usuarios.Tel_fono`, dejara `usuarios.telefono_verificado_en = NULL` y registrara supresion de contacto.
-9. Si el paciente confirma el telefono despues de la verificacion, el sistema podra enviar el recordatorio solo si faltan al menos 3 horas para la cita.
-10. Si faltan menos de 3 horas para la cita al momento de la confirmacion, no se enviara el recordatorio y el despacho quedara marcado como omitido por confirmacion tardia.
-11. La modalidad se seguira resolviendo con la regla actual del proyecto:
+7. La plantilla de recordatorio aprobada es `recordatorio_cita_24h` con `language_code = es_CO`.
+8. La plantilla de verificacion aprobada es `verificacion_telefono_paciente` con `language_code = es_CO`, botones `Confirmar` y `No lo reconozco`, y `message_validity_period = 12 horas` configurado en Meta.
+9. El parametro `{{1}}` de `verificacion_telefono_paciente` sera `patientShortName`, construido como `usuarios.Primer_nombre + usuarios.Primer_apellido`, normalizado con `trim`.
+10. Si el telefono no esta verificado, no se enviaran datos de la cita hasta obtener confirmacion.
+11. Si el paciente responde `No lo reconozco`, el sistema limpiara `usuarios.Tel_fono`, dejara `usuarios.telefono_verificado_en = NULL` y registrara supresion de contacto.
+12. Si el paciente confirma el telefono despues de la verificacion, el sistema podra enviar el recordatorio solo si faltan al menos 3 horas para la cita.
+13. Si faltan menos de 3 horas para la cita al momento de la confirmacion, no se enviara el recordatorio y el despacho quedara marcado como omitido por confirmacion tardia.
+14. La vigencia operativa de la verificacion seguira ligada a la ventana de la cita; la validez de 12 horas configurada en Meta no extiende la ventana de negocio del backend.
+15. La modalidad se seguira resolviendo con la regla actual del proyecto:
     - `IdModalidad = 0` => `PRESENCIAL`
     - `IdModalidad != 0` => valor vacio hasta definir catalogo real
-12. La ciudad y direccion de la cita se resolveran desde la informacion de sede usada por las consultas de agenda.
-13. Si la conversacion esta en `HUMAN_HANDOFF`, el sistema no enviara recordatorios automaticos ni verificaciones automaticas; el despacho se marcara como `SKIPPED_HANDOFF_ACTIVE`.
-14. El backend bot sera la fuente de verdad del despacho; las columnas legacy solo se usaran como apoyo operativo.
-15. El despacho de recordatorios sera principalmente orientado a eventos (`delayed jobs`) con barrido de recuperacion periodico, para evitar escaneos intensivos cada minuto.
+16. La ciudad y direccion de la cita se resolveran desde la informacion de sede usada por las consultas de agenda.
+17. Si la conversacion esta en `HUMAN_HANDOFF`, el sistema no enviara recordatorios automaticos ni verificaciones automaticas; el despacho se marcara como `SKIPPED_HANDOFF_ACTIVE`.
+18. El backend bot sera la fuente de verdad del despacho; las columnas legacy solo se usaran como apoyo operativo.
+19. El despacho de recordatorios sera principalmente orientado a eventos (`delayed jobs`) con barrido de recuperacion periodico, para evitar escaneos intensivos cada minuto.
 
 ## Modelo operativo recomendado
 
@@ -313,6 +317,8 @@ Si `usuarios.telefono_verificado_en IS NULL`:
 
 - no se envia el recordatorio clinico
 - se envia la plantilla de verificacion
+- la ventana operativa de respuesta se controla con `verification_expires_at = appointment_starts_at - 3 horas`
+- la `message_validity_period = 12 horas` de Meta no reemplaza esa regla de negocio
 
 ### Regla de confirmacion tardia
 
@@ -323,9 +329,12 @@ Si el paciente confirma el numero despues de haber recibido la plantilla de veri
 
 ### Regla de privacidad
 
+La plantilla de verificacion puede incluir unicamente:
+
+- `patientShortName = trim(usuarios.Primer_nombre + " " + usuarios.Primer_apellido)`
+
 La plantilla de verificacion no debe incluir:
 
-- nombre del paciente
 - fecha de la cita
 - especialidad
 - profesional
@@ -384,9 +393,9 @@ Esto mantiene consistencia con la regla general del proyecto: cuando `HUMAN_HAND
 10. Si faltan `>= 3 horas`, envia el recordatorio y marca `SENT`.
 11. Si faltan `< 3 horas`, marca `SKIPPED_LATE_CONFIRMATION`.
 
-### Flujo `No lo conozco`
+### Flujo `No lo reconozco`
 
-1. El webhook recibe el boton `No lo conozco`.
+1. El webhook recibe el boton `No lo reconozco`.
 2. El sistema valida idempotencia inbound usando `meta_message_id` inbound + `button_payload_id`.
 3. El sistema resuelve el despacho por token firmado y valida remitente.
 4. Si el evento inbound ya fue procesado, responde idempotente sin repetir cambios.
@@ -451,10 +460,28 @@ Tipo:
 Template con botones de respuesta rapida
 ```
 
+Idioma:
+
+```txt
+es_CO
+```
+
+Variable de cuerpo:
+
+```txt
+{{1}} = patientShortName
+patientShortName = trim(usuarios.Primer_nombre + " " + usuarios.Primer_apellido)
+```
+
 Botones:
 
-- `Confirmar`
-- `No lo conozco`
+- `button index 0 = Confirmar`
+- `button index 1 = No lo reconozco`
+
+Vigencia:
+
+- `message_validity_period = 12 horas` en Meta
+- la vigencia operativa real sigue controlada por `verification_expires_at`
 
 Requisito de correlacion:
 
@@ -471,8 +498,8 @@ Antes de habilitar el envio real se debe confirmar:
 - numero y WABA activos
 - metodo de pago activo
 - webhook activo para mensajes y estados
-- plantilla `recordatorio_cita_24h` aprobada
-- plantilla `verificacion_telefono_paciente` aprobada
+- plantilla `recordatorio_cita_24h` aprobada con `language_code = es_CO`
+- plantilla `verificacion_telefono_paciente` aprobada con `language_code = es_CO`
 
 ### Regla financiera
 
@@ -675,7 +702,7 @@ Todos deben auditarse con mensaje controlado y sin exponer datos sensibles.
 - limpieza de `usuarios.Tel_fono`
 - creacion de supresion `UNKNOWN_PERSON`
 - reentrega de webhook `Confirmar` no duplica transiciones
-- reentrega de webhook `No lo conozco` no duplica limpieza/supresion
+- reentrega de webhook `No lo reconozco` no duplica limpieza/supresion
 - recuperacion de lock expirado permite continuar procesamiento
 
 ### E2E
@@ -684,7 +711,7 @@ Todos deben auditarse con mensaje controlado y sin exponer datos sensibles.
 - cita asignada con telefono no verificado -> envio de verificacion
 - confirmacion con mas de 3 horas -> envio posterior del recordatorio
 - confirmacion con menos de 3 horas -> no envio
-- respuesta `No lo conozco` -> limpieza y supresion
+- respuesta `No lo reconozco` -> limpieza y supresion
 - reprogramacion -> nuevo despacho correcto
 - cron retrasado -> no se pierde recordatorio
 - doble worker -> no duplica envio
@@ -762,7 +789,7 @@ Mitigacion:
 4. No se envian datos de cita a numeros con `usuarios.telefono_verificado_en = NULL`.
 5. La verificacion usa plantilla `Utility` aprobada con botones.
 6. `Confirmar` actualiza `usuarios.telefono_verificado_en` con hora actual Colombia.
-7. `No lo conozco` limpia `usuarios.Tel_fono` y registra supresion de contacto.
+7. `No lo reconozco` limpia `usuarios.Tel_fono` y registra supresion de contacto.
 8. Si la confirmacion llega con al menos 3 horas de anticipacion, el recordatorio se envia.
 9. Si la confirmacion llega con menos de 3 horas de anticipacion, el recordatorio no se envia.
 10. El opt-in se valida en base bot con finalidad `APPOINTMENT_NOTIFICATIONS`.

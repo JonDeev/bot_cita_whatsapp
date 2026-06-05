@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
+export const APPOINTMENT_REMINDER_SEND_MODES = {
+  LIVE: 'live',
+  MOCK: 'mock',
+} as const;
+
+export type AppointmentReminderSendMode =
+  (typeof APPOINTMENT_REMINDER_SEND_MODES)[keyof typeof APPOINTMENT_REMINDER_SEND_MODES];
+
 @Injectable()
 export class AppointmentReminderDispatchConfigService {
   isSyncSchedulerEnabled(): boolean {
@@ -101,6 +109,45 @@ export class AppointmentReminderDispatchConfigService {
     );
   }
 
+  getSendMode(): AppointmentReminderSendMode {
+    const value = (process.env.APPOINTMENT_REMINDERS_SEND_MODE ?? '')
+      .trim()
+      .toLowerCase();
+
+    if (value === APPOINTMENT_REMINDER_SEND_MODES.MOCK) {
+      return APPOINTMENT_REMINDER_SEND_MODES.MOCK;
+    }
+
+    return APPOINTMENT_REMINDER_SEND_MODES.LIVE;
+  }
+
+  isMockSendMode(): boolean {
+    return this.getSendMode() === APPOINTMENT_REMINDER_SEND_MODES.MOCK;
+  }
+
+  getSendRolloutPercent(): number {
+    return this.readIntRangeEnv(
+      'APPOINTMENT_REMINDERS_SEND_ROLLOUT_PERCENT',
+      100,
+      0,
+      100,
+    );
+  }
+
+  isWithinReminderSendRollout(patientLegacyUserId: number): boolean {
+    const rolloutPercent = this.getSendRolloutPercent();
+    if (rolloutPercent >= 100) {
+      return true;
+    }
+
+    if (rolloutPercent <= 0) {
+      return false;
+    }
+
+    const cohortBucket = Math.abs(Math.trunc(patientLegacyUserId)) % 100;
+    return cohortBucket < rolloutPercent;
+  }
+
   getTimezone(): string {
     const value = (process.env.APPOINTMENT_REMINDERS_TIMEZONE ?? '').trim();
     return value || 'America/Bogota';
@@ -123,6 +170,25 @@ export class AppointmentReminderDispatchConfigService {
 
     const parsed = Number.parseInt(raw, 10);
     if (!Number.isInteger(parsed) || parsed <= 0) {
+      return fallback;
+    }
+
+    return parsed;
+  }
+
+  private readIntRangeEnv(
+    key: string,
+    fallback: number,
+    minimum: number,
+    maximum: number,
+  ): number {
+    const raw = (process.env[key] ?? '').trim();
+    if (!raw) {
+      return fallback;
+    }
+
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
       return fallback;
     }
 

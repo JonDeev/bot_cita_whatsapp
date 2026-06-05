@@ -155,12 +155,19 @@ export interface AppointmentReminderDispatchRepository {
     metaMessageId: string;
     sentAtIso: string;
   }): Promise<boolean>;
+  markPostVerificationSentAfterUncertainOwnership(input: {
+    dispatchId: number;
+    metaMessageId: string;
+    sentAtIso: string;
+  }): Promise<boolean>;
   markPostVerificationSkipped(input: {
     dispatchId: number;
     status:
       | 'SKIPPED_LATE_CONFIRMATION'
       | 'SKIPPED_SUPPRESSED_CONTACT'
-      | 'SKIPPED_APPOINTMENT_CANCELLED';
+      | 'SKIPPED_APPOINTMENT_CANCELLED'
+      | 'SKIPPED_HANDOFF_ACTIVE'
+      | 'SKIPPED_NO_OPT_IN';
     reason?: string;
   }): Promise<boolean>;
   findById(

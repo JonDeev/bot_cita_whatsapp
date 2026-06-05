@@ -77,6 +77,8 @@ Rules to enforce:
 - eligibility uses `agenda.Estado = 'Asignada'`
 - source phone uses `usuarios.Tel_fono` (`@map("Teléfono")`)
 - verification gate uses `usuarios.telefono_verificado_en`
+- verification template `verificacion_telefono_paciente` sends `{{1}} = patientShortName`
+- `patientShortName` is built as `trim(usuarios.Primer_nombre + ' ' + usuarios.Primer_apellido)`
 - no clinical reminder content if phone is not verified
 - handoff gate blocks automatic sends (`SKIPPED_HANDOFF_ACTIVE`)
 - confirmation rule: send only if `appointment_starts_at - now >= 3h`
@@ -145,7 +147,7 @@ Deliverables:
 Button flows:
 
 - `Confirmar`: set `usuarios.telefono_verificado_en`, then send reminder if >=3h
-- `No lo conozco`: clear `usuarios.Tel_fono`, keep verification null, create suppression
+- `No lo reconozco`: clear `usuarios.Tel_fono`, keep verification null, create suppression
 
 Exit criteria:
 
@@ -162,6 +164,7 @@ Deliverables:
 Rules:
 
 - `verification_expires_at = appointment_starts_at - 3h`
+- Meta `message_validity_period = 12 hours` does not extend backend business validity
 - after expiry, no automatic clinical reminder send
 
 Exit criteria:

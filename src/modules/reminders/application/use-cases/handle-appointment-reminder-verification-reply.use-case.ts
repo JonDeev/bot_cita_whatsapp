@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../../../audit/application/services/audit.service';
-import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
 import {
   APPOINTMENT_REMINDER_DISPATCH_REPOSITORY,
   APPOINTMENT_REMINDER_ELIGIBILITY_REPOSITORY,
@@ -15,6 +14,7 @@ import { AppointmentReminderButtonTokenService } from '../services/appointment-r
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
+import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 
 export interface HandleAppointmentReminderVerificationReplyInput {
@@ -44,7 +44,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     private readonly windowService: AppointmentReminderWindowService,
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
-    private readonly sendWhatsappTemplateMessage: SendWhatsappTemplateMessageUseCase,
+    private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -142,6 +142,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       id: number;
       legacyAgendaId: number;
       patientLegacyUserId: number;
+      conversationKey: string | null;
       recipientPhoneRaw: string;
       recipientPhoneE164: string | null;
       appointmentStartsAtIso: string;
@@ -160,10 +161,20 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
         phone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
       });
     if (hasSuppression) {
-      await this.dispatchRepository.markPostVerificationSkipped({
-        dispatchId: dispatch.id,
-        status: 'SKIPPED_SUPPRESSED_CONTACT',
-      });
+      const markedSkipped =
+        await this.dispatchRepository.markPostVerificationSkipped({
+          dispatchId: dispatch.id,
+          status: 'SKIPPED_SUPPRESSED_CONTACT',
+        });
+      if (!markedSkipped) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            skipStatus: 'SKIPPED_SUPPRESSED_CONTACT',
+          },
+        );
+      }
       await this.dispatchRepository.markInboundDedupProcessed({
         provider: 'META_WHATSAPP',
         inboundMessageId: input.inboundMessageId,
@@ -181,10 +192,20 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     });
 
     if (!canStillSend) {
-      await this.dispatchRepository.markPostVerificationSkipped({
-        dispatchId: dispatch.id,
-        status: 'SKIPPED_LATE_CONFIRMATION',
-      });
+      const markedSkipped =
+        await this.dispatchRepository.markPostVerificationSkipped({
+          dispatchId: dispatch.id,
+          status: 'SKIPPED_LATE_CONFIRMATION',
+        });
+      if (!markedSkipped) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            skipStatus: 'SKIPPED_LATE_CONFIRMATION',
+          },
+        );
+      }
       await this.auditService.record(
         'appointment_reminder.dispatch.skipped_late_confirmation',
         {
@@ -208,10 +229,20 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     )[0];
 
     if (!latestAppointment || latestAppointment.legacyState !== 'Asignada') {
-      await this.dispatchRepository.markPostVerificationSkipped({
-        dispatchId: dispatch.id,
-        status: 'SKIPPED_APPOINTMENT_CANCELLED',
-      });
+      const markedSkipped =
+        await this.dispatchRepository.markPostVerificationSkipped({
+          dispatchId: dispatch.id,
+          status: 'SKIPPED_APPOINTMENT_CANCELLED',
+        });
+      if (!markedSkipped) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            skipStatus: 'SKIPPED_APPOINTMENT_CANCELLED',
+          },
+        );
+      }
       await this.dispatchRepository.markInboundDedupProcessed({
         provider: 'META_WHATSAPP',
         inboundMessageId: input.inboundMessageId,
@@ -222,14 +253,84 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       return;
     }
 
-    const recipientPhone =
-      dispatch.recipientPhoneE164 ??
-      this.phoneNormalizer.toE164Colombia(
-        this.phoneNormalizer.normalizeLegacyPhone(dispatch.recipientPhoneRaw) ??
-          dispatch.recipientPhoneRaw,
+    const conversationKey = this.resolveConversationKey(dispatch);
+    const hasHandOffActive =
+      await this.recipientPolicyRepository.isHumanHandoffActive({
+        conversationKey,
+      });
+    if (hasHandOffActive) {
+      const markedSkipped =
+        await this.dispatchRepository.markPostVerificationSkipped({
+          dispatchId: dispatch.id,
+          status: 'SKIPPED_HANDOFF_ACTIVE',
+        });
+      if (!markedSkipped) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            skipStatus: 'SKIPPED_HANDOFF_ACTIVE',
+          },
+        );
+      }
+      await this.auditService.record(
+        'appointment_reminder.phone_confirmed_handoff_active',
+        {
+          dispatchId: dispatch.id,
+        },
       );
+      await this.dispatchRepository.markInboundDedupProcessed({
+        provider: 'META_WHATSAPP',
+        inboundMessageId: input.inboundMessageId,
+        buttonPayloadId: input.interactiveReplyId,
+        processedAtIso: input.receivedAtIso,
+        resultStatus: 'PROCESSED_HANDOFF_ACTIVE',
+      });
+      return;
+    }
 
-    const sendResult = await this.sendWhatsappTemplateMessage.execute({
+    const hasOptIn =
+      await this.recipientPolicyRepository.hasAppointmentNotificationsOptIn({
+        patientLegacyUserId: dispatch.patientLegacyUserId,
+      });
+    if (!hasOptIn) {
+      const markedSkipped =
+        await this.dispatchRepository.markPostVerificationSkipped({
+          dispatchId: dispatch.id,
+          status: 'SKIPPED_NO_OPT_IN',
+        });
+      if (!markedSkipped) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            skipStatus: 'SKIPPED_NO_OPT_IN',
+          },
+        );
+      }
+      await this.auditService.record(
+        'appointment_reminder.phone_confirmed_no_opt_in',
+        {
+          dispatchId: dispatch.id,
+        },
+      );
+      await this.dispatchRepository.markInboundDedupProcessed({
+        provider: 'META_WHATSAPP',
+        inboundMessageId: input.inboundMessageId,
+        buttonPayloadId: input.interactiveReplyId,
+        processedAtIso: input.receivedAtIso,
+        resultStatus: 'PROCESSED_NO_OPT_IN',
+      });
+      return;
+    }
+
+    const recipientPhone =
+      dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw;
+
+    const sendResult = await this.templateDeliveryService.send({
+      conversationKey,
+      dispatchId: dispatch.id,
+      patientLegacyUserId: dispatch.patientLegacyUserId,
       to: recipientPhone,
       templateName: dispatch.templateName,
       languageCode: this.templateConfig.getTemplateLanguageCode(),
@@ -237,11 +338,38 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       trigger: 'appointment_reminder.phone_confirmed',
     });
 
-    await this.dispatchRepository.markPostVerificationSent({
+    const markedSent = await this.dispatchRepository.markPostVerificationSent({
       dispatchId: dispatch.id,
       metaMessageId: sendResult.messageId,
       sentAtIso: input.receivedAtIso,
     });
+    if (!markedSent) {
+      const compensated =
+        await this.dispatchRepository.markPostVerificationSentAfterUncertainOwnership(
+          {
+            dispatchId: dispatch.id,
+            metaMessageId: sendResult.messageId,
+            sentAtIso: input.receivedAtIso,
+          },
+        );
+      if (compensated) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_compensated',
+          {
+            dispatchId: dispatch.id,
+            messageId: sendResult.messageId,
+          },
+        );
+      } else {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            messageId: sendResult.messageId,
+          },
+        );
+      }
+    }
 
     await this.auditService.record('appointment_reminder.phone_confirmed', {
       dispatchId: dispatch.id,
@@ -255,6 +383,26 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       processedAtIso: input.receivedAtIso,
       resultStatus: 'PROCESSED_CONFIRMED',
     });
+  }
+
+  private resolveConversationKey(dispatch: {
+    conversationKey: string | null;
+    recipientPhoneE164: string | null;
+    recipientPhoneRaw: string;
+  }): string {
+    if (dispatch.conversationKey?.trim()) {
+      return dispatch.conversationKey;
+    }
+
+    const phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim();
+    const recipientPhone =
+      dispatch.recipientPhoneE164 ??
+      this.phoneNormalizer.toE164Colombia(
+        this.phoneNormalizer.normalizeLegacyPhone(dispatch.recipientPhoneRaw) ??
+          dispatch.recipientPhoneRaw,
+      );
+
+    return `whatsapp:${phoneNumberId || 'unknown'}:${recipientPhone}`;
   }
 
   private async processReject(
@@ -276,11 +424,20 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       notes: 'Patient rejected phone ownership via reminder verification.',
     });
 
-    await this.dispatchRepository.markPostVerificationSkipped({
-      dispatchId: dispatch.id,
-      status: 'SKIPPED_SUPPRESSED_CONTACT',
-      reason: 'UNKNOWN_PERSON',
-    });
+    const markedSkipped =
+      await this.dispatchRepository.markPostVerificationSkipped({
+        dispatchId: dispatch.id,
+        status: 'SKIPPED_SUPPRESSED_CONTACT',
+        reason: 'UNKNOWN_PERSON',
+      });
+    if (!markedSkipped) {
+      await this.auditService.record(
+        'appointment_reminder.phone_rejected_state_lost',
+        {
+          dispatchId: dispatch.id,
+        },
+      );
+    }
 
     await this.auditService.record(
       'appointment_reminder.phone_rejected_unknown_person',

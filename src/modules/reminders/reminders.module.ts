@@ -1,5 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { ConversationsModule } from '../conversations/conversations.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
@@ -17,16 +18,19 @@ import { AppointmentReminderDispatchConfigService } from './application/services
 import { AppointmentReminderMetricsAccessConfigService } from './application/services/appointment-reminder-metrics-access-config.service';
 import { AppointmentReminderPhoneNormalizerService } from './application/services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from './application/services/appointment-reminder-template-config.service';
+import { AppointmentReminderTemplateDeliveryService } from './application/services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from './application/services/appointment-reminder-window.service';
 import {
   APPOINTMENT_REMINDER_DISPATCH_REPOSITORY,
   APPOINTMENT_REMINDER_ELIGIBILITY_REPOSITORY,
   APPOINTMENT_REMINDER_METRICS_REPOSITORY,
+  APPOINTMENT_REMINDER_OUTBOX_REPOSITORY,
   APPOINTMENT_REMINDER_PATIENT_CONTACT_REPOSITORY,
   APPOINTMENT_REMINDER_RECIPIENT_POLICY_REPOSITORY,
 } from './domain/reminders.tokens';
 import { MariadbLegacyAppointmentReminderPatientContactRepository } from './infrastructure/persistence/mysql/mariadb-legacy-appointment-reminder-patient-contact.repository';
 import { PrismaBotAppointmentReminderDispatchRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-dispatch.repository';
+import { PrismaBotAppointmentReminderOutboxRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-outbox.repository';
 import { PrismaBotAppointmentReminderMetricsRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-metrics.repository';
 import { PrismaBotAppointmentReminderRecipientPolicyRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-recipient-policy.repository';
 import { PrismaLegacyAppointmentReminderEligibilityRepository } from './infrastructure/persistence/mysql/prisma-legacy-appointment-reminder-eligibility.repository';
@@ -40,6 +44,7 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
 @Module({
   imports: [
     AuditModule,
+    ConversationsModule,
     PrismaModule,
     PrismaBotModule,
     forwardRef(() => WhatsappModule),
@@ -51,7 +56,9 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     AppointmentReminderMetricsAccessConfigService,
     AppointmentReminderPhoneNormalizerService,
     AppointmentReminderTemplateConfigService,
+    AppointmentReminderTemplateDeliveryService,
     AppointmentReminderWindowService,
+    PrismaBotAppointmentReminderOutboxRepository,
     CreateOrRefreshAppointmentReminderDispatchesUseCase,
     DispatchDueAppointmentRemindersUseCase,
     HandleAppointmentReminderVerificationReplyUseCase,
@@ -83,6 +90,10 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     {
       provide: APPOINTMENT_REMINDER_METRICS_REPOSITORY,
       useClass: PrismaBotAppointmentReminderMetricsRepository,
+    },
+    {
+      provide: APPOINTMENT_REMINDER_OUTBOX_REPOSITORY,
+      useClass: PrismaBotAppointmentReminderOutboxRepository,
     },
     {
       provide: APPOINTMENT_REMINDER_DISPATCH_QUEUE,

@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AuditService } from '../../../audit/application/services/audit.service';
-import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
 import { APPOINTMENT_REMINDER_DISPATCH_QUEUE } from '../../domain/reminder-queue.tokens';
 import {
   APPOINTMENT_REMINDER_DISPATCH_REPOSITORY,
@@ -18,6 +17,7 @@ import { AppointmentReminderButtonTokenService } from '../services/appointment-r
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
+import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 
 export interface DispatchDueAppointmentRemindersResult {
@@ -54,7 +54,7 @@ export class DispatchDueAppointmentRemindersUseCase {
     private readonly windowService: AppointmentReminderWindowService,
     private readonly buttonTokenService: AppointmentReminderButtonTokenService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
-    private readonly sendWhatsappTemplateMessage: SendWhatsappTemplateMessageUseCase,
+    private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -162,7 +162,10 @@ export class DispatchDueAppointmentRemindersUseCase {
             dispatch,
             workerId,
             send: () =>
-              this.sendWhatsappTemplateMessage.execute({
+              this.templateDeliveryService.send({
+                conversationKey: this.resolveConversationKey(dispatch),
+                dispatchId: dispatch.id,
+                patientLegacyUserId: dispatch.patientLegacyUserId,
                 to: dispatch.recipientPhoneE164!,
                 templateName: dispatch.templateName,
                 languageCode: this.templateConfig.getTemplateLanguageCode(),
@@ -242,10 +245,15 @@ export class DispatchDueAppointmentRemindersUseCase {
           dispatch,
           workerId,
           send: () =>
-            this.sendWhatsappTemplateMessage.execute({
+            this.templateDeliveryService.send({
+              conversationKey: this.resolveConversationKey(dispatch),
+              dispatchId: dispatch.id,
+              patientLegacyUserId: dispatch.patientLegacyUserId,
               to: dispatch.recipientPhoneE164!,
               templateName: dispatch.verificationTemplateName,
               languageCode: this.templateConfig.getTemplateLanguageCode(),
+              bodyTextParameters:
+                this.buildVerificationBodyParameters(appointment),
               quickReplyButtons: [
                 {
                   index: '0',
@@ -439,6 +447,36 @@ export class DispatchDueAppointmentRemindersUseCase {
       input.siteAddress ?? '',
       input.doctorName ?? '',
     ];
+  }
+
+  private buildVerificationBodyParameters(input: {
+    patientFirstName: string;
+    patientLastName: string;
+  }): string[] {
+    const patientShortName =
+      `${input.patientFirstName} ${input.patientLastName}`.trim();
+
+    return [patientShortName || 'Paciente'];
+  }
+
+  private resolveConversationKey(dispatch: {
+    conversationKey: string | null;
+    recipientPhoneE164: string | null;
+    recipientPhoneRaw: string;
+  }): string {
+    if (dispatch.conversationKey?.trim()) {
+      return dispatch.conversationKey;
+    }
+
+    const phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim();
+    const recipientPhone =
+      dispatch.recipientPhoneE164 ??
+      this.phoneNormalizer.toE164Colombia(
+        this.phoneNormalizer.normalizeLegacyPhone(dispatch.recipientPhoneRaw) ??
+          dispatch.recipientPhoneRaw,
+      );
+
+    return `whatsapp:${phoneNumberId || 'unknown'}:${recipientPhone}`;
   }
 
   private async sendWithLeaseHeartbeat<T>(input: {

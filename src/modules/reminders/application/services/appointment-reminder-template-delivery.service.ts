@@ -1,0 +1,257 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@whatsapp-bot/prisma-client';
+import { AuditService } from '../../../audit/application/services/audit.service';
+import { CONVERSATION_MESSAGE_REPOSITORY } from '../../../conversations/domain/conversations.tokens';
+import type { ConversationMessageRepository } from '../../../conversations/domain/ports/conversation-message.repository';
+import { APPOINTMENT_REMINDER_OUTBOX_REPOSITORY } from '../../domain/reminders.tokens';
+import type { AppointmentReminderOutboxRepository } from '../../domain/ports/appointment-reminder-outbox.repository';
+import {
+  APPOINTMENT_REMINDER_SEND_MODES,
+  AppointmentReminderDispatchConfigService,
+} from './appointment-reminder-dispatch-config.service';
+import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
+import type {
+  OutboundWhatsappSendResult,
+  OutboundWhatsappTemplateQuickReplyButton,
+} from '../../../whatsapp/domain/value-objects/outbound-whatsapp-message';
+
+export interface AppointmentReminderTemplateDeliveryInput {
+  conversationKey: string;
+  dispatchId: number;
+  patientLegacyUserId: number;
+  to: string;
+  templateName: string;
+  languageCode: string;
+  trigger: string;
+  bodyTextParameters?: string[];
+  quickReplyButtons?: OutboundWhatsappTemplateQuickReplyButton[];
+}
+
+export interface AppointmentReminderTemplateDeliveryResult extends OutboundWhatsappSendResult {
+  deliveryMode: 'live' | 'mock';
+}
+
+@Injectable()
+export class AppointmentReminderTemplateDeliveryService {
+  private readonly logger = new Logger(
+    AppointmentReminderTemplateDeliveryService.name,
+  );
+
+  constructor(
+    private readonly configService: AppointmentReminderDispatchConfigService,
+    private readonly sendWhatsappTemplateMessage: SendWhatsappTemplateMessageUseCase,
+    @Inject(APPOINTMENT_REMINDER_OUTBOX_REPOSITORY)
+    private readonly reminderOutboxRepository: AppointmentReminderOutboxRepository,
+    @Inject(CONVERSATION_MESSAGE_REPOSITORY)
+    private readonly conversationMessageRepository: ConversationMessageRepository,
+    private readonly auditService: AuditService,
+  ) {}
+
+  async send(
+    input: AppointmentReminderTemplateDeliveryInput,
+  ): Promise<AppointmentReminderTemplateDeliveryResult> {
+    const deliveryMode = this.resolveDeliveryMode(input.patientLegacyUserId);
+    const sentAtIso = new Date().toISOString();
+    const deduplicationKey = this.buildDeduplicationKey(input);
+
+    await this.reminderOutboxRepository.reserve({
+      deduplicationKey,
+      conversationKey: input.conversationKey,
+      recipientPhone: input.to,
+      payload: this.buildOutboxPayload(input, deliveryMode, null),
+    });
+
+    const result = await this.sendAndMarkOutbox({
+      input,
+      deduplicationKey,
+      sentAtIso,
+      deliveryMode,
+    });
+
+    await this.persistOutboundTemplateMessage({
+      conversationKey: input.conversationKey,
+      dispatchId: input.dispatchId,
+      messageId: result.messageId,
+      templateName: input.templateName,
+      to: input.to,
+      sentAtIso,
+      trigger: input.trigger,
+      deliveryMode,
+    });
+
+    return result;
+  }
+
+  private resolveDeliveryMode(patientLegacyUserId: number): 'live' | 'mock' {
+    if (this.configService.isMockSendMode()) {
+      return 'mock';
+    }
+
+    if (!this.configService.isWithinReminderSendRollout(patientLegacyUserId)) {
+      return 'mock';
+    }
+
+    return 'live';
+  }
+
+  private buildMockMessageId(input: {
+    dispatchId: number;
+    templateName: string;
+  }): string {
+    return `mock:${input.dispatchId}:${input.templateName}`;
+  }
+
+  private async sendAndMarkOutbox(input: {
+    input: AppointmentReminderTemplateDeliveryInput;
+    deduplicationKey: string;
+    sentAtIso: string;
+    deliveryMode: 'live' | 'mock';
+  }): Promise<AppointmentReminderTemplateDeliveryResult> {
+    const result = await this.sendWhatsAppTemplateMessageWithFallback(input);
+
+    try {
+      await this.reminderOutboxRepository.markSent({
+        deduplicationKey: input.deduplicationKey,
+        payload: this.buildOutboxPayload(
+          input.input,
+          input.deliveryMode,
+          result.messageId,
+        ),
+        sentAtIso: input.sentAtIso,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.auditService.record(
+        'appointment_reminder.template.outbox_mark_sent_failed',
+        {
+          dispatchId: input.input.dispatchId,
+          templateName: input.input.templateName,
+          trigger: input.input.trigger,
+          deliveryMode: input.deliveryMode,
+          errorMessage,
+        },
+      );
+      throw error;
+    }
+
+    return {
+      messageId: result.messageId,
+      deliveryMode: input.deliveryMode,
+    };
+  }
+
+  private async sendWhatsAppTemplateMessageWithFallback(input: {
+    input: AppointmentReminderTemplateDeliveryInput;
+    deduplicationKey: string;
+    deliveryMode: 'live' | 'mock';
+  }): Promise<OutboundWhatsappSendResult> {
+    let result: OutboundWhatsappSendResult;
+
+    try {
+      result =
+        input.deliveryMode === APPOINTMENT_REMINDER_SEND_MODES.LIVE
+          ? await this.sendWhatsappTemplateMessage.execute({
+              to: input.input.to,
+              templateName: input.input.templateName,
+              languageCode: input.input.languageCode,
+              bodyTextParameters: input.input.bodyTextParameters,
+              quickReplyButtons: input.input.quickReplyButtons,
+              trigger: input.input.trigger,
+            })
+          : { messageId: this.buildMockMessageId(input.input) };
+
+      if (input.deliveryMode === APPOINTMENT_REMINDER_SEND_MODES.MOCK) {
+        await this.auditService.record(
+          'appointment_reminder.template.mock_sent',
+          {
+            dispatchId: input.input.dispatchId,
+            templateName: input.input.templateName,
+            trigger: input.input.trigger,
+            deliveryMode: input.deliveryMode,
+          },
+        );
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.reminderOutboxRepository.markFailed({
+        deduplicationKey: input.deduplicationKey,
+        errorMessage,
+      });
+      throw error;
+    }
+
+    return result;
+  }
+
+  private buildDeduplicationKey(
+    input: AppointmentReminderTemplateDeliveryInput,
+  ): string {
+    return [
+      'appointment-reminder',
+      input.dispatchId,
+      input.templateName,
+      input.trigger,
+    ].join(':');
+  }
+
+  private buildOutboxPayload(
+    input: AppointmentReminderTemplateDeliveryInput,
+    deliveryMode: 'live' | 'mock',
+    messageId: string | null,
+  ): Prisma.InputJsonValue {
+    return {
+      kind: 'appointment_reminder_template',
+      dispatchId: input.dispatchId,
+      conversationKey: input.conversationKey,
+      recipientPhone: input.to,
+      templateName: input.templateName,
+      languageCode: input.languageCode,
+      trigger: input.trigger,
+      bodyTextParameters: input.bodyTextParameters ?? [],
+      quickReplyButtons: input.quickReplyButtons ?? [],
+      deliveryMode,
+      messageId,
+    };
+  }
+
+  private async persistOutboundTemplateMessage(input: {
+    conversationKey: string;
+    dispatchId: number;
+    messageId: string;
+    templateName: string;
+    to: string;
+    sentAtIso: string;
+    trigger: string;
+    deliveryMode: 'live' | 'mock';
+  }): Promise<void> {
+    try {
+      await this.conversationMessageRepository.saveOutbound({
+        conversationKey: input.conversationKey,
+        messageType: 'template',
+        to: input.to,
+        whatsappMessageId: input.messageId,
+        body: `template:${input.templateName}`,
+        sentAt: input.sentAtIso,
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(
+        `Failed to persist reminder outbound message for dispatch ${input.dispatchId}.`,
+      );
+      await this.auditService.record(
+        'appointment_reminder.template.outbound_persistence_failed',
+        {
+          dispatchId: input.dispatchId,
+          templateName: input.templateName,
+          trigger: input.trigger,
+          deliveryMode: input.deliveryMode,
+          messageId: input.messageId,
+          errorMessage,
+        },
+      );
+    }
+  }
+}

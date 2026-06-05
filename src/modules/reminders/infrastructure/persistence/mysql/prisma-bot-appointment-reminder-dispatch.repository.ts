@@ -558,12 +558,43 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
     return result.count > 0;
   }
 
+  async markPostVerificationSentAfterUncertainOwnership(input: {
+    dispatchId: number;
+    metaMessageId: string;
+    sentAtIso: string;
+  }): Promise<boolean> {
+    const result =
+      await this.prismaBot.botAppointmentReminderDispatch.updateMany({
+        where: {
+          id: input.dispatchId,
+          status: {
+            in: [
+              BotAppointmentReminderDispatchStatus.PHONE_VERIFICATION_PENDING,
+              BotAppointmentReminderDispatchStatus.PENDING,
+              BotAppointmentReminderDispatchStatus.LOCKED,
+              BotAppointmentReminderDispatchStatus.SENT,
+            ],
+          },
+        },
+        data: {
+          status: BotAppointmentReminderDispatchStatus.SENT,
+          metaMessageId: input.metaMessageId,
+          sentAt: new Date(input.sentAtIso),
+          lastError: null,
+        },
+      });
+
+    return result.count > 0;
+  }
+
   async markPostVerificationSkipped(input: {
     dispatchId: number;
     status:
       | 'SKIPPED_LATE_CONFIRMATION'
       | 'SKIPPED_SUPPRESSED_CONTACT'
-      | 'SKIPPED_APPOINTMENT_CANCELLED';
+      | 'SKIPPED_APPOINTMENT_CANCELLED'
+      | 'SKIPPED_HANDOFF_ACTIVE'
+      | 'SKIPPED_NO_OPT_IN';
     reason?: string;
   }): Promise<boolean> {
     const result =
@@ -579,7 +610,11 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
               ? BotAppointmentReminderDispatchStatus.SKIPPED_LATE_CONFIRMATION
               : input.status === 'SKIPPED_SUPPRESSED_CONTACT'
                 ? BotAppointmentReminderDispatchStatus.SKIPPED_SUPPRESSED_CONTACT
-                : BotAppointmentReminderDispatchStatus.SKIPPED_APPOINTMENT_CANCELLED,
+                : input.status === 'SKIPPED_APPOINTMENT_CANCELLED'
+                  ? BotAppointmentReminderDispatchStatus.SKIPPED_APPOINTMENT_CANCELLED
+                  : input.status === 'SKIPPED_HANDOFF_ACTIVE'
+                    ? BotAppointmentReminderDispatchStatus.SKIPPED_HANDOFF_ACTIVE
+                    : BotAppointmentReminderDispatchStatus.SKIPPED_NO_OPT_IN,
           lastError: input.reason ?? null,
         },
       });
