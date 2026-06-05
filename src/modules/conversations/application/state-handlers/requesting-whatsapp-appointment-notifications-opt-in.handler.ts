@@ -3,6 +3,7 @@ import { RegisterWhatsappPostBookingConsentUseCase } from '../../../patients/app
 import { AuditService } from '../../../audit/application/services/audit.service';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import {
   APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
@@ -12,7 +13,6 @@ import {
   APPOINTMENT_NOTIFICATION_OPT_IN_OPTION_IDS,
   isAppointmentNotificationOptInOptionId,
 } from '../services/appointment-notification-opt-in-option-id';
-import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import type {
   ConversationStateHandler,
   ConversationStateHandlerResult,
@@ -30,7 +30,6 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
   constructor(
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
     private readonly registerWhatsappPostBookingConsent: RegisterWhatsappPostBookingConsentUseCase,
-    private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly auditService: AuditService,
   ) {}
 
@@ -80,8 +79,14 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
       persistenceStatus: consentResult.status,
     });
 
+    await this.auditService.record('conversation.closed.by_patient', {
+      conversationKey: session.conversationKey,
+      patientId: patientId ?? null,
+    });
+
     return {
       nextState: CONVERSATION_STATES.MAIN_MENU,
+      nextStatus: CONVERSATION_STATUSES.CLOSED,
       nextContext: {
         ...session.context,
         flowIntent: undefined,
@@ -98,7 +103,6 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
           type: 'text',
           body: responseMessage,
         },
-        this.mainMenuListFactory.build(),
       ],
     };
   }
