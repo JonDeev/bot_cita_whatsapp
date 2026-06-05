@@ -32,11 +32,13 @@ export interface AppointmentReminderTemplateDeliveryResult extends OutboundWhats
 }
 
 interface AppointmentReminderOutboxQuickReplyButton {
+  [key: string]: Prisma.JsonValue;
   index: string;
   payload: string;
 }
 
 interface AppointmentReminderOutboxPayload {
+  [key: string]: Prisma.JsonValue;
   kind: 'appointment_reminder_template';
   dispatchId: number;
   conversationKey: string;
@@ -229,12 +231,15 @@ export class AppointmentReminderTemplateDeliveryService {
       languageCode: input.languageCode,
       trigger: input.trigger,
       bodyTextParameters: input.bodyTextParameters ?? [],
-      quickReplyButtons: input.quickReplyButtons ?? [],
+      quickReplyButtons: (input.quickReplyButtons ?? []).map((button) => ({
+        index: button.index,
+        payload: button.payload,
+      })),
       deliveryMode,
       messageId,
     };
 
-    return payload;
+    return payload as Prisma.InputJsonValue;
   }
 
   private async persistOutboundTemplateMessage(input: {
