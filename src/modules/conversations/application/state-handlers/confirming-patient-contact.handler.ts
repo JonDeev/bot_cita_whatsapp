@@ -3,7 +3,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
-import { MainMenuListFactory } from '../services/main-menu-list.factory';
+import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import { PATIENT_CONTACT_CONFIRMATION_OPTION_IDS } from '../services/patient-contact-confirmation-option-id';
 import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
@@ -21,7 +21,6 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
     private readonly patientContactConfirmationMessageFactory: PatientContactConfirmationMessageFactory,
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
     private readonly patientContactUpdateSuccessMessageFactory: PatientContactUpdateSuccessMessageFactory,
-    private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly auditService: AuditService,
   ) {}
 
@@ -79,17 +78,14 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
         selectedOption: 'CONTINUE',
       });
 
-      if (
-        contactVerification.requiresPhoneUpdate ||
-        contactVerification.requiresEmailUpdate
-      ) {
+      if (contactVerification.requiresPhoneUpdate) {
         await this.auditService.record(
           'patient.contact_update.validation_failed',
           {
             conversationKey: session.conversationKey,
             patientId: session.context?.patientValidation?.patientId ?? null,
             flowIntent: session.context?.flowIntent ?? null,
-            reason: 'REQUIRES_CONTACT_UPDATE',
+            reason: 'REQUIRES_PHONE_UPDATE',
           },
         );
 
@@ -118,6 +114,7 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
 
         return {
           nextState: CONVERSATION_STATES.MAIN_MENU,
+          nextStatus: CONVERSATION_STATUSES.CLOSED,
           nextContext: {
             ...session.context,
             flowIntent: undefined,
@@ -131,7 +128,6 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
           },
           outboundMessages: [
             this.patientContactUpdateSuccessMessageFactory.build(),
-            this.mainMenuListFactory.build(),
           ],
         };
       }

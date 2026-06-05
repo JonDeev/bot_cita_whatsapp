@@ -1,7 +1,6 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { PatientContactInputValidatorService } from '../../../patients/application/services/patient-contact-input-validator.service';
 import { UpdatePatientContactDetailsUseCase } from '../../../patients/application/use-cases/update-patient-contact-details.use-case';
-import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
 import { UpdatingContactEmailHandler } from './updating-contact-email.handler';
@@ -44,14 +43,13 @@ describe('UpdatingContactEmailHandler', () => {
       updatePatientContactDetails,
       new PatientContactUpdateOptionsListFactory(),
       new PatientContactUpdateSuccessMessageFactory(),
-      new MainMenuListFactory(),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
     );
   }
 
-  it('returns to MAIN_MENU with success message when update flow is primary', async () => {
+  it('closes the conversation after updating the email in UPDATE_CONTACT flow', async () => {
     const handler = buildHandler({
       execute: jest.fn().mockResolvedValue({
         status: 'UPDATED',
@@ -72,6 +70,8 @@ describe('UpdatingContactEmailHandler', () => {
     });
 
     expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.nextStatus).toBe('CLOSED');
+    expect(result.outboundMessages).toHaveLength(1);
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'text',
     });

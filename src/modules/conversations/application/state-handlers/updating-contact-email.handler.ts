@@ -4,8 +4,8 @@ import { PatientContactInputValidatorService } from '../../../patients/applicati
 import { UpdatePatientContactDetailsUseCase } from '../../../patients/application/use-cases/update-patient-contact-details.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
-import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
 import type {
@@ -24,7 +24,6 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     private readonly updatePatientContactDetails: UpdatePatientContactDetailsUseCase,
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
     private readonly patientContactUpdateSuccessMessageFactory: PatientContactUpdateSuccessMessageFactory,
-    private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly auditService: AuditService,
   ) {}
 
@@ -187,6 +186,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     if (session.context?.flowIntent === 'UPDATE_CONTACT') {
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextStatus: CONVERSATION_STATUSES.CLOSED,
         nextContext: {
           ...session.context,
           flowIntent: undefined,
@@ -200,7 +200,6 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
         },
         outboundMessages: [
           this.patientContactUpdateSuccessMessageFactory.build(),
-          this.mainMenuListFactory.build(),
         ],
       };
     }

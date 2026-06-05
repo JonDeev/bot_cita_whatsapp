@@ -4,8 +4,8 @@ import { PatientContactInputValidatorService } from '../../../patients/applicati
 import { UpdatePatientContactDetailsUseCase } from '../../../patients/application/use-cases/update-patient-contact-details.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
-import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
 import type {
@@ -24,7 +24,6 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
     private readonly updatePatientContactDetails: UpdatePatientContactDetailsUseCase,
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
     private readonly patientContactUpdateSuccessMessageFactory: PatientContactUpdateSuccessMessageFactory,
-    private readonly mainMenuListFactory: MainMenuListFactory,
     private readonly auditService: AuditService,
   ) {}
 
@@ -51,15 +50,20 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
     const normalizedPhone = this.patientContactInputValidator.normalizePhone(
       event.textBody,
     );
+    const normalizedPhoneValue = normalizedPhone ?? undefined;
     const currentPhone = this.patientContactInputValidator.normalizePhone(
       contactVerification.primaryPhone,
     );
-    const hasValidPhone =
+    const hasValidPhone = Boolean(
       normalizedPhone &&
-      this.patientContactInputValidator.isValidColombianMobilePhone(
-        normalizedPhone,
-      ) &&
-      normalizedPhone !== currentPhone;
+        this.patientContactInputValidator.isValidColombianMobilePhone(
+          normalizedPhone,
+        ),
+    );
+    const isSameValidPhone =
+      hasValidPhone &&
+      currentPhone !== null &&
+      normalizedPhone === currentPhone;
 
     if (!hasValidPhone) {
       return this.handleInvalidPhoneInput(
@@ -68,14 +72,48 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
       );
     }
 
+    if (isSameValidPhone) {
+      await this.auditService.record(
+        'patient.contact_update.phone_confirmed_without_change',
+        {
+          conversationKey: session.conversationKey,
+          patientId: session.context?.patientValidation?.patientId ?? null,
+          flowIntent: session.context?.flowIntent ?? null,
+          updateMode: selectedMode,
+          result: 'NO_CHANGE_ACCEPTED',
+        },
+      );
+    }
+
     if (selectedMode === 'BOTH') {
+      if (isSameValidPhone) {
+        return {
+          nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
+          nextContext: {
+            ...session.context,
+            contactVerification: {
+              ...contactVerification,
+              selectedUpdateMode: 'EMAIL',
+              pendingPhone: undefined,
+              invalidPhoneAttempts: 0,
+            },
+          },
+          outboundMessages: [
+            {
+              type: 'text',
+              body: 'Ahora escribe tu nuevo correo electronico.',
+            },
+          ],
+        };
+      }
+
       return {
         nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
         nextContext: {
           ...session.context,
           contactVerification: {
             ...contactVerification,
-            pendingPhone: normalizedPhone,
+            pendingPhone: normalizedPhoneValue,
             invalidPhoneAttempts: 0,
           },
         },
@@ -88,10 +126,14 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
       };
     }
 
+    if (isSameValidPhone) {
+      return this.resolveCompletedFlow(session);
+    }
+
     const updateResult = await this.updatePatientContactDetails.execute({
       patientId: session.context?.patientValidation?.patientId,
       mode: 'PHONE',
-      newPhone: normalizedPhone,
+      newPhone: normalizedPhoneValue,
       updatedBy: 'AdrianaBot',
       triggerFlowIntent: session.context?.flowIntent ?? 'UNKNOWN',
     });
@@ -194,7 +236,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
       outboundMessages: [
         {
           type: 'text',
-          body: 'El numero debe tener 10 digitos, iniciar por 3 y ser diferente al actual. Intenta nuevamente.',
+          body: 'El numero debe tener 10 digitos e iniciar por 3. Intenta nuevamente.',
         },
       ],
     };
@@ -206,6 +248,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
     if (session.context?.flowIntent === 'UPDATE_CONTACT') {
       return {
         nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextStatus: CONVERSATION_STATUSES.CLOSED,
         nextContext: {
           ...session.context,
           flowIntent: undefined,
@@ -219,7 +262,6 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         },
         outboundMessages: [
           this.patientContactUpdateSuccessMessageFactory.build(),
-          this.mainMenuListFactory.build(),
         ],
       };
     }
@@ -254,7 +296,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         result.reason === 'MISSING_PHONE' ||
         result.reason === 'INVALID_PHONE'
       ) {
-        return 'El telefono debe tener 10 digitos, iniciar por 3 y ser diferente al actual.';
+        return 'El telefono debe tener 10 digitos e iniciar por 3.';
       }
     }
 

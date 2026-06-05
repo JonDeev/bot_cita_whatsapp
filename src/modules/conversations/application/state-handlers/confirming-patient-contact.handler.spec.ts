@@ -1,5 +1,4 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
-import { MainMenuListFactory } from '../services/main-menu-list.factory';
 import { PATIENT_CONTACT_CONFIRMATION_OPTION_IDS } from '../services/patient-contact-confirmation-option-id';
 import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
@@ -40,7 +39,6 @@ describe('ConfirmingPatientContactHandler', () => {
       new PatientContactConfirmationMessageFactory(),
       new PatientContactUpdateOptionsListFactory(),
       new PatientContactUpdateSuccessMessageFactory(),
-      new MainMenuListFactory(),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -96,6 +94,69 @@ describe('ConfirmingPatientContactHandler', () => {
     expect(result.nextState).toBe('SELECTING_CONTACT_UPDATE_FIELD');
     expect(result.outboundMessages[1]).toMatchObject({
       type: 'interactive_list',
+    });
+  });
+
+  it('continues when only email needs update and phone is already valid', async () => {
+    const handler = buildHandler();
+
+    const result = await handler.handle(
+      {
+        ...baseSession,
+        context: {
+          ...baseSession.context,
+          contactVerification: {
+            ...baseSession.context.contactVerification,
+            requiresEmailUpdate: true,
+          },
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-3',
+        from: '573001112233',
+        timestamp: '1711111113',
+        messageType: 'interactive',
+        interactiveReplyId: PATIENT_CONTACT_CONFIRMATION_OPTION_IDS.CONTINUE,
+        interactiveReplyTitle: 'Continuar',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('PATIENT_VALIDATED');
+    expect(
+      result.nextContext?.contactVerification?.completedForCurrentFlow,
+    ).toBe(true);
+  });
+
+  it('closes the conversation after confirming contact in UPDATE_CONTACT flow', async () => {
+    const handler = buildHandler();
+
+    const result = await handler.handle(
+      {
+        ...baseSession,
+        context: {
+          ...baseSession.context,
+          flowIntent: 'UPDATE_CONTACT',
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-4',
+        from: '573001112233',
+        timestamp: '1711111114',
+        messageType: 'interactive',
+        interactiveReplyId: PATIENT_CONTACT_CONFIRMATION_OPTION_IDS.CONTINUE,
+        interactiveReplyTitle: 'Continuar',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.nextStatus).toBe('CLOSED');
+    expect(result.outboundMessages).toHaveLength(1);
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'text',
     });
   });
 });
