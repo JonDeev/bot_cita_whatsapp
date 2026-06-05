@@ -8,7 +8,7 @@ import type {
 
 interface UpdateAssignment {
   columnName: string;
-  value: string;
+  value: string | Date;
 }
 
 type ContactColumnLogicalName =
@@ -147,7 +147,8 @@ export class MariadbLegacyPatientContactDetailsRepository
       availableColumns,
       COLUMN_CANDIDATES.EMAIL_VERIFIED_AT,
     );
-    const verifiedAtIso = new Date().toISOString();
+    // Use a real Date so the MariaDB driver serializes it using the DB-safe format.
+    const verifiedAt = new Date();
 
     if (command.nextPrimaryPhone) {
       if (!primaryPhoneColumn) {
@@ -190,14 +191,14 @@ export class MariadbLegacyPatientContactDetailsRepository
     if (command.nextPrimaryPhone && phoneVerifiedAtColumn) {
       assignments.push({
         columnName: phoneVerifiedAtColumn,
-        value: verifiedAtIso,
+        value: verifiedAt,
       });
     }
 
     if (command.nextPrimaryEmail && emailVerifiedAtColumn) {
       assignments.push({
         columnName: emailVerifiedAtColumn,
-        value: verifiedAtIso,
+        value: verifiedAt,
       });
     }
 

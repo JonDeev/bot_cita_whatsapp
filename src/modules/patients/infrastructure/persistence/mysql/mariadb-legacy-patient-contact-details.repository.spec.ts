@@ -80,16 +80,13 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
     });
 
     expect(result).toBe('UPDATED');
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('telefono_verificado_en'),
-      expect.arrayContaining(['3014445566', 10]),
-    );
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.not.stringContaining('confirmacion_telefono'),
-      expect.any(Array),
-    );
+    const [phoneSql, phoneParams] = query.mock.calls[1];
+    expect(phoneSql).toContain('telefono_verificado_en');
+    expect(phoneSql).not.toContain('confirmacion_telefono');
+    expect(phoneParams).toHaveLength(3);
+    expect(phoneParams[0]).toBe('3014445566');
+    expect(phoneParams[1]).toBeInstanceOf(Date);
+    expect(phoneParams[2]).toBe(10);
     expect(release).toHaveBeenCalledTimes(1);
 
     await repository.onModuleDestroy();
@@ -114,16 +111,13 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
     });
 
     expect(result).toBe('UPDATED');
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('correo_verificado_en'),
-      expect.arrayContaining(['nuevo@example.com', 10]),
-    );
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.not.stringContaining('confirmacion_telefono'),
-      expect.any(Array),
-    );
+    const [emailSql, emailParams] = query.mock.calls[1];
+    expect(emailSql).toContain('correo_verificado_en');
+    expect(emailSql).not.toContain('confirmacion_telefono');
+    expect(emailParams).toHaveLength(3);
+    expect(emailParams[0]).toBe('nuevo@example.com');
+    expect(emailParams[1]).toBeInstanceOf(Date);
+    expect(emailParams[2]).toBe(10);
   });
 
   it('updates both verification timestamps in one SQL statement', async () => {
@@ -147,26 +141,18 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
     });
 
     expect(result).toBe('UPDATED');
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('telefono_verificado_en'),
-      expect.arrayContaining([
-        '3014445566',
-        '3001234567',
-        'nuevo@example.com',
-        'anterior@example.com',
-        10,
-      ]),
-    );
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('correo_verificado_en'),
-      expect.any(Array),
-    );
-    expect(query).toHaveBeenNthCalledWith(
-      2,
-      expect.not.stringContaining('confirmacion_telefono'),
-      expect.any(Array),
-    );
+    const [bothSql, bothParams] = query.mock.calls[1];
+    expect(bothSql).toContain('telefono_verificado_en');
+    expect(bothSql).toContain('correo_verificado_en');
+    expect(bothSql).not.toContain('confirmacion_telefono');
+    expect(bothParams).toHaveLength(7);
+    expect(bothParams[0]).toBe('3014445566');
+    expect(bothParams[1]).toBe('3001234567');
+    expect(bothParams[2]).toBe('nuevo@example.com');
+    expect(bothParams[3]).toBe('anterior@example.com');
+    expect(bothParams[4]).toBeInstanceOf(Date);
+    expect(bothParams[5]).toBeInstanceOf(Date);
+    expect(bothParams[4].getTime()).toBe(bothParams[5].getTime());
+    expect(bothParams[6]).toBe(10);
   });
 });
