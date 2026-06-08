@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { RegisterWhatsappPostBookingConsentUseCase } from '../../../patients/application/use-cases/register-whatsapp-post-booking-consent.use-case';
 import {
   APPOINTMENT_REMINDER_DISPATCH_REPOSITORY,
   APPOINTMENT_REMINDER_ELIGIBILITY_REPOSITORY,
@@ -7,7 +8,10 @@ import {
   APPOINTMENT_REMINDER_RECIPIENT_POLICY_REPOSITORY,
 } from '../../domain/reminders.tokens';
 import type { AppointmentReminderDispatchRepository } from '../../domain/ports/appointment-reminder-dispatch.repository';
-import type { AppointmentReminderEligibilityRepository } from '../../domain/ports/appointment-reminder-eligibility.repository';
+import type {
+  AppointmentReminderEligibilityRepository,
+  EligibleAppointmentForReminder,
+} from '../../domain/ports/appointment-reminder-eligibility.repository';
 import type { AppointmentReminderPatientContactRepository } from '../../domain/ports/appointment-reminder-patient-contact.repository';
 import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/ports/appointment-reminder-recipient-policy.repository';
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
@@ -17,6 +21,10 @@ import { AppointmentReminderRuntimeSettingsResolverService } from '../services/a
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
+import {
+  APPOINTMENT_REMINDER_VERIFICATION_CONSENT_SOURCE,
+  buildAppointmentReminderVerificationConsentText,
+} from '../services/appointment-reminder-verification-consent';
 
 export interface HandleAppointmentReminderVerificationReplyInput {
   inboundMessageId: string;
@@ -28,6 +36,29 @@ export interface HandleAppointmentReminderVerificationReplyInput {
 export interface HandleAppointmentReminderVerificationReplyResult {
   handled: boolean;
 }
+
+type LatestAppointmentLookupResult =
+  | {
+      status: 'FOUND';
+      appointment: EligibleAppointmentForReminder;
+    }
+  | {
+      status: 'NOT_FOUND';
+    }
+  | {
+      status: 'LOOKUP_FAILED';
+      errorMessage: string;
+    };
+
+type LegacyPhoneVerificationSyncResult =
+  | {
+      status: 'UPDATED' | 'PATIENT_NOT_FOUND' | 'WRITE_DISABLED';
+    }
+  | {
+      status: 'FAILED';
+      errorMessage: string;
+      attempts: number;
+    };
 
 @Injectable()
 export class HandleAppointmentReminderVerificationReplyUseCase {
@@ -46,6 +77,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
     private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
+    private readonly registerWhatsappPostBookingConsent: RegisterWhatsappPostBookingConsentUseCase,
     private readonly auditService: AuditService,
     private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
@@ -152,10 +184,98 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     },
     input: HandleAppointmentReminderVerificationReplyInput,
   ): Promise<void> {
-    await this.patientContactRepository.markPhoneVerified({
+    const latestAppointmentResult = await this.resolveLatestAppointment(
+      dispatch.id,
+      dispatch.legacyAgendaId,
+    );
+    const latestAppointment =
+      latestAppointmentResult.status === 'FOUND'
+        ? latestAppointmentResult.appointment
+        : null;
+    const patientDisplayName = latestAppointment
+      ? `${latestAppointment.patientFirstName} ${latestAppointment.patientLastName}`.trim()
+      : 'Paciente';
+    const consentTextSnapshot =
+      buildAppointmentReminderVerificationConsentText(patientDisplayName);
+
+    let consentResult: { status: 'RECORDED' | 'SKIPPED' } | undefined;
+    try {
+      consentResult = await this.registerWhatsappPostBookingConsent.execute({
+        patientId: dispatch.patientLegacyUserId,
+        phone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
+        granted: true,
+        consentTextSnapshot,
+        source: APPOINTMENT_REMINDER_VERIFICATION_CONSENT_SOURCE,
+        respondedAtIso: input.receivedAtIso,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.auditService.record(
+        'appointment_reminder.phone_confirmed_consent_persist_failed',
+        {
+          dispatchId: dispatch.id,
+          patientLegacyUserId: dispatch.patientLegacyUserId,
+          errorMessage,
+        },
+      );
+      await this.dispatchRepository.markInboundDedupProcessed({
+        provider: 'META_WHATSAPP',
+        inboundMessageId: input.inboundMessageId,
+        buttonPayloadId: input.interactiveReplyId,
+        processedAtIso: input.receivedAtIso,
+        resultStatus: 'PROCESSED_CONSENT_PERSIST_FAILED',
+      });
+      return;
+    }
+
+    await this.auditService.record(
+      'appointment_reminder.phone_confirmed_consent_recorded',
+      {
+        dispatchId: dispatch.id,
+        patientLegacyUserId: dispatch.patientLegacyUserId,
+        consentStatus: consentResult!.status,
+        consentSource: APPOINTMENT_REMINDER_VERIFICATION_CONSENT_SOURCE,
+      },
+    );
+
+    const verifiedPhoneResult = await this.syncLegacyPhoneVerification({
       patientLegacyUserId: dispatch.patientLegacyUserId,
       verifiedAtIso: input.receivedAtIso,
     });
+    if (verifiedPhoneResult.status !== 'UPDATED') {
+      await this.auditService.record(
+        'appointment_reminder.phone_confirmed_phone_write_failed',
+        {
+          dispatchId: dispatch.id,
+          patientLegacyUserId: dispatch.patientLegacyUserId,
+          writeResult: verifiedPhoneResult.status,
+          attempts:
+            verifiedPhoneResult.status === 'FAILED'
+              ? verifiedPhoneResult.attempts
+              : undefined,
+          errorMessage:
+            verifiedPhoneResult.status === 'FAILED'
+              ? verifiedPhoneResult.errorMessage
+              : undefined,
+        },
+      );
+    }
+
+    const clearedUnknownPersonSuppression =
+      await this.recipientPolicyRepository.clearUnknownPersonSuppression({
+        patientLegacyUserId: dispatch.patientLegacyUserId,
+        phone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
+      });
+    if (clearedUnknownPersonSuppression) {
+      await this.auditService.record(
+        'appointment_reminder.phone_confirmed_suppression_cleared',
+        {
+          dispatchId: dispatch.id,
+          patientLegacyUserId: dispatch.patientLegacyUserId,
+        },
+      );
+    }
 
     const hasSuppression =
       await this.recipientPolicyRepository.hasActiveSuppression({
@@ -224,13 +344,46 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       return;
     }
 
-    const latestAppointment = (
-      await this.eligibilityRepository.findByLegacyAgendaIds([
-        dispatch.legacyAgendaId,
-      ])
-    )[0];
+    if (latestAppointmentResult.status === 'LOOKUP_FAILED') {
+      const paused =
+        await this.dispatchRepository.markPostVerificationPausedHold({
+          dispatchId: dispatch.id,
+          reason: 'appointment_lookup_failed_after_confirmation',
+        });
+      if (!paused) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            pauseHold: true,
+            reason: 'appointment_lookup_failed_after_confirmation',
+          },
+        );
+      } else {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_lookup_deferred',
+          {
+            dispatchId: dispatch.id,
+            legacyAgendaId: dispatch.legacyAgendaId,
+            errorMessage: latestAppointmentResult.errorMessage,
+          },
+        );
+      }
+      await this.dispatchRepository.markInboundDedupProcessed({
+        provider: 'META_WHATSAPP',
+        inboundMessageId: input.inboundMessageId,
+        buttonPayloadId: input.interactiveReplyId,
+        processedAtIso: input.receivedAtIso,
+        resultStatus: 'PROCESSED_APPOINTMENT_LOOKUP_FAILED',
+      });
+      return;
+    }
 
-    if (!latestAppointment || latestAppointment.legacyState !== 'Asignada') {
+    if (
+      latestAppointmentResult.status === 'NOT_FOUND' ||
+      !latestAppointment ||
+      latestAppointment.legacyState !== 'Asignada'
+    ) {
       const markedSkipped =
         await this.dispatchRepository.markPostVerificationSkipped({
           dispatchId: dispatch.id,
@@ -254,6 +407,8 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       });
       return;
     }
+
+    const confirmedAppointment = latestAppointment;
 
     const conversationKey = this.resolveConversationKey(dispatch);
     const hasHandOffActive =
@@ -369,7 +524,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       to: recipientPhone,
       templateName: dispatch.templateName,
       languageCode: this.templateConfig.getTemplateLanguageCode(),
-      bodyTextParameters: this.buildReminderBodyParameters(latestAppointment),
+      bodyTextParameters: this.buildReminderBodyParameters(confirmedAppointment),
       trigger: 'appointment_reminder.phone_confirmed',
     });
 
@@ -418,6 +573,81 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       processedAtIso: input.receivedAtIso,
       resultStatus: 'PROCESSED_CONFIRMED',
     });
+  }
+
+  private async resolveLatestAppointment(
+    dispatchId: number,
+    legacyAgendaId: number,
+  ): Promise<LatestAppointmentLookupResult> {
+    try {
+      const appointment = (
+        await this.eligibilityRepository.findByLegacyAgendaIds([legacyAgendaId])
+      )[0];
+      if (!appointment) {
+        return { status: 'NOT_FOUND' };
+      }
+
+      return {
+        status: 'FOUND',
+        appointment,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.auditService.record(
+        'appointment_reminder.latest_appointment_lookup_failed',
+        {
+          dispatchId,
+          legacyAgendaId,
+          errorMessage,
+        },
+      );
+      return {
+        status: 'LOOKUP_FAILED',
+        errorMessage,
+      };
+    }
+  }
+
+  private async syncLegacyPhoneVerification(input: {
+    patientLegacyUserId: number;
+    verifiedAtIso: string;
+  }): Promise<LegacyPhoneVerificationSyncResult> {
+    const maxAttempts = 2;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const result = await this.patientContactRepository.markPhoneVerified(
+          input,
+        );
+
+        if (result === 'UPDATED') {
+          return { status: 'UPDATED' };
+        }
+
+        if (result === 'PATIENT_NOT_FOUND') {
+          return { status: 'PATIENT_NOT_FOUND' };
+        }
+
+        return { status: 'WRITE_DISABLED' };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        if (attempt >= maxAttempts) {
+          return {
+            status: 'FAILED',
+            errorMessage,
+            attempts: attempt,
+          };
+        }
+      }
+    }
+
+    return {
+      status: 'FAILED',
+      errorMessage: 'Unexpected legacy phone verification sync fallthrough.',
+      attempts: maxAttempts,
+    };
   }
 
   private async resolveMinConfirmationHours(): Promise<number> {

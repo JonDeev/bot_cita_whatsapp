@@ -79,6 +79,48 @@ describe('ResolveWhatsappAppointmentNotificationsOptInGateUseCase', () => {
     });
   });
 
+  it('returns PROMPT_NOT_REQUIRED when consent exists even if legacy phone verification is missing', async () => {
+    const useCase =
+      new ResolveWhatsappAppointmentNotificationsOptInGateUseCase(
+        {
+          findByPatientId: jest.fn().mockResolvedValue({
+            patientId: 98,
+            firstName: 'DANIEL',
+            secondName: null,
+            firstLastName: 'CASTANO',
+            secondLastName: null,
+            primaryPhone: '3001112233',
+            primaryEmail: 'daniel@example.com',
+            phoneVerifiedAtIso: null,
+            emailVerifiedAtIso: null,
+          }),
+        },
+        {
+          findConsentByPatientAndPurpose: jest.fn().mockResolvedValue({
+            patientLegacyUserId: 98,
+            phone: '573001112233',
+            channel: 'WHATSAPP',
+            purpose: 'APPOINTMENT_NOTIFICATIONS',
+            granted: true,
+            grantedAtIso: '2026-05-02T10:00:00.000Z',
+            revokedAtIso: null,
+          }),
+        },
+        patientContactInputValidator,
+      );
+
+    const result = await useCase.execute({
+      patientId: 98,
+      whatsappPhone: '3001112233',
+    });
+
+    expect(result).toEqual({
+      status: 'PROMPT_NOT_REQUIRED',
+      consentGrantedAtIso: '2026-05-02T10:00:00.000Z',
+      phoneVerifiedAtIso: '2026-05-02T10:00:00.000Z',
+    });
+  });
+
   it('returns PROMPT_REQUIRED when stored consent is older than phone verification timestamp', async () => {
     const useCase =
       new ResolveWhatsappAppointmentNotificationsOptInGateUseCase(

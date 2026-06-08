@@ -53,6 +53,40 @@ export class PrismaBotAppointmentReminderRecipientPolicyRepository
     return Boolean(suppression);
   }
 
+  async clearUnknownPersonSuppression(input: {
+    patientLegacyUserId: number;
+    phone: string;
+  }): Promise<boolean> {
+    const suppression = await this.prismaBot.botContactSuppression.findFirst({
+      where: {
+        channel: BotContactChannel.WHATSAPP,
+        active: true,
+        reason: BotContactSuppressionReason.UNKNOWN_PERSON,
+        scope: 'APPOINTMENT_NOTIFICATIONS',
+        patientLegacyUserId: input.patientLegacyUserId,
+        phone: input.phone,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!suppression) {
+      return false;
+    }
+
+    await this.prismaBot.botContactSuppression.update({
+      where: {
+        id: suppression.id,
+      },
+      data: {
+        active: false,
+      },
+    });
+
+    return true;
+  }
+
   async isHumanHandoffActive(input: {
     conversationKey: string | null;
   }): Promise<boolean> {

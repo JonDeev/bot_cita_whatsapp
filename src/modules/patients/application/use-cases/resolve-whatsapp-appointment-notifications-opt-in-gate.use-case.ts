@@ -66,7 +66,32 @@ export class ResolveWhatsappAppointmentNotificationsOptInGateUseCase {
       return { status: 'PROMPT_REQUIRED', reason: 'PATIENT_NOT_FOUND' };
     }
 
+    const consent =
+      await this.whatsappContactConsentReaderRepository.findConsentByPatientAndPurpose(
+        {
+          patientLegacyUserId: patientId,
+          channel: WHATSAPP_CONTACT_CONSENT_CHANNEL,
+          purpose:
+            WHATSAPP_CONTACT_CONSENT_PURPOSES.APPOINTMENT_NOTIFICATIONS,
+        },
+      );
+
     if (!profile.phoneVerifiedAtIso) {
+      if (
+        consent?.granted &&
+        this.isSamePhoneNumber({
+          first: consent.phone,
+          second: whatsappPhone,
+        }) &&
+        consent.grantedAtIso
+      ) {
+        return {
+          status: 'PROMPT_NOT_REQUIRED',
+          consentGrantedAtIso: consent.grantedAtIso,
+          phoneVerifiedAtIso: consent.grantedAtIso,
+        };
+      }
+
       return { status: 'PROMPT_REQUIRED', reason: 'PHONE_NOT_VERIFIED' };
     }
 
@@ -78,16 +103,6 @@ export class ResolveWhatsappAppointmentNotificationsOptInGateUseCase {
     ) {
       return { status: 'PROMPT_REQUIRED', reason: 'PHONE_MISMATCH' };
     }
-
-    const consent =
-      await this.whatsappContactConsentReaderRepository.findConsentByPatientAndPurpose(
-        {
-          patientLegacyUserId: patientId,
-          channel: WHATSAPP_CONTACT_CONSENT_CHANNEL,
-          purpose:
-            WHATSAPP_CONTACT_CONSENT_PURPOSES.APPOINTMENT_NOTIFICATIONS,
-        },
-      );
 
     if (!consent?.granted) {
       return { status: 'PROMPT_REQUIRED', reason: 'CONSENT_NOT_GRANTED' };

@@ -6,6 +6,10 @@ export interface AppointmentReminderRecipientPolicyRepository {
     patientLegacyUserId: number;
     phone: string;
   }): Promise<boolean>;
+  clearUnknownPersonSuppression(input: {
+    patientLegacyUserId: number;
+    phone: string;
+  }): Promise<boolean>;
   isHumanHandoffActive(input: {
     conversationKey: string | null;
   }): Promise<boolean>;

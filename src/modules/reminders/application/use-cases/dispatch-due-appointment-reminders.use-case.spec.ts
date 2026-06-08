@@ -6,6 +6,7 @@ import type {
 } from '../../domain/ports/appointment-reminder-dispatch.repository';
 import type { AppointmentReminderEligibilityRepository } from '../../domain/ports/appointment-reminder-eligibility.repository';
 import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/ports/appointment-reminder-recipient-policy.repository';
+import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
@@ -109,6 +110,11 @@ type DispatchQueueMock = {
   >;
 };
 
+type ResolveWhatsappAppointmentNotificationsOptInGateUseCaseMock = Pick<
+  ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
+  'execute'
+>;
+
 type DispatchConfigServiceMock = Pick<
   AppointmentReminderDispatchConfigService,
   | 'getLockTtlSeconds'
@@ -153,6 +159,7 @@ type DispatchDueAppointmentRemindersFixture = {
   eligibilityRepository: EligibilityRepositoryMock;
   recipientPolicyRepository: RecipientPolicyRepositoryMock;
   dispatchQueue: DispatchQueueMock;
+  resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCaseMock;
   configService: DispatchConfigServiceMock;
   templateConfig: TemplateConfigServiceMock;
   windowService: WindowServiceMock;
@@ -304,6 +311,15 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
       .mockResolvedValue(undefined),
   };
 
+  const resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCaseMock =
+    {
+      execute: jest.fn().mockResolvedValue({
+        status: 'PROMPT_NOT_REQUIRED',
+        consentGrantedAtIso: '2026-05-01T10:00:00.000Z',
+        phoneVerifiedAtIso: '2026-05-01T10:00:00.000Z',
+      }),
+    };
+
   const configService: DispatchConfigServiceMock = {
     getLockTtlSeconds: jest.fn().mockReturnValue(300),
     getLockHeartbeatIntervalMs: jest.fn().mockReturnValue(60_000),
@@ -371,6 +387,7 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     eligibilityRepository as unknown as AppointmentReminderEligibilityRepository,
     recipientPolicyRepository as unknown as AppointmentReminderRecipientPolicyRepository,
     dispatchQueue,
+    resolveWhatsappAppointmentNotificationsOptInGate as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     configService as unknown as AppointmentReminderDispatchConfigService,
     templateConfig as unknown as AppointmentReminderTemplateConfigService,
     windowService as unknown as AppointmentReminderWindowService,
@@ -387,6 +404,7 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     eligibilityRepository,
     recipientPolicyRepository,
     dispatchQueue,
+    resolveWhatsappAppointmentNotificationsOptInGate,
     configService,
     templateConfig,
     windowService,

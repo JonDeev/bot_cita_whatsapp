@@ -6,6 +6,7 @@ import {
   APPOINTMENT_REMINDER_ELIGIBILITY_REPOSITORY,
   APPOINTMENT_REMINDER_RECIPIENT_POLICY_REPOSITORY,
 } from '../../domain/reminders.tokens';
+import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import type { AppointmentReminderDispatchQueuePort } from '../../domain/ports/appointment-reminder-dispatch-queue.port';
 import type {
   AppointmentReminderDispatchRecord,
@@ -29,6 +30,19 @@ export interface DispatchDueAppointmentRemindersResult {
   failed: number;
 }
 
+type OptInGateReason =
+  | 'INVALID_PATIENT_ID'
+  | 'INVALID_PHONE'
+  | 'PATIENT_NOT_FOUND'
+  | 'PHONE_NOT_VERIFIED'
+  | 'PHONE_MISMATCH'
+  | 'CONSENT_NOT_GRANTED'
+  | 'CONSENT_PHONE_MISMATCH'
+  | 'CONSENT_TIMESTAMP_MISSING'
+  | 'CONSENT_OUTDATED_AFTER_PHONE_VERIFICATION'
+  | 'INVALID_PHONE_VERIFIED_AT'
+  | 'INVALID_CONSENT_GRANTED_AT';
+
 interface ReminderDispatchLeaseHeartbeat {
   renewNow(): Promise<boolean>;
   isLockLost(): boolean;
@@ -50,6 +64,7 @@ export class DispatchDueAppointmentRemindersUseCase {
     private readonly recipientPolicyRepository: AppointmentReminderRecipientPolicyRepository,
     @Inject(APPOINTMENT_REMINDER_DISPATCH_QUEUE)
     private readonly dispatchQueue: AppointmentReminderDispatchQueuePort,
+    private readonly resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly templateConfig: AppointmentReminderTemplateConfigService,
     private readonly windowService: AppointmentReminderWindowService,
@@ -136,6 +151,21 @@ export class DispatchDueAppointmentRemindersUseCase {
         continue;
       }
 
+      const optInGate =
+        await this.resolveWhatsappAppointmentNotificationsOptInGate.execute({
+          patientId: dispatch.patientLegacyUserId,
+          whatsappPhone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
+        });
+      const shouldSendReminder = optInGate.status === 'PROMPT_NOT_REQUIRED';
+      const requiresPhoneVerification =
+        optInGate.status === 'PROMPT_REQUIRED' &&
+        this.requiresPhoneVerification(optInGate.reason);
+      if (!shouldSendReminder && !requiresPhoneVerification) {
+        await this.markSkipped(dispatch, workerId, 'SKIPPED_NO_OPT_IN');
+        skipped += 1;
+        continue;
+      }
+
       const hasSuppression =
         await this.recipientPolicyRepository.hasActiveSuppression({
           patientLegacyUserId: dispatch.patientLegacyUserId,
@@ -190,7 +220,7 @@ export class DispatchDueAppointmentRemindersUseCase {
           continue;
         }
 
-        if (appointment.patientPhoneVerifiedAtIso) {
+        if (shouldSendReminder) {
           const bodyTextParameters =
             this.buildReminderBodyParameters(appointment);
           const sendResult = await this.sendWithLeaseHeartbeat({
@@ -539,6 +569,18 @@ export class DispatchDueAppointmentRemindersUseCase {
       );
 
     return `whatsapp:${phoneNumberId || 'unknown'}:${recipientPhone}`;
+  }
+
+  private requiresPhoneVerification(reason: OptInGateReason): boolean {
+    return (
+      reason === 'PHONE_NOT_VERIFIED' ||
+      reason === 'PHONE_MISMATCH' ||
+      reason === 'CONSENT_PHONE_MISMATCH' ||
+      reason === 'CONSENT_TIMESTAMP_MISSING' ||
+      reason === 'CONSENT_OUTDATED_AFTER_PHONE_VERIFICATION' ||
+      reason === 'INVALID_PHONE_VERIFIED_AT' ||
+      reason === 'INVALID_CONSENT_GRANTED_AT'
+    );
   }
 
   private async sendWithLeaseHeartbeat<T>(input: {

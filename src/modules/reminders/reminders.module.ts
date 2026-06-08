@@ -1,6 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ConversationsModule } from '../conversations/conversations.module';
+import { PatientsModule } from '../patients/patients.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
@@ -56,6 +57,7 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
   imports: [
     AuditModule,
     ConversationsModule,
+    PatientsModule,
     PrismaModule,
     PrismaBotModule,
     forwardRef(() => WhatsappModule),

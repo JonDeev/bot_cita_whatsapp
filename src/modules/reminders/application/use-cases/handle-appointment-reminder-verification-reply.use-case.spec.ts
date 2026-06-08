@@ -1,4 +1,5 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { RegisterWhatsappPostBookingConsentUseCase } from '../../../patients/application/use-cases/register-whatsapp-post-booking-consent.use-case';
 import type { AppointmentReminderDispatchRepository } from '../../domain/ports/appointment-reminder-dispatch.repository';
 import type {
   AppointmentReminderEligibilityRepository,
@@ -20,6 +21,7 @@ type DispatchRepositoryMock = Pick<
   | 'recordInboundDedup'
   | 'findById'
   | 'markPostVerificationSkipped'
+  | 'markPostVerificationPausedHold'
   | 'markPostVerificationSent'
   | 'markInboundDedupProcessed'
 >;
@@ -36,7 +38,9 @@ type PatientContactRepositoryMock = Pick<
 
 type RecipientPolicyRepositoryMock = Pick<
   AppointmentReminderRecipientPolicyRepository,
-  'hasActiveSuppression' | 'upsertUnknownPersonSuppression'
+  | 'hasActiveSuppression'
+  | 'upsertUnknownPersonSuppression'
+  | 'clearUnknownPersonSuppression'
 > &
   Partial<
     Pick<
@@ -56,13 +60,31 @@ type TemplateDeliveryServiceMock = Pick<
   'send'
 >;
 
+type RegisterWhatsappPostBookingConsentUseCaseMock = Pick<
+  RegisterWhatsappPostBookingConsentUseCase,
+  'execute'
+>;
+
 function createUseCase(input: {
-  dispatchRepository: DispatchRepositoryMock;
+  dispatchRepository: Partial<DispatchRepositoryMock> &
+    Pick<
+      DispatchRepositoryMock,
+      | 'recordInboundDedup'
+      | 'findById'
+      | 'markPostVerificationSkipped'
+      | 'markPostVerificationSent'
+      | 'markInboundDedupProcessed'
+    >;
   eligibilityRepository: EligibilityRepositoryMock;
   patientContactRepository: PatientContactRepositoryMock;
-  recipientPolicyRepository: RecipientPolicyRepositoryMock;
+  recipientPolicyRepository: Partial<RecipientPolicyRepositoryMock> &
+    Pick<
+      RecipientPolicyRepositoryMock,
+      'hasActiveSuppression' | 'upsertUnknownPersonSuppression'
+    >;
   configService: DispatchConfigMock;
   templateDeliveryService: TemplateDeliveryServiceMock;
+  registerWhatsappPostBookingConsent?: RegisterWhatsappPostBookingConsentUseCaseMock;
   auditService: AuditService;
   tokenService: AppointmentReminderButtonTokenService;
   templateConfig: AppointmentReminderTemplateConfigService;
@@ -76,7 +98,17 @@ function createUseCase(input: {
   } as AppointmentReminderDispatchConfigService;
 
   return new HandleAppointmentReminderVerificationReplyUseCase(
-    input.dispatchRepository as AppointmentReminderDispatchRepository,
+    {
+      recordInboundDedup: input.dispatchRepository.recordInboundDedup,
+      findById: input.dispatchRepository.findById,
+      markPostVerificationSkipped:
+        input.dispatchRepository.markPostVerificationSkipped,
+      markPostVerificationPausedHold:
+        input.dispatchRepository.markPostVerificationPausedHold ??
+        jest.fn().mockResolvedValue(false),
+      markPostVerificationSent: input.dispatchRepository.markPostVerificationSent,
+      markInboundDedupProcessed: input.dispatchRepository.markInboundDedupProcessed,
+    } as unknown as AppointmentReminderDispatchRepository,
     input.eligibilityRepository as AppointmentReminderEligibilityRepository,
     input.patientContactRepository,
     {
@@ -84,6 +116,9 @@ function createUseCase(input: {
         input.recipientPolicyRepository.hasActiveSuppression,
       upsertUnknownPersonSuppression:
         input.recipientPolicyRepository.upsertUnknownPersonSuppression,
+      clearUnknownPersonSuppression:
+        input.recipientPolicyRepository.clearUnknownPersonSuppression ??
+        jest.fn().mockResolvedValue(false),
       hasAppointmentNotificationsOptIn:
         input.recipientPolicyRepository.hasAppointmentNotificationsOptIn ??
         jest.fn().mockResolvedValue(false),
@@ -97,6 +132,10 @@ function createUseCase(input: {
     configService,
     new AppointmentReminderPhoneNormalizerService(),
     input.templateDeliveryService as AppointmentReminderTemplateDeliveryService,
+    input.registerWhatsappPostBookingConsent ??
+      ({
+        execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+      } as unknown as RegisterWhatsappPostBookingConsentUseCase),
     input.auditService,
     input.runtimeResolver,
   );
@@ -159,12 +198,14 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         templateName: 'recordatorio_cita_24h',
       }),
       markPostVerificationSkipped: jest.fn().mockResolvedValue(true),
+      markPostVerificationPausedHold: jest.fn().mockResolvedValue(true),
       markInboundDedupProcessed: jest.fn().mockResolvedValue(undefined),
     };
 
     const recipientPolicyRepository = {
       hasActiveSuppression: jest.fn().mockResolvedValue(true),
       upsertUnknownPersonSuppression: jest.fn(),
+      clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
     };
 
     const patientContactRepository = {
@@ -179,10 +220,21 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
     const templateDeliveryService = {
       send: jest.fn(),
     };
+    const registerWhatsappPostBookingConsent = {
+      execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+    };
 
     const useCase = createUseCase({
       dispatchRepository,
-      eligibilityRepository: { findByLegacyAgendaIds: jest.fn() },
+      eligibilityRepository: {
+        findByLegacyAgendaIds: jest.fn().mockResolvedValue([
+          createMinimalEligibleAppointment({
+            legacyAgendaId: 501,
+            patientFirstName: 'JOSE',
+            patientLastName: 'PEREZ',
+          }),
+        ]),
+      },
       patientContactRepository,
       recipientPolicyRepository,
       templateConfig,
@@ -191,6 +243,7 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         getVerificationGraceHours: jest.fn().mockReturnValue(3),
       },
       templateDeliveryService,
+      registerWhatsappPostBookingConsent,
       auditService,
     });
 
@@ -213,7 +266,115 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         resultStatus: 'PROCESSED_SUPPRESSED_CONTACT',
       }),
     );
+    expect(
+      recipientPolicyRepository.clearUnknownPersonSuppression,
+    ).toHaveBeenCalledWith({
+      patientLegacyUserId: 80,
+      phone: '573001234567',
+    });
+    expect(
+      registerWhatsappPostBookingConsent.execute,
+    ).toHaveBeenCalledWith({
+      patientId: 80,
+      phone: '573001234567',
+      granted: true,
+      consentTextSnapshot:
+        'Hola JOSE PEREZ. Somos IPS SISM.\n\n' +
+        'Confirma si este numero celular te pertenece o si estas autorizado(a) para recibir recordatorios de citas, encuestas de satisfaccion y notificaciones importantes sobre servicios de salud de este paciente.\n\n' +
+        'Su salud en buenas manos.',
+      source: 'REMINDER_PHONE_VERIFICATION_TEMPLATE',
+      respondedAtIso: '2026-05-25T15:00:00.000Z',
+    });
     expect(templateDeliveryService.send).not.toHaveBeenCalled();
+  });
+
+  it('records consent with a fallback snapshot when the legacy appointment lookup fails', async () => {
+    const tokenService = new AppointmentReminderButtonTokenService();
+    const templateConfig = new AppointmentReminderTemplateConfigService();
+    const token = tokenService.createToken({
+      dispatchId: 1008,
+      expiresAtIso: '2099-01-01T00:00:00.000Z',
+    });
+    const interactiveReplyId = `${templateConfig.getConfirmButtonPayloadPrefix()}${token}`;
+
+    const dispatchRepository = {
+      recordInboundDedup: jest.fn().mockResolvedValue(true),
+      findById: jest.fn().mockResolvedValue({
+        id: 1008,
+        status: 'PHONE_VERIFICATION_PENDING',
+        verificationTokenHash: tokenService.hashToken(token),
+        legacyAgendaId: 802,
+        patientLegacyUserId: 83,
+        recipientPhoneRaw: '3001110000',
+        recipientPhoneE164: '573001110000',
+        appointmentStartsAtIso: '2099-05-01T12:00:00.000Z',
+        templateName: 'recordatorio_cita_24h',
+      }),
+      markPostVerificationSkipped: jest.fn().mockResolvedValue(true),
+      markInboundDedupProcessed: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const registerWhatsappPostBookingConsent = {
+      execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+    };
+
+    const useCase = createUseCase({
+      dispatchRepository,
+      eligibilityRepository: {
+        findByLegacyAgendaIds: jest.fn().mockRejectedValue(new Error('db down')),
+      },
+      patientContactRepository: {
+        markPhoneVerified: jest.fn().mockResolvedValue('UPDATED'),
+        clearPhoneAndVerification: jest.fn(),
+      },
+      recipientPolicyRepository: {
+        hasActiveSuppression: jest.fn().mockResolvedValue(false),
+        hasAppointmentNotificationsOptIn: jest.fn().mockResolvedValue(true),
+        isHumanHandoffActive: jest.fn().mockResolvedValue(false),
+        upsertUnknownPersonSuppression: jest.fn(),
+        clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
+      },
+      templateConfig,
+      tokenService,
+      configService: {
+        getVerificationGraceHours: jest.fn().mockReturnValue(3),
+      },
+      templateDeliveryService: {
+        send: jest.fn(),
+      },
+      registerWhatsappPostBookingConsent,
+      auditService: {
+        record: jest.fn().mockResolvedValue(undefined),
+      } as unknown as AuditService,
+    });
+
+    await useCase.execute({
+      inboundMessageId: 'wamid-inbound-lookup-failure',
+      fromPhone: '573001110000',
+      interactiveReplyId,
+      receivedAtIso: '2026-05-25T15:00:00.000Z',
+    });
+
+    expect(
+      dispatchRepository.markPostVerificationPausedHold,
+    ).toHaveBeenCalledWith({
+      dispatchId: 1008,
+      reason: 'appointment_lookup_failed_after_confirmation',
+    });
+    expect(dispatchRepository.markInboundDedupProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inboundMessageId: 'wamid-inbound-lookup-failure',
+        resultStatus: 'PROCESSED_APPOINTMENT_LOOKUP_FAILED',
+      }),
+    );
+    expect(registerWhatsappPostBookingConsent.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consentTextSnapshot:
+          'Hola Paciente. Somos IPS SISM.\n\n' +
+          'Confirma si este numero celular te pertenece o si estas autorizado(a) para recibir recordatorios de citas, encuestas de satisfaccion y notificaciones importantes sobre servicios de salud de este paciente.\n\n' +
+          'Su salud en buenas manos.',
+      }),
+    );
   });
 
   it('marks inbound dedup as processed when appointment is no longer assigned', async () => {
@@ -290,6 +451,100 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
       expect.objectContaining({
         inboundMessageId: 'wamid-inbound-2',
         resultStatus: 'PROCESSED_APPOINTMENT_CANCELLED',
+      }),
+    );
+  });
+
+  it('continues confirmation when legacy phone verification sync fails', async () => {
+    const tokenService = new AppointmentReminderButtonTokenService();
+    const templateConfig = new AppointmentReminderTemplateConfigService();
+    const token = tokenService.createToken({
+      dispatchId: 1009,
+      expiresAtIso: '2099-01-01T00:00:00.000Z',
+    });
+    const interactiveReplyId = `${templateConfig.getConfirmButtonPayloadPrefix()}${token}`;
+
+    const dispatchRepository = {
+      recordInboundDedup: jest.fn().mockResolvedValue(true),
+      findById: jest.fn().mockResolvedValue({
+        id: 1009,
+        status: 'PHONE_VERIFICATION_PENDING',
+        verificationTokenHash: tokenService.hashToken(token),
+        legacyAgendaId: 701,
+        patientLegacyUserId: 82,
+        recipientPhoneRaw: '3005556677',
+        recipientPhoneE164: '573005556677',
+        appointmentStartsAtIso: '2099-04-01T18:00:00.000Z',
+        templateName: 'recordatorio_cita_24h',
+      }),
+      markPostVerificationSkipped: jest.fn().mockResolvedValue(true),
+      markPostVerificationSent: jest.fn().mockResolvedValue(true),
+      markInboundDedupProcessed: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const eligibilityRepository = {
+      findByLegacyAgendaIds: jest.fn().mockResolvedValue([
+        createMinimalEligibleAppointment({
+          legacyAgendaId: 701,
+          patientFirstName: 'MARIA',
+          patientLastName: 'PEREZ',
+          appointmentDateIso: '2099-04-01T00:00:00.000Z',
+          appointmentTimeHhmm: '13:00',
+          siteAddress: 'CALLE 15',
+          doctorName: 'DR. JUAN MARTINEZ',
+        }),
+      ]),
+    };
+
+    const templateDeliveryService = {
+      send: jest.fn().mockResolvedValue({ messageId: 'wamid-reminder-2000' }),
+    };
+
+    const useCase = createUseCase({
+      dispatchRepository,
+      eligibilityRepository,
+      patientContactRepository: {
+        markPhoneVerified: jest.fn().mockResolvedValue('PATIENT_NOT_FOUND'),
+        clearPhoneAndVerification: jest.fn(),
+      },
+      recipientPolicyRepository: {
+        hasActiveSuppression: jest.fn().mockResolvedValue(false),
+        hasAppointmentNotificationsOptIn: jest.fn().mockResolvedValue(true),
+        isHumanHandoffActive: jest.fn().mockResolvedValue(false),
+        upsertUnknownPersonSuppression: jest.fn(),
+        clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
+      },
+      templateConfig,
+      tokenService,
+      configService: {
+        getVerificationGraceHours: jest.fn().mockReturnValue(3),
+      },
+      templateDeliveryService,
+      registerWhatsappPostBookingConsent: {
+        execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+      },
+      auditService: {
+        record: jest.fn().mockResolvedValue(undefined),
+      } as unknown as AuditService,
+    });
+
+    await useCase.execute({
+      inboundMessageId: 'wamid-inbound-4',
+      fromPhone: '573005556677',
+      interactiveReplyId,
+      receivedAtIso: '2026-05-25T17:00:00.000Z',
+    });
+
+    expect(templateDeliveryService.send).toHaveBeenCalledTimes(1);
+    expect(dispatchRepository.markPostVerificationSent).toHaveBeenCalledWith({
+      dispatchId: 1009,
+      metaMessageId: 'wamid-reminder-2000',
+      sentAtIso: '2026-05-25T17:00:00.000Z',
+    });
+    expect(dispatchRepository.markInboundDedupProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inboundMessageId: 'wamid-inbound-4',
+        resultStatus: 'PROCESSED_CONFIRMED',
       }),
     );
   });
@@ -496,6 +751,9 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
     const templateDeliveryService = {
       send: jest.fn().mockResolvedValue({ messageId: 'wamid-reminder-1003' }),
     };
+    const registerWhatsappPostBookingConsent = {
+      execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+    };
 
     const useCase = createUseCase({
       dispatchRepository,
@@ -509,6 +767,7 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         hasAppointmentNotificationsOptIn: jest.fn().mockResolvedValue(true),
         isHumanHandoffActive: jest.fn().mockResolvedValue(false),
         upsertUnknownPersonSuppression: jest.fn(),
+        clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
       },
       templateConfig,
       tokenService,
@@ -516,6 +775,7 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         getVerificationGraceHours: jest.fn().mockReturnValue(3),
       },
       templateDeliveryService,
+      registerWhatsappPostBookingConsent,
       auditService: {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -555,6 +815,25 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         resultStatus: 'PROCESSED_CONFIRMED',
       }),
     );
+    expect(
+      recipientPolicyRepository.clearUnknownPersonSuppression,
+    ).toHaveBeenCalledWith({
+      patientLegacyUserId: 82,
+      phone: '573005556677',
+    });
+    expect(
+      registerWhatsappPostBookingConsent.execute,
+    ).toHaveBeenCalledWith({
+      patientId: 82,
+      phone: '573005556677',
+      granted: true,
+      consentTextSnapshot:
+        'Hola MARIA PEREZ. Somos IPS SISM.\n\n' +
+        'Confirma si este numero celular te pertenece o si estas autorizado(a) para recibir recordatorios de citas, encuestas de satisfaccion y notificaciones importantes sobre servicios de salud de este paciente.\n\n' +
+        'Su salud en buenas manos.',
+      source: 'REMINDER_PHONE_VERIFICATION_TEMPLATE',
+      respondedAtIso: '2026-05-25T17:00:00.000Z',
+    });
   });
 
   it('moves confirmation into paused hold when emergency pause is active', async () => {
