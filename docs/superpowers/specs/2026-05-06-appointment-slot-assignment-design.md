@@ -351,6 +351,7 @@ Registrar al menos estos eventos:
 - `appointment.assignment.time_exhausted`
 - `appointment.assignment.succeeded`
 - `appointment.assignment.failed`
+- `conversation.closed.after_appointment_assignment`
 
 Campos minimos sugeridos:
 
@@ -363,6 +364,9 @@ Campos minimos sugeridos:
 - `preferredSlotRef`
 - `assignedSlotRef`
 - `usedFallbackSlot`
+- `optInGateStatus`
+
+El evento `conversation.closed.after_appointment_assignment` debe registrarse cuando la cita se asigna correctamente y el sistema determina que no hace falta pedir consentimiento adicional de notificaciones por WhatsApp. Ese cierre documenta que el flujo termino en forma controlada y que la conversacion quedo cerrada sin menu adicional.
 
 No se debe registrar mas informacion sensible de la necesaria.
 

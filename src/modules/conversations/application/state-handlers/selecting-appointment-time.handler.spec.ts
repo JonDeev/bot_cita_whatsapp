@@ -132,15 +132,13 @@ describe('SelectingAppointmentTimeHandler', () => {
     );
 
     expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.nextStatus).toBe('CLOSED');
     expect(result.nextContext?.appointmentTimeSelection).toBeUndefined();
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'text',
       body: expect.stringContaining('su cita se asignó satisfactoriamente'),
     });
-    expect(result.outboundMessages[1]).toMatchObject({
-      type: 'interactive_list',
-      buttonText: 'Ver opciones',
-    });
+    expect(result.outboundMessages).toHaveLength(1);
   });
 
   it('asks for opt-in when consent gate requires re-consent', async () => {

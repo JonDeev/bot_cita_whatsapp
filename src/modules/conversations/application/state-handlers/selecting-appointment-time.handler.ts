@@ -5,6 +5,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
+import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { OfferedAppointmentTimeSessionContext } from '../../domain/entities/conversation-session-context.entity';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import { AppointmentAssignmentConfirmationMessageFactory } from '../services/appointment-assignment-confirmation-message.factory';
@@ -215,10 +216,23 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       };
 
       if (shouldPromptOptInResult.status === 'PROMPT_NOT_REQUIRED') {
+        await this.auditService.record(
+          'conversation.closed.after_appointment_assignment',
+          {
+            conversationKey: session.conversationKey,
+            patientId: session.context?.patientValidation?.patientId ?? null,
+            appointmentDate:
+              session.context?.appointmentDateSelection?.selectedDateIso ?? null,
+            appointmentTime: selectedTime.timeHHmm,
+            optInGateStatus: shouldPromptOptInResult.status,
+          },
+        );
+
         return {
           nextState: CONVERSATION_STATES.MAIN_MENU,
+          nextStatus: CONVERSATION_STATUSES.CLOSED,
           nextContext: this.buildPostBookingNextContext(session),
-          outboundMessages: [confirmationMessage, this.mainMenuListFactory.build()],
+          outboundMessages: [confirmationMessage],
         };
       }
 
