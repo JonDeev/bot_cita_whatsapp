@@ -93,6 +93,9 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "moduleNameMapper": {
+      "^@whatsapp-bot/shared$": "<rootDir>/../packages/shared/src/index.ts"
+    },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

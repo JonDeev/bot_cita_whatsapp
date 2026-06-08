@@ -1,4 +1,24 @@
-import { ZodError } from 'zod';
+import { BadRequestException } from '@nestjs/common';
+import { z } from 'zod';
+
+jest.mock('@whatsapp-bot/shared', () => {
+  const schema = z
+    .object({
+      expectedVersion: z.coerce.number().int().positive(),
+      reason: z.string().trim().min(1).max(500).optional(),
+      changes: z
+        .record(z.unknown())
+        .refine((value) => Object.keys(value).length > 0, {
+          message: 'At least one settings change is required.',
+        }),
+    })
+    .strict();
+
+  return {
+    ReminderRuntimeSettingsUpdateRequestSchema: schema,
+  };
+});
+
 import { AdminRemindersQueryParserService } from './admin-reminders-query-parser.service';
 
 describe('AdminRemindersQueryParserService', () => {
@@ -30,14 +50,81 @@ describe('AdminRemindersQueryParserService', () => {
   });
 
   it('rejects invalid lookback hours', () => {
-    expect(() => service.parseMetricsLookbackHours('0')).toThrow(ZodError);
-    expect(() => service.parseMetricsLookbackHours('999')).toThrow(ZodError);
+    expect(() => service.parseMetricsLookbackHours('0')).toThrow(
+      BadRequestException,
+    );
+    expect(() => service.parseMetricsLookbackHours('999')).toThrow(
+      BadRequestException,
+    );
   });
 
   it('rejects invalid dispatch datetime filters', () => {
-    expect(() => service.parseListDispatchesQuery({ from: '2026-05-01 10:00:00' })).toThrow(
-      ZodError,
-    );
-    expect(() => service.parseListDispatchesQuery({ to: 'invalid-date' })).toThrow(ZodError);
+    expect(() =>
+      service.parseListDispatchesQuery({ from: '2026-05-01 10:00:00' }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      service.parseListDispatchesQuery({ to: 'invalid-date' }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('parses reminder runtime settings update requests', () => {
+    const parsed = service.parseReminderRuntimeSettingsUpdateRequest({
+      expectedVersion: 4,
+      reason: 'ajuste operativo',
+      changes: {
+        sendMode: 'live',
+        sendRolloutPercent: '75',
+      },
+    });
+
+    expect(parsed).toEqual({
+      expectedVersion: 4,
+      reason: 'ajuste operativo',
+      changes: {
+        sendMode: 'live',
+        sendRolloutPercent: '75',
+      },
+    });
+  });
+
+  it('parses emergency pause public payload and history query', () => {
+    expect(
+      service.parseEmergencyPauseRequest({
+        expectedVersion: 7,
+        reason: 'incidente',
+        enabled: true,
+      }),
+    ).toEqual({
+      expectedVersion: 7,
+      reason: 'incidente',
+      enabled: true,
+    });
+
+    expect(
+      service.parseReminderSettingsHistoryQuery({
+        page: '2',
+        pageSize: '10',
+      }),
+    ).toEqual({
+      page: 2,
+      pageSize: 10,
+    });
+  });
+
+  it('rejects invalid settings update and emergency pause payloads', () => {
+    expect(() =>
+      service.parseReminderRuntimeSettingsUpdateRequest({
+        expectedVersion: 0,
+        changes: {},
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      service.parseEmergencyPauseRequest({
+        expectedVersion: 1,
+        reason: '',
+        enabled: 'yes',
+      }),
+    ).toThrow(BadRequestException);
   });
 });

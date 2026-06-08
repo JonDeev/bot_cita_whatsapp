@@ -131,6 +131,7 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
               BotAppointmentReminderDispatchStatus.PENDING,
               BotAppointmentReminderDispatchStatus.LOCKED,
               BotAppointmentReminderDispatchStatus.PHONE_VERIFICATION_PENDING,
+              BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
             ],
           },
         },
@@ -535,6 +536,32 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
     return result.count > 0;
   }
 
+  async markPausedHold(command: {
+    dispatchId: number;
+    expectedLockVersion: number;
+    workerId: string;
+    reason: string;
+  }): Promise<boolean> {
+    const result =
+      await this.prismaBot.botAppointmentReminderDispatch.updateMany({
+        where: {
+          id: command.dispatchId,
+          status: BotAppointmentReminderDispatchStatus.LOCKED,
+          lockedBy: command.workerId,
+          lockVersion: command.expectedLockVersion,
+        },
+        data: {
+          status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+          lastError: command.reason,
+          lockAcquiredAt: null,
+          lockExpiresAt: null,
+          lockedBy: null,
+        },
+      });
+
+    return result.count > 0;
+  }
+
   async markPostVerificationSent(input: {
     dispatchId: number;
     metaMessageId: string;
@@ -552,6 +579,26 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
           metaMessageId: input.metaMessageId,
           sentAt: new Date(input.sentAtIso),
           lastError: null,
+        },
+      });
+
+    return result.count > 0;
+  }
+
+  async markPostVerificationPausedHold(input: {
+    dispatchId: number;
+    reason?: string;
+  }): Promise<boolean> {
+    const result =
+      await this.prismaBot.botAppointmentReminderDispatch.updateMany({
+        where: {
+          id: input.dispatchId,
+          status:
+            BotAppointmentReminderDispatchStatus.PHONE_VERIFICATION_PENDING,
+        },
+        data: {
+          status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+          lastError: input.reason ?? null,
         },
       });
 
@@ -688,6 +735,45 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
         resultStatus: input.resultStatus,
       },
     });
+  }
+
+  async releasePausedHolds(input: {
+    runAtIso: string;
+    limit: number;
+  }): Promise<number[]> {
+    const rows = await this.prismaBot.botAppointmentReminderDispatch.findMany({
+      where: {
+        status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+        scheduledFor: {
+          lte: new Date(input.runAtIso),
+        },
+      },
+      orderBy: [{ scheduledFor: 'asc' }, { id: 'asc' }],
+      take: input.limit,
+      select: {
+        id: true,
+      },
+    });
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    await this.prismaBot.botAppointmentReminderDispatch.updateMany({
+      where: {
+        id: {
+          in: rows.map((row) => row.id),
+        },
+        status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+      },
+      data: {
+        status: BotAppointmentReminderDispatchStatus.PENDING,
+        lastError: null,
+        nextAttemptAt: null,
+      },
+    });
+
+    return rows.map((row) => row.id);
   }
 
   private mapDispatch(

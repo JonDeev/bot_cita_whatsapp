@@ -7,13 +7,14 @@ import { APPOINTMENT_REMINDER_OUTBOX_REPOSITORY } from '../../domain/reminders.t
 import type { AppointmentReminderOutboxRepository } from '../../domain/ports/appointment-reminder-outbox.repository';
 import {
   APPOINTMENT_REMINDER_SEND_MODES,
-  AppointmentReminderDispatchConfigService,
-} from './appointment-reminder-dispatch-config.service';
+} from '../../domain/appointment-reminder-runtime.types';
+import { AppointmentReminderDispatchConfigService } from './appointment-reminder-dispatch-config.service';
 import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
 import type {
   OutboundWhatsappSendResult,
   OutboundWhatsappTemplateQuickReplyButton,
 } from '../../../whatsapp/domain/value-objects/outbound-whatsapp-message';
+import { AppointmentReminderRuntimeSettingsResolverService } from './appointment-reminder-runtime-settings-resolver.service';
 
 export interface AppointmentReminderTemplateDeliveryInput {
   conversationKey: string;
@@ -66,12 +67,20 @@ export class AppointmentReminderTemplateDeliveryService {
     @Inject(CONVERSATION_MESSAGE_REPOSITORY)
     private readonly conversationMessageRepository: ConversationMessageRepository,
     private readonly auditService: AuditService,
+    private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
 
   async send(
     input: AppointmentReminderTemplateDeliveryInput,
   ): Promise<AppointmentReminderTemplateDeliveryResult> {
-    const deliveryMode = this.resolveDeliveryMode(input.patientLegacyUserId);
+    const runtimeSettings =
+      await this.resolveRuntimeHotReloadableSettings();
+    const deliveryMode = this.resolveDeliveryMode(
+      input.patientLegacyUserId,
+      runtimeSettings.sendMode,
+      runtimeSettings.sendRolloutPercent,
+      runtimeSettings.emergencyPauseEnabled,
+    );
     const sentAtIso = new Date().toISOString();
     const deduplicationKey = this.buildDeduplicationKey(input);
 
@@ -103,16 +112,57 @@ export class AppointmentReminderTemplateDeliveryService {
     return result;
   }
 
-  private resolveDeliveryMode(patientLegacyUserId: number): 'live' | 'mock' {
-    if (this.configService.isMockSendMode()) {
+  private resolveDeliveryMode(
+    patientLegacyUserId: number,
+    sendMode: 'live' | 'mock',
+    sendRolloutPercent: number,
+    emergencyPauseEnabled: boolean,
+  ): 'live' | 'mock' {
+    if (emergencyPauseEnabled) {
+      throw new Error('Emergency pause is active for appointment reminders.');
+    }
+
+    if (sendMode === APPOINTMENT_REMINDER_SEND_MODES.MOCK) {
       return 'mock';
     }
 
-    if (!this.configService.isWithinReminderSendRollout(patientLegacyUserId)) {
+    if (
+      !this.configService.isWithinReminderSendRollout(
+        patientLegacyUserId,
+        sendRolloutPercent,
+      )
+    ) {
       return 'mock';
     }
 
     return 'live';
+  }
+
+  private async resolveRuntimeHotReloadableSettings(): Promise<{
+    sendMode: 'live' | 'mock';
+    sendRolloutPercent: number;
+    emergencyPauseEnabled: boolean;
+  }> {
+    if (this.runtimeResolver) {
+      return this.runtimeResolver.resolveEffectiveHotReloadableSettings();
+    }
+
+    const legacyIsMockSendMode =
+      'isMockSendMode' in this.configService &&
+      typeof this.configService.isMockSendMode === 'function'
+        ? this.configService.isMockSendMode()
+        : false;
+    const legacyRolloutPercent =
+      'getSendRolloutPercent' in this.configService &&
+      typeof this.configService.getSendRolloutPercent === 'function'
+        ? this.configService.getSendRolloutPercent()
+        : 100;
+
+    return {
+      sendMode: legacyIsMockSendMode ? 'mock' : 'live',
+      sendRolloutPercent: legacyRolloutPercent,
+      emergencyPauseEnabled: false,
+    };
   }
 
   private buildMockMessageId(input: {

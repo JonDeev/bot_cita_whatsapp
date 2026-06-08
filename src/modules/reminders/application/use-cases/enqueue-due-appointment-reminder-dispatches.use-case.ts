@@ -4,6 +4,7 @@ import { APPOINTMENT_REMINDER_DISPATCH_REPOSITORY } from '../../domain/reminders
 import type { AppointmentReminderDispatchQueuePort } from '../../domain/ports/appointment-reminder-dispatch-queue.port';
 import type { AppointmentReminderDispatchRepository } from '../../domain/ports/appointment-reminder-dispatch.repository';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 
 @Injectable()
 export class EnqueueDueAppointmentReminderDispatchesUseCase {
@@ -13,6 +14,7 @@ export class EnqueueDueAppointmentReminderDispatchesUseCase {
     @Inject(APPOINTMENT_REMINDER_DISPATCH_QUEUE)
     private readonly dispatchQueue: AppointmentReminderDispatchQueuePort,
     private readonly configService: AppointmentReminderDispatchConfigService,
+    private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
 
   async execute(input?: { runAtIso?: string }): Promise<{ enqueued: number }> {
@@ -21,9 +23,14 @@ export class EnqueueDueAppointmentReminderDispatchesUseCase {
     }
 
     const runAtIso = input?.runAtIso ?? new Date().toISOString();
+    const runtimeSettings = this.runtimeResolver
+      ? await this.runtimeResolver.resolveEffectiveHotReloadableSettings()
+      : {
+          dispatchBatchSize: this.configService.getDispatchBatchSize(),
+        };
     const dueDispatchIds = await this.dispatchRepository.findDueDispatchIds({
       runAtIso,
-      limit: this.configService.getDispatchBatchSize(),
+      limit: runtimeSettings.dispatchBatchSize,
     });
 
     for (const dispatchId of dueDispatchIds) {

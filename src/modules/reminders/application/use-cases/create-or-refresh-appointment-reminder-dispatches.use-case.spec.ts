@@ -44,6 +44,7 @@ describe('CreateOrRefreshAppointmentReminderDispatchesUseCase', () => {
       getMaxEligibilityWindowHours: jest.fn().mockReturnValue(72),
       getEligibilityLimit: jest.fn().mockReturnValue(500),
       isQueueEnabled: jest.fn().mockReturnValue(true),
+      getWhatsAppPhoneNumberId: jest.fn().mockReturnValue('12345'),
     };
 
     const phoneNormalizer = {

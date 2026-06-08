@@ -13,6 +13,7 @@ import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
@@ -46,6 +47,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
     private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
     private readonly auditService: AuditService,
+    private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
 
   async execute(
@@ -188,7 +190,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     const canStillSend = this.windowService.hasAtLeastHoursBeforeAppointment({
       appointmentStartsAtIso: dispatch.appointmentStartsAtIso,
       referenceIso: input.receivedAtIso,
-      minimumHours: this.configService.getVerificationGraceHours(),
+      minimumHours: await this.resolveMinConfirmationHours(),
     });
 
     if (!canStillSend) {
@@ -289,6 +291,39 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       return;
     }
 
+    if (await this.isEmergencyPauseActive()) {
+      const paused =
+        await this.dispatchRepository.markPostVerificationPausedHold({
+          dispatchId: dispatch.id,
+          reason: 'emergency_pause_active',
+        });
+      if (!paused) {
+        await this.auditService.record(
+          'appointment_reminder.phone_confirmed_state_lost',
+          {
+            dispatchId: dispatch.id,
+            pauseHold: true,
+          },
+        );
+      } else {
+        await this.auditService.record(
+          'appointment_reminder.dispatch.paused_hold',
+          {
+            dispatchId: dispatch.id,
+            source: 'post_verification_confirm',
+          },
+        );
+      }
+      await this.dispatchRepository.markInboundDedupProcessed({
+        provider: 'META_WHATSAPP',
+        inboundMessageId: input.inboundMessageId,
+        buttonPayloadId: input.interactiveReplyId,
+        processedAtIso: input.receivedAtIso,
+        resultStatus: 'PROCESSED_PAUSED_HOLD',
+      });
+      return;
+    }
+
     const hasOptIn =
       await this.recipientPolicyRepository.hasAppointmentNotificationsOptIn({
         patientLegacyUserId: dispatch.patientLegacyUserId,
@@ -385,6 +420,24 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     });
   }
 
+  private async resolveMinConfirmationHours(): Promise<number> {
+    if (this.runtimeResolver) {
+      return (
+        await this.runtimeResolver.resolveEffectiveHotReloadableSettings()
+      ).minConfirmationHours;
+    }
+
+    return this.configService.getVerificationGraceHours();
+  }
+
+  private async isEmergencyPauseActive(): Promise<boolean> {
+    if (!this.runtimeResolver) {
+      return false;
+    }
+
+    return this.runtimeResolver.isEmergencyPauseActive();
+  }
+
   private resolveConversationKey(dispatch: {
     conversationKey: string | null;
     recipientPhoneE164: string | null;
@@ -394,7 +447,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       return dispatch.conversationKey;
     }
 
-    const phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim();
+    const phoneNumberId = this.configService.getWhatsAppPhoneNumberId();
     const recipientPhone =
       dispatch.recipientPhoneE164 ??
       this.phoneNormalizer.toE164Colombia(

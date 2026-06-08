@@ -5,6 +5,7 @@ import type { AppointmentReminderOutboxRepository } from '../../domain/ports/app
 import { AppointmentReminderDispatchConfigService } from './appointment-reminder-dispatch-config.service';
 import { AppointmentReminderTemplateDeliveryService } from './appointment-reminder-template-delivery.service';
 import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
+import { AppointmentReminderRuntimeSettingsResolverService } from './appointment-reminder-runtime-settings-resolver.service';
 
 describe('AppointmentReminderTemplateDeliveryService', () => {
   it('uses mock delivery mode when configured and persists outbound metadata', async () => {
@@ -35,7 +36,7 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
 
     const configService = {
       isMockSendMode: jest.fn().mockReturnValue(true),
-      isWithinReminderSendRollout: jest.fn(),
+      isWithinReminderSendRollout: jest.fn().mockReturnValue(true),
     } as unknown as AppointmentReminderDispatchConfigService;
 
     const service = new AppointmentReminderTemplateDeliveryService(
@@ -178,6 +179,81 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
     );
     expect(result).toEqual({
       messageId: 'wamid-live-1',
+      deliveryMode: 'live',
+    });
+  });
+
+  it('prefers runtime resolver settings over bootstrap config when available', async () => {
+    const saveOutbound = jest.fn().mockResolvedValue(undefined);
+    const execute = jest.fn().mockResolvedValue({ messageId: 'wamid-live-2' });
+    const record = jest.fn().mockResolvedValue(undefined);
+    const reserve = jest.fn().mockResolvedValue(undefined);
+    const markSent = jest.fn().mockResolvedValue(undefined);
+    const markFailed = jest.fn().mockResolvedValue(undefined);
+
+    const conversationMessageRepository = {
+      saveOutbound,
+    } as ConversationMessageRepository;
+
+    const reminderOutboxRepository = {
+      reserve,
+      markSent,
+      markFailed,
+    } as AppointmentReminderOutboxRepository;
+
+    const sendWhatsappTemplateMessage = {
+      execute,
+    } as unknown as SendWhatsappTemplateMessageUseCase;
+
+    const auditService = {
+      record,
+    } as AuditService;
+
+    const configService = {
+      isMockSendMode: jest.fn().mockReturnValue(true),
+      isWithinReminderSendRollout: jest.fn().mockReturnValue(true),
+    } as unknown as AppointmentReminderDispatchConfigService;
+
+    const runtimeResolver = {
+      resolveEffectiveHotReloadableSettings: jest.fn().mockResolvedValue({
+        sendMode: 'live' as const,
+        sendRolloutPercent: 100,
+        emergencyPauseEnabled: false,
+        dispatchBatchSize: 50,
+        eligibilityLimit: 500,
+        lockTtlSeconds: 300,
+        lockHeartbeatIntervalMs: 60_000,
+        minConfirmationHours: 3,
+      }),
+    } as unknown as AppointmentReminderRuntimeSettingsResolverService;
+
+    const service = new AppointmentReminderTemplateDeliveryService(
+      configService,
+      sendWhatsappTemplateMessage,
+      reminderOutboxRepository,
+      conversationMessageRepository,
+      auditService,
+      runtimeResolver,
+    );
+
+    const result = await service.send({
+      conversationKey: 'whatsapp:1:573001234579',
+      dispatchId: 93,
+      patientLegacyUserId: 5003,
+      to: '573001234579',
+      templateName: 'recordatorio_cita_24h',
+      languageCode: 'es_CO',
+      bodyTextParameters: ['PACIENTE'],
+      trigger: 'appointment_reminder.dispatch_due',
+    });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(record).not.toHaveBeenCalledWith(
+      'appointment_reminder.template.mock_sent',
+      expect.anything(),
+    );
+    expect(result).toEqual({
+      messageId: 'wamid-live-2',
       deliveryMode: 'live',
     });
   });

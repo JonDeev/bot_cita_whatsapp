@@ -9,6 +9,7 @@ import type { AppointmentReminderEligibilityRepository } from '../../domain/port
 import { AppointmentReminderAppointmentTimeService } from '../services/appointment-reminder-appointment-time.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 import { APPOINTMENT_REMINDER_DISPATCH_QUEUE } from '../../domain/reminder-queue.tokens';
@@ -37,18 +38,24 @@ export class CreateOrRefreshAppointmentReminderDispatchesUseCase {
     private readonly windowService: AppointmentReminderWindowService,
     private readonly appointmentTimeService: AppointmentReminderAppointmentTimeService,
     private readonly templateConfig: AppointmentReminderTemplateConfigService,
+    private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
 
   async execute(input?: {
     runAtIso?: string;
   }): Promise<CreateOrRefreshAppointmentReminderDispatchesResult> {
     const runAtIso = input?.runAtIso ?? new Date().toISOString();
+    const runtimeSettings = this.runtimeResolver
+      ? await this.runtimeResolver.resolveEffectiveHotReloadableSettings()
+      : {
+          eligibilityLimit: this.configService.getEligibilityLimit(),
+        };
 
     const candidates =
       await this.eligibilityRepository.findFutureAssignedAppointments({
         nowIso: runAtIso,
         maxWindowHours: this.configService.getMaxEligibilityWindowHours(),
-        limit: this.configService.getEligibilityLimit(),
+        limit: runtimeSettings.eligibilityLimit,
       });
 
     let created = 0;
@@ -129,7 +136,7 @@ export class CreateOrRefreshAppointmentReminderDispatchesUseCase {
   }
 
   private createConversationKey(recipientPhoneE164: string): string {
-    const phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim();
+    const phoneNumberId = this.configService.getWhatsAppPhoneNumberId();
     return `whatsapp:${phoneNumberId || 'unknown'}:${recipientPhoneE164}`;
   }
 }

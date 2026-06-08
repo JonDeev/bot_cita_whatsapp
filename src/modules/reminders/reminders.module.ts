@@ -13,13 +13,21 @@ import { ReconcileAppointmentReminderDispatchHealthUseCase } from './application
 import { EnqueueDueAppointmentReminderDispatchesUseCase } from './application/use-cases/enqueue-due-appointment-reminder-dispatches.use-case';
 import { GetAppointmentReminderMetricsUseCase } from './application/use-cases/get-appointment-reminder-metrics.use-case';
 import { AppointmentReminderAppointmentTimeService } from './application/services/appointment-reminder-appointment-time.service';
+import { AppointmentReminderBootstrapConfigService } from './application/services/appointment-reminder-bootstrap-config.service';
 import { AppointmentReminderButtonTokenService } from './application/services/appointment-reminder-button-token.service';
 import { AppointmentReminderDispatchConfigService } from './application/services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderMetricsAccessConfigService } from './application/services/appointment-reminder-metrics-access-config.service';
 import { AppointmentReminderPhoneNormalizerService } from './application/services/appointment-reminder-phone-normalizer.service';
+import { AppointmentReminderRuntimeSettingsCatalogService } from './application/services/appointment-reminder-runtime-settings-catalog.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from './application/services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from './application/services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from './application/services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from './application/services/appointment-reminder-window.service';
+import { GetAppointmentReminderRuntimeOptionsUseCase } from './application/use-cases/get-appointment-reminder-runtime-options.use-case';
+import { GetAppointmentReminderRuntimeSettingsUseCase } from './application/use-cases/get-appointment-reminder-runtime-settings.use-case';
+import { ListAppointmentReminderRuntimeSettingEventsUseCase } from './application/use-cases/list-appointment-reminder-runtime-setting-events.use-case';
+import { ToggleAppointmentReminderEmergencyPauseUseCase } from './application/use-cases/toggle-appointment-reminder-emergency-pause.use-case';
+import { UpdateAppointmentReminderRuntimeSettingsUseCase } from './application/use-cases/update-appointment-reminder-runtime-settings.use-case';
 import {
   APPOINTMENT_REMINDER_DISPATCH_REPOSITORY,
   APPOINTMENT_REMINDER_ELIGIBILITY_REPOSITORY,
@@ -27,12 +35,14 @@ import {
   APPOINTMENT_REMINDER_OUTBOX_REPOSITORY,
   APPOINTMENT_REMINDER_PATIENT_CONTACT_REPOSITORY,
   APPOINTMENT_REMINDER_RECIPIENT_POLICY_REPOSITORY,
+  APPOINTMENT_REMINDER_RUNTIME_SETTINGS_REPOSITORY,
 } from './domain/reminders.tokens';
 import { MariadbLegacyAppointmentReminderPatientContactRepository } from './infrastructure/persistence/mysql/mariadb-legacy-appointment-reminder-patient-contact.repository';
 import { PrismaBotAppointmentReminderDispatchRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-dispatch.repository';
 import { PrismaBotAppointmentReminderOutboxRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-outbox.repository';
 import { PrismaBotAppointmentReminderMetricsRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-metrics.repository';
 import { PrismaBotAppointmentReminderRecipientPolicyRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-recipient-policy.repository';
+import { PrismaBotAppointmentReminderRuntimeSettingsRepository } from './infrastructure/persistence/mysql/prisma-bot-appointment-reminder-runtime-settings.repository';
 import { PrismaLegacyAppointmentReminderEligibilityRepository } from './infrastructure/persistence/mysql/prisma-legacy-appointment-reminder-eligibility.repository';
 import { AppointmentReminderScheduler } from './infrastructure/scheduling/appointment-reminder.scheduler';
 import { AppointmentReminderSyncScheduler } from './infrastructure/scheduling/appointment-reminder-sync.scheduler';
@@ -51,10 +61,13 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
   ],
   providers: [
     AppointmentReminderAppointmentTimeService,
+    AppointmentReminderBootstrapConfigService,
     AppointmentReminderButtonTokenService,
     AppointmentReminderDispatchConfigService,
     AppointmentReminderMetricsAccessConfigService,
     AppointmentReminderPhoneNormalizerService,
+    AppointmentReminderRuntimeSettingsCatalogService,
+    AppointmentReminderRuntimeSettingsResolverService,
     AppointmentReminderTemplateConfigService,
     AppointmentReminderTemplateDeliveryService,
     AppointmentReminderWindowService,
@@ -67,6 +80,11 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     ReconcileAppointmentReminderDispatchHealthUseCase,
     EnqueueDueAppointmentReminderDispatchesUseCase,
     GetAppointmentReminderMetricsUseCase,
+    GetAppointmentReminderRuntimeOptionsUseCase,
+    GetAppointmentReminderRuntimeSettingsUseCase,
+    ListAppointmentReminderRuntimeSettingEventsUseCase,
+    UpdateAppointmentReminderRuntimeSettingsUseCase,
+    ToggleAppointmentReminderEmergencyPauseUseCase,
     BullmqAppointmentReminderDispatchQueue,
     BullmqAppointmentReminderDispatchWorker,
     AppointmentReminderScheduler,
@@ -96,6 +114,10 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
       useClass: PrismaBotAppointmentReminderOutboxRepository,
     },
     {
+      provide: APPOINTMENT_REMINDER_RUNTIME_SETTINGS_REPOSITORY,
+      useClass: PrismaBotAppointmentReminderRuntimeSettingsRepository,
+    },
+    {
       provide: APPOINTMENT_REMINDER_DISPATCH_QUEUE,
       useExisting: BullmqAppointmentReminderDispatchQueue,
     },
@@ -108,6 +130,13 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     CreateOrRefreshAppointmentReminderDispatchesUseCase,
     DispatchDueAppointmentRemindersUseCase,
     GetAppointmentReminderMetricsUseCase,
+    AppointmentReminderRuntimeSettingsCatalogService,
+    AppointmentReminderRuntimeSettingsResolverService,
+    GetAppointmentReminderRuntimeOptionsUseCase,
+    GetAppointmentReminderRuntimeSettingsUseCase,
+    ListAppointmentReminderRuntimeSettingEventsUseCase,
+    UpdateAppointmentReminderRuntimeSettingsUseCase,
+    ToggleAppointmentReminderEmergencyPauseUseCase,
   ],
 })
 export class RemindersModule {}

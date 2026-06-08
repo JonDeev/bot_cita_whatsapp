@@ -292,6 +292,57 @@ describe('PrismaBotAppointmentReminderDispatchRepository', () => {
     expect(marked).toBe(true);
   });
 
+  it('marks a locked dispatch as PAUSED_HOLD with CAS fields', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prismaBot = {
+      botAppointmentReminderDispatch: {
+        updateMany,
+      },
+    };
+
+    const repository = new PrismaBotAppointmentReminderDispatchRepository(
+      prismaBot as never,
+    );
+
+    const marked = await repository.markPausedHold({
+      dispatchId: 52,
+      expectedLockVersion: 3,
+      workerId: 'worker:test',
+      reason: 'emergency_pause_active',
+    });
+
+    const call = (updateMany.mock.calls as Array<[unknown]>)[0]?.[0] as {
+      where: {
+        id: number;
+        status: BotAppointmentReminderDispatchStatus;
+        lockedBy: string;
+        lockVersion: number;
+      };
+      data: {
+        status: BotAppointmentReminderDispatchStatus;
+        lastError: string;
+        lockAcquiredAt: null;
+        lockExpiresAt: null;
+        lockedBy: null;
+      };
+    };
+
+    expect(call.where).toMatchObject({
+      id: 52,
+      status: BotAppointmentReminderDispatchStatus.LOCKED,
+      lockedBy: 'worker:test',
+      lockVersion: 3,
+    });
+    expect(call.data).toMatchObject({
+      status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+      lastError: 'emergency_pause_active',
+      lockAcquiredAt: null,
+      lockExpiresAt: null,
+      lockedBy: null,
+    });
+    expect(marked).toBe(true);
+  });
+
   it('marks post-verification reminder as sent from PHONE_VERIFICATION_PENDING', async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prismaBot = {
@@ -433,6 +484,45 @@ describe('PrismaBotAppointmentReminderDispatchRepository', () => {
     expect(optInMarked).toBe(true);
   });
 
+  it('marks post-verification reminder as PAUSED_HOLD when emergency pause is active', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prismaBot = {
+      botAppointmentReminderDispatch: {
+        updateMany,
+      },
+    };
+
+    const repository = new PrismaBotAppointmentReminderDispatchRepository(
+      prismaBot as never,
+    );
+
+    const marked = await repository.markPostVerificationPausedHold({
+      dispatchId: 64,
+      reason: 'emergency_pause_active',
+    });
+
+    const call = (updateMany.mock.calls as Array<[unknown]>)[0]?.[0] as {
+      where: {
+        id: number;
+        status: BotAppointmentReminderDispatchStatus;
+      };
+      data: {
+        status: BotAppointmentReminderDispatchStatus;
+        lastError: string;
+      };
+    };
+
+    expect(call.where).toMatchObject({
+      id: 64,
+      status: BotAppointmentReminderDispatchStatus.PHONE_VERIFICATION_PENDING,
+    });
+    expect(call.data).toMatchObject({
+      status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+      lastError: 'emergency_pause_active',
+    });
+    expect(marked).toBe(true);
+  });
+
   it('marks inbound dedup rows as processed', async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prismaBot = {
@@ -500,5 +590,44 @@ describe('PrismaBotAppointmentReminderDispatchRepository', () => {
     });
 
     expect(accepted).toBe(false);
+  });
+
+  it('releases paused hold rows back to pending in due order', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 81 }, { id: 82 }]);
+    const updateMany = jest.fn().mockResolvedValue({ count: 2 });
+    const prismaBot = {
+      botAppointmentReminderDispatch: {
+        findMany,
+        updateMany,
+      },
+    };
+
+    const repository = new PrismaBotAppointmentReminderDispatchRepository(
+      prismaBot as never,
+    );
+
+    const released = await repository.releasePausedHolds({
+      runAtIso: '2026-06-07T12:00:00.000Z',
+      limit: 25,
+    });
+
+    expect(findMany.mock.calls[0]?.[0]).toMatchObject({
+      where: {
+        status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+      },
+      take: 25,
+    });
+    expect(updateMany.mock.calls[0]?.[0]).toMatchObject({
+      where: {
+        id: { in: [81, 82] },
+        status: BotAppointmentReminderDispatchStatus.PAUSED_HOLD,
+      },
+      data: {
+        status: BotAppointmentReminderDispatchStatus.PENDING,
+        lastError: null,
+        nextAttemptAt: null,
+      },
+    });
+    expect(released).toEqual([81, 82]);
   });
 });

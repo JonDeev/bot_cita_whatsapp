@@ -76,6 +76,7 @@ enum BotAppointmentReminderDispatchStatus {
   LOCKED
   PHONE_VERIFICATION_PENDING
   PHONE_VERIFICATION_EXPIRED
+  PAUSED_HOLD
   SENT
   SKIPPED_NO_OPT_IN
   SKIPPED_INVALID_PHONE
@@ -238,6 +239,8 @@ model BotAdminUser {
   updatedAt    DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
   sessions     BotAdminSession[]
   auditEvents  BotAdminAuditEvent[]
+  reminderRuntimeSettingsUpdated BotAppointmentReminderRuntimeSettings[]
+  reminderRuntimeSettingEvents   BotAppointmentReminderRuntimeSettingEvent[]
 
   @@index([role, status], map: "idx_bot_admin_users_role_status")
   @@map("bot_admin_users")
@@ -544,6 +547,54 @@ model BotAppointmentReminderDispatch {
   @@index([lockExpiresAt, status], map: "idx_bot_appt_reminder_lock_expires_status")
   @@index([verificationTokenHash], map: "idx_bot_appt_reminder_verification_token_hash")
   @@map("bot_appointment_reminder_dispatches")
+}
+
+model BotAppointmentReminderRuntimeSettings {
+  id                      Int           @id @default(autoincrement())
+  scopeKey                String        @unique(map: "uq_bot_appt_reminder_runtime_settings_scope_key") @map("scope_key") @db.VarChar(32)
+  syncEnabled             Boolean       @map("sync_enabled")
+  dispatchEnabled         Boolean       @map("dispatch_enabled")
+  queueEnabled            Boolean       @map("queue_enabled")
+  sendMode                String        @map("send_mode") @db.VarChar(16)
+  sendRolloutPercent      Int           @map("send_rollout_percent")
+  emergencyPauseEnabled   Boolean       @map("emergency_pause_enabled")
+  syncIntervalMs          Int           @map("sync_interval_ms")
+  recoverySweepIntervalMs Int           @map("recovery_sweep_interval_ms")
+  workerConcurrency       Int           @map("worker_concurrency")
+  dispatchBatchSize       Int           @map("dispatch_batch_size")
+  eligibilityLimit        Int           @map("eligibility_limit")
+  lockTtlSeconds          Int           @map("lock_ttl_seconds")
+  lockHeartbeatIntervalMs Int           @map("lock_heartbeat_interval_ms")
+  minConfirmationHours    Int           @map("min_confirmation_hours")
+  version                 Int           @default(1)
+  updatedByAdminUserId    Int?          @map("updated_by_admin_user_id")
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt               DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedByAdminUser      BotAdminUser? @relation(fields: [updatedByAdminUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([updatedAt], map: "idx_bot_appt_reminder_runtime_settings_updated_at")
+  @@index([updatedByAdminUserId], map: "idx_bot_appt_reminder_runtime_settings_updated_by")
+  @@map("bot_appointment_reminder_runtime_settings")
+}
+
+model BotAppointmentReminderRuntimeSettingEvent {
+  id                   Int      @id @default(autoincrement())
+  settingsVersion      Int      @map("settings_version")
+  adminUserId          Int?     @map("admin_user_id")
+  changeType           String   @map("change_type") @db.VarChar(32)
+  section              String   @db.VarChar(16)
+  reason               String?  @db.VarChar(500)
+  previousSnapshotJson Json     @map("previous_snapshot_json") @db.Json
+  newSnapshotJson      Json     @map("new_snapshot_json") @db.Json
+  effectiveSnapshotJson Json    @map("effective_snapshot_json") @db.Json
+  occurredAt           DateTime @map("occurred_at") @db.DateTime(3)
+  createdAt            DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  adminUser            BotAdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([settingsVersion], map: "idx_bot_appt_reminder_runtime_events_version")
+  @@index([adminUserId, occurredAt], map: "idx_bot_appt_reminder_runtime_events_admin_occurred")
+  @@index([section, occurredAt], map: "idx_bot_appt_reminder_runtime_events_section_occurred")
+  @@map("bot_appointment_reminder_runtime_setting_events")
 }
 
 model BotWebhookInboundDedup {

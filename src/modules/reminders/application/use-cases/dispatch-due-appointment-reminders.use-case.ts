@@ -16,6 +16,7 @@ import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
@@ -56,6 +57,7 @@ export class DispatchDueAppointmentRemindersUseCase {
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
     private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
     private readonly auditService: AuditService,
+    private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
 
   async execute(input?: {
@@ -65,12 +67,13 @@ export class DispatchDueAppointmentRemindersUseCase {
   }): Promise<DispatchDueAppointmentRemindersResult> {
     const runAtIso = input?.runAtIso ?? new Date().toISOString();
     const workerId = input?.workerId ?? `worker:${process.pid}`;
+    const runtimeSettings = await this.resolveRuntimeHotReloadableSettings();
 
     const claimedDispatches = await this.dispatchRepository.claimDueDispatches({
       runAtIso,
       workerId,
-      lockTtlSeconds: this.configService.getLockTtlSeconds(),
-      limit: this.configService.getDispatchBatchSize(),
+      lockTtlSeconds: runtimeSettings.lockTtlSeconds,
+      limit: runtimeSettings.dispatchBatchSize,
       restrictToDispatchIds: input?.restrictToDispatchIds,
     });
 
@@ -155,12 +158,45 @@ export class DispatchDueAppointmentRemindersUseCase {
       }
 
       try {
+        if (runtimeSettings.emergencyPauseEnabled) {
+          const paused = await this.dispatchRepository.markPausedHold({
+            dispatchId: dispatch.id,
+            expectedLockVersion: dispatch.lockVersion,
+            workerId,
+            reason: 'emergency_pause_active',
+          });
+          if (paused) {
+            await this.auditService.record(
+              'appointment_reminder.dispatch.paused_hold',
+              {
+                dispatchId: dispatch.id,
+                source: 'dispatch_due',
+              },
+            );
+            continue;
+          }
+
+          await this.auditService.record(
+            'appointment_reminder.dispatch.lock_lost',
+            {
+              dispatchId: dispatch.id,
+              workerId,
+              reason: 'cas_mark_paused_hold_failed',
+            },
+          );
+          this.logger.warn(
+            `Reminder dispatch ${dispatch.id} could not transition to PAUSED_HOLD while emergency pause was active. External send was blocked.`,
+          );
+          continue;
+        }
+
         if (appointment.patientPhoneVerifiedAtIso) {
           const bodyTextParameters =
             this.buildReminderBodyParameters(appointment);
           const sendResult = await this.sendWithLeaseHeartbeat({
             dispatch,
             workerId,
+            runtimeSettings,
             send: () =>
               this.templateDeliveryService.send({
                 conversationKey: this.resolveConversationKey(dispatch),
@@ -244,6 +280,7 @@ export class DispatchDueAppointmentRemindersUseCase {
         const sendResult = await this.sendWithLeaseHeartbeat({
           dispatch,
           workerId,
+          runtimeSettings,
           send: () =>
             this.templateDeliveryService.send({
               conversationKey: this.resolveConversationKey(dispatch),
@@ -379,6 +416,31 @@ export class DispatchDueAppointmentRemindersUseCase {
     };
   }
 
+  private async resolveRuntimeHotReloadableSettings(): Promise<{
+    lockTtlSeconds: number;
+    lockHeartbeatIntervalMs: number;
+    dispatchBatchSize: number;
+    emergencyPauseEnabled: boolean;
+  }> {
+    if (this.runtimeResolver) {
+      const runtime =
+        await this.runtimeResolver.resolveEffectiveHotReloadableSettings();
+      return {
+        lockTtlSeconds: runtime.lockTtlSeconds,
+        lockHeartbeatIntervalMs: runtime.lockHeartbeatIntervalMs,
+        dispatchBatchSize: runtime.dispatchBatchSize,
+        emergencyPauseEnabled: runtime.emergencyPauseEnabled,
+      };
+    }
+
+    return {
+      lockTtlSeconds: this.configService.getLockTtlSeconds(),
+      lockHeartbeatIntervalMs: this.configService.getLockHeartbeatIntervalMs(),
+      dispatchBatchSize: this.configService.getDispatchBatchSize(),
+      emergencyPauseEnabled: false,
+    };
+  }
+
   private async markSkipped(
     dispatch: AppointmentReminderDispatchRecord,
     workerId: string,
@@ -468,7 +530,7 @@ export class DispatchDueAppointmentRemindersUseCase {
       return dispatch.conversationKey;
     }
 
-    const phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID ?? '').trim();
+    const phoneNumberId = this.configService.getWhatsAppPhoneNumberId();
     const recipientPhone =
       dispatch.recipientPhoneE164 ??
       this.phoneNormalizer.toE164Colombia(
@@ -482,11 +544,16 @@ export class DispatchDueAppointmentRemindersUseCase {
   private async sendWithLeaseHeartbeat<T>(input: {
     dispatch: AppointmentReminderDispatchRecord;
     workerId: string;
+    runtimeSettings: {
+      lockTtlSeconds: number;
+      lockHeartbeatIntervalMs: number;
+    };
     send: () => Promise<T>;
   }): Promise<T | null> {
     const leaseHeartbeat = this.createLeaseHeartbeat(
       input.dispatch,
       input.workerId,
+      input.runtimeSettings,
     );
 
     try {
@@ -517,9 +584,13 @@ export class DispatchDueAppointmentRemindersUseCase {
   private createLeaseHeartbeat(
     dispatch: AppointmentReminderDispatchRecord,
     workerId: string,
+    runtimeSettings: {
+      lockTtlSeconds: number;
+      lockHeartbeatIntervalMs: number;
+    },
   ): ReminderDispatchLeaseHeartbeat {
-    const lockTtlSeconds = this.configService.getLockTtlSeconds();
-    const heartbeatIntervalMs = this.configService.getLockHeartbeatIntervalMs();
+    const lockTtlSeconds = runtimeSettings.lockTtlSeconds;
+    const heartbeatIntervalMs = runtimeSettings.lockHeartbeatIntervalMs;
     let lockLost = false;
     let stopped = false;
     let renewing = false;

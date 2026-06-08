@@ -11,6 +11,7 @@ import { AppointmentReminderDispatchConfigService } from '../services/appointmen
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import type { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 import { HandleAppointmentReminderVerificationReplyUseCase } from './handle-appointment-reminder-verification-reply.use-case';
 
@@ -47,7 +48,8 @@ type RecipientPolicyRepositoryMock = Pick<
 type DispatchConfigMock = Pick<
   AppointmentReminderDispatchConfigService,
   'getVerificationGraceHours'
->;
+> &
+  Partial<Pick<AppointmentReminderDispatchConfigService, 'getWhatsAppPhoneNumberId'>>;
 
 type TemplateDeliveryServiceMock = Pick<
   AppointmentReminderTemplateDeliveryService,
@@ -64,7 +66,15 @@ function createUseCase(input: {
   auditService: AuditService;
   tokenService: AppointmentReminderButtonTokenService;
   templateConfig: AppointmentReminderTemplateConfigService;
+  runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService;
 }): HandleAppointmentReminderVerificationReplyUseCase {
+  const configService: AppointmentReminderDispatchConfigService = {
+    ...input.configService,
+    getWhatsAppPhoneNumberId:
+      input.configService.getWhatsAppPhoneNumberId ??
+      jest.fn().mockReturnValue('12345'),
+  } as AppointmentReminderDispatchConfigService;
+
   return new HandleAppointmentReminderVerificationReplyUseCase(
     input.dispatchRepository as AppointmentReminderDispatchRepository,
     input.eligibilityRepository as AppointmentReminderEligibilityRepository,
@@ -84,10 +94,11 @@ function createUseCase(input: {
     input.templateConfig,
     input.tokenService,
     new AppointmentReminderWindowService(),
-    input.configService as AppointmentReminderDispatchConfigService,
+    configService,
     new AppointmentReminderPhoneNormalizerService(),
     input.templateDeliveryService as AppointmentReminderTemplateDeliveryService,
     input.auditService,
+    input.runtimeResolver,
   );
 }
 
@@ -542,6 +553,112 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
       expect.objectContaining({
         inboundMessageId: 'wamid-inbound-3',
         resultStatus: 'PROCESSED_CONFIRMED',
+      }),
+    );
+  });
+
+  it('moves confirmation into paused hold when emergency pause is active', async () => {
+    const tokenService = new AppointmentReminderButtonTokenService();
+    const templateConfig = new AppointmentReminderTemplateConfigService();
+    const token = tokenService.createToken({
+      dispatchId: 1007,
+      expiresAtIso: '2099-01-01T00:00:00.000Z',
+    });
+    const interactiveReplyId = `${templateConfig.getConfirmButtonPayloadPrefix()}${token}`;
+
+    const dispatchRepository = {
+      recordInboundDedup: jest.fn().mockResolvedValue(true),
+      findById: jest.fn().mockResolvedValue({
+        id: 1007,
+        status: 'PHONE_VERIFICATION_PENDING',
+        verificationTokenHash: tokenService.hashToken(token),
+        legacyAgendaId: 801,
+        patientLegacyUserId: 83,
+        recipientPhoneRaw: '3007778899',
+        recipientPhoneE164: '573007778899',
+        appointmentStartsAtIso: '2099-04-01T18:00:00.000Z',
+        templateName: 'recordatorio_cita_24h',
+      }),
+      markPostVerificationSkipped: jest.fn().mockResolvedValue(true),
+      markPostVerificationPausedHold: jest.fn().mockResolvedValue(true),
+      markInboundDedupProcessed: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const eligibilityRepository = {
+      findByLegacyAgendaIds: jest.fn().mockResolvedValue([
+        createMinimalEligibleAppointment({
+          legacyAgendaId: 801,
+          patientFirstName: 'ANA',
+          patientLastName: 'RUIZ',
+          appointmentDateIso: '2099-04-01T00:00:00.000Z',
+          appointmentTimeHhmm: '13:00',
+          siteAddress: 'CALLE 15',
+          doctorName: 'DR. JUAN MARTINEZ',
+        }),
+      ]),
+    };
+
+    const runtimeResolver = {
+      isEmergencyPauseActive: jest.fn().mockResolvedValue(true),
+      resolveEffectiveHotReloadableSettings: jest.fn().mockResolvedValue({
+        sendMode: 'live' as const,
+        sendRolloutPercent: 100,
+        emergencyPauseEnabled: true,
+        dispatchBatchSize: 50,
+        eligibilityLimit: 500,
+        lockTtlSeconds: 300,
+        lockHeartbeatIntervalMs: 60_000,
+        minConfirmationHours: 3,
+      }),
+    } as unknown as AppointmentReminderRuntimeSettingsResolverService;
+
+    const templateDeliveryService = {
+      send: jest.fn(),
+    };
+
+    const useCase = createUseCase({
+      dispatchRepository,
+      eligibilityRepository,
+      patientContactRepository: {
+        markPhoneVerified: jest.fn().mockResolvedValue(undefined),
+        clearPhoneAndVerification: jest.fn(),
+      },
+      recipientPolicyRepository: {
+        hasActiveSuppression: jest.fn().mockResolvedValue(false),
+        hasAppointmentNotificationsOptIn: jest.fn().mockResolvedValue(true),
+        isHumanHandoffActive: jest.fn().mockResolvedValue(false),
+        upsertUnknownPersonSuppression: jest.fn(),
+      },
+      templateConfig,
+      tokenService,
+      configService: {
+        getVerificationGraceHours: jest.fn().mockReturnValue(3),
+      },
+      templateDeliveryService,
+      auditService: {
+        record: jest.fn().mockResolvedValue(undefined),
+      } as unknown as AuditService,
+      runtimeResolver,
+    });
+
+    await useCase.execute({
+      inboundMessageId: 'wamid-inbound-7',
+      fromPhone: '573007778899',
+      interactiveReplyId,
+      receivedAtIso: '2026-05-25T17:00:00.000Z',
+    });
+
+    expect(dispatchRepository.markPostVerificationPausedHold).toHaveBeenCalledWith(
+      {
+        dispatchId: 1007,
+        reason: 'emergency_pause_active',
+      },
+    );
+    expect(templateDeliveryService.send).not.toHaveBeenCalled();
+    expect(dispatchRepository.markInboundDedupProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inboundMessageId: 'wamid-inbound-7',
+        resultStatus: 'PROCESSED_PAUSED_HOLD',
       }),
     );
   });

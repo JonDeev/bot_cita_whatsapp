@@ -91,6 +91,13 @@ export interface MarkDispatchFailedCommand {
   attempts: number;
 }
 
+export interface MarkDispatchPausedHoldCommand {
+  dispatchId: number;
+  expectedLockVersion: number;
+  workerId: string;
+  reason: string;
+}
+
 export interface RenewDispatchLockCommand {
   dispatchId: number;
   expectedLockVersion: number;
@@ -150,10 +157,15 @@ export interface AppointmentReminderDispatchRepository {
   }): Promise<boolean>;
   markSkipped(command: MarkDispatchSkippedCommand): Promise<boolean>;
   markFailed(command: MarkDispatchFailedCommand): Promise<boolean>;
+  markPausedHold(command: MarkDispatchPausedHoldCommand): Promise<boolean>;
   markPostVerificationSent(input: {
     dispatchId: number;
     metaMessageId: string;
     sentAtIso: string;
+  }): Promise<boolean>;
+  markPostVerificationPausedHold(input: {
+    dispatchId: number;
+    reason?: string;
   }): Promise<boolean>;
   markPostVerificationSentAfterUncertainOwnership(input: {
     dispatchId: number;
@@ -184,4 +196,8 @@ export interface AppointmentReminderDispatchRepository {
     processedAtIso: string;
     resultStatus: string;
   }): Promise<void>;
+  releasePausedHolds(input: {
+    runAtIso: string;
+    limit: number;
+  }): Promise<number[]>;
 }

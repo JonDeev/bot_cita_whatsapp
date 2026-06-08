@@ -3,6 +3,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { APPOINTMENT_REMINDER_DISPATCH_REPOSITORY } from '../../domain/reminders.tokens';
 import type { AppointmentReminderDispatchRepository } from '../../domain/ports/appointment-reminder-dispatch.repository';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
+import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 
 export interface ReconcileAppointmentReminderDispatchHealthResult {
   recoveredLocks: number;
@@ -16,12 +17,18 @@ export class ReconcileAppointmentReminderDispatchHealthUseCase {
     private readonly dispatchRepository: AppointmentReminderDispatchRepository,
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly auditService: AuditService,
+    private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
   ) {}
 
   async execute(input?: {
     runAtIso?: string;
   }): Promise<ReconcileAppointmentReminderDispatchHealthResult> {
     const runAtIso = input?.runAtIso ?? new Date().toISOString();
+    const runtimeSettings = this.runtimeResolver
+      ? await this.runtimeResolver.resolveEffectiveHotReloadableSettings()
+      : {
+          emergencyPauseEnabled: false,
+        };
 
     const [recoveredLocks, expiredVerifications] = await Promise.all([
       this.dispatchRepository.recoverExpiredLocks({
@@ -33,6 +40,16 @@ export class ReconcileAppointmentReminderDispatchHealthUseCase {
         limit: this.configService.getRecoveryBatchSize(),
       }),
     ]);
+    const releasedPausedHolds =
+      runtimeSettings.emergencyPauseEnabled ||
+      typeof this.dispatchRepository.releasePausedHolds !== 'function'
+        ? 0
+        : (
+            await this.dispatchRepository.releasePausedHolds({
+              runAtIso,
+              limit: this.configService.getRecoveryBatchSize(),
+            })
+          ).length;
 
     if (recoveredLocks > 0) {
       await this.auditService.record('appointment_reminder.dispatch.lock_recovered', {
@@ -45,6 +62,15 @@ export class ReconcileAppointmentReminderDispatchHealthUseCase {
         'appointment_reminder.dispatch.verification_expired',
         {
           expiredVerifications,
+        },
+      );
+    }
+
+    if (releasedPausedHolds > 0) {
+      await this.auditService.record(
+        'appointment_reminder.dispatch.paused_holds_released',
+        {
+          releasedPausedHolds,
         },
       );
     }

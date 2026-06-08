@@ -9,6 +9,8 @@ import { ChatsPage } from '../pages/chats-page';
 import { DashboardPage } from '../pages/dashboard-page';
 import { LogsPage } from '../pages/logs-page';
 import { ProfilePage } from '../pages/profile-page';
+import { ReminderSettingsGuidePage } from '../pages/reminder-settings-guide-page';
+import { ReminderSettingsPage } from '../pages/reminder-settings-page';
 import { RemindersPage } from '../pages/reminders-page';
 import { SurveysPage } from '../pages/surveys-page';
 import { UnauthorizedPage } from '../pages/unauthorized-page';
@@ -39,6 +41,8 @@ export function AppRouter() {
             element={<ConversationDetailPage />}
           />
           <Route path="reminders" element={<RemindersPage />} />
+          <Route path="reminders/settings" element={<ReminderSettingsPage />} />
+          <Route path="reminders/settings/guide" element={<ReminderSettingsGuidePage />} />
           <Route path="surveys" element={<SurveysPage />} />
           <Route path="logs" element={<LogsPage />} />
           <Route path="profile" element={<ProfilePage />} />
