@@ -10,6 +10,8 @@ interface ReminderDispatchJobData {
   dispatchId: number;
 }
 
+const REMINDER_DISPATCH_JOB_ID_PREFIX = 'reminder-dispatch';
+
 @Injectable()
 export class BullmqAppointmentReminderDispatchQueue
   implements AppointmentReminderDispatchQueuePort, OnModuleDestroy
@@ -68,7 +70,7 @@ export class BullmqAppointmentReminderDispatchQueue
   }
 
   private toJobId(dispatchId: number): string {
-    return `dispatch:${dispatchId}`;
+    return `${REMINDER_DISPATCH_JOB_ID_PREFIX}-${dispatchId}`;
   }
 
   private getRedisUrl(): string {

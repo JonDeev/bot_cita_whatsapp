@@ -19,6 +19,7 @@ import { AppointmentReminderDispatchConfigService } from './application/services
 import { AppointmentReminderMetricsAccessConfigService } from './application/services/appointment-reminder-metrics-access-config.service';
 import { AppointmentReminderPhoneNormalizerService } from './application/services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderRuntimeSettingsCatalogService } from './application/services/appointment-reminder-runtime-settings-catalog.service';
+import { AppointmentReminderRuntimeSettingsInitializerService } from './application/services/appointment-reminder-runtime-settings-initializer.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from './application/services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from './application/services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from './application/services/appointment-reminder-template-delivery.service';
@@ -67,6 +68,7 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     AppointmentReminderMetricsAccessConfigService,
     AppointmentReminderPhoneNormalizerService,
     AppointmentReminderRuntimeSettingsCatalogService,
+    AppointmentReminderRuntimeSettingsInitializerService,
     AppointmentReminderRuntimeSettingsResolverService,
     AppointmentReminderTemplateConfigService,
     AppointmentReminderTemplateDeliveryService,

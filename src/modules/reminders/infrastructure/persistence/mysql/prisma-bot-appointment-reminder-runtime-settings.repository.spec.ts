@@ -1,4 +1,5 @@
 import type { PrismaBotService } from '../../../../../shared/infrastructure/prisma-bot/prisma-bot.service';
+import { Prisma } from '@whatsapp-bot/prisma-client';
 import {
   APPOINTMENT_REMINDER_RUNTIME_SETTING_CHANGE_TYPES,
   APPOINTMENT_REMINDER_RUNTIME_SETTINGS_SCOPE_DEFAULT,
@@ -480,5 +481,67 @@ describe('PrismaBotAppointmentReminderRuntimeSettingsRepository', () => {
         username: 'admin',
       },
     });
+  });
+
+  it('treats a concurrent first-create unique collision as already initialized', async () => {
+    const findUnique = jest
+      .fn<Promise<unknown>, [FindUniqueInput]>()
+      .mockResolvedValueOnce(null);
+    const createSettings = jest
+      .fn<Promise<never>, [CreateSettingsInput]>()
+      .mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Duplicate scope key', {
+          code: 'P2002',
+          clientVersion: '7.8.0',
+        }),
+      );
+    const createEvent = jest.fn<Promise<unknown>, [CreateEventInput]>();
+    const createAdminAudit = jest.fn<Promise<unknown>, [CreateAdminAuditInput]>();
+
+    const tx = {
+      botAppointmentReminderRuntimeSettings: {
+        findUnique,
+        create: createSettings,
+      },
+      botAppointmentReminderRuntimeSettingEvent: {
+        create: createEvent,
+      },
+      botAdminAuditEvent: {
+        create: createAdminAudit,
+      },
+    };
+
+    const prismaBot = {
+      $transaction: jest.fn(async (callback: (input: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    } as unknown as PrismaBotService;
+
+    const repository =
+      new PrismaBotAppointmentReminderRuntimeSettingsRepository(prismaBot);
+
+    const result = await repository.saveWithEvent({
+      scopeKey: APPOINTMENT_REMINDER_RUNTIME_SETTINGS_SCOPE_DEFAULT,
+      expectedVersion: 0,
+      nextSnapshot: baseSnapshot,
+      effectiveSnapshot: baseSnapshot,
+      adminUserId: null,
+      changeType:
+        APPOINTMENT_REMINDER_RUNTIME_SETTING_CHANGE_TYPES.DEFAULTS_SEEDED,
+      section: 'protected',
+      reason: 'bootstrap',
+      occurredAtIso: '2026-06-07T12:00:00.000Z',
+      adminAudit: {
+        action: 'system.reminder_runtime_settings.defaults_seeded',
+        resourceType: 'appointment_reminder_runtime_settings',
+        resourceId: 'default',
+        metadata: { source: 'bootstrap' },
+        ipHash: null,
+      },
+    });
+
+    expect(result).toBeNull();
+    expect(createEvent).not.toHaveBeenCalled();
+    expect(createAdminAudit).not.toHaveBeenCalled();
   });
 });

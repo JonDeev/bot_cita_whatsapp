@@ -117,14 +117,23 @@ export class PrismaBotAppointmentReminderRuntimeSettingsRepository
           return null;
         }
 
-        const created = await tx.botAppointmentReminderRuntimeSettings.create({
-          data: {
-            scopeKey: command.scopeKey,
-            ...this.snapshotToSettingsData(command.nextSnapshot),
-            version: 1,
-            updatedByAdminUserId: command.adminUserId,
-          },
-        });
+        let created: RuntimeSettingsRow;
+        try {
+          created = await tx.botAppointmentReminderRuntimeSettings.create({
+            data: {
+              scopeKey: command.scopeKey,
+              ...this.snapshotToSettingsData(command.nextSnapshot),
+              version: 1,
+              updatedByAdminUserId: command.adminUserId,
+            },
+          });
+        } catch (error) {
+          if (this.isUniqueConstraintError(error)) {
+            return null;
+          }
+
+          throw error;
+        }
 
         const event = await tx.botAppointmentReminderRuntimeSettingEvent.create({
           data: {
@@ -384,5 +393,15 @@ export class PrismaBotAppointmentReminderRuntimeSettingsRepository
       minConfirmationHours:
         snapshot.minConfirmationHours as AppointmentReminderRuntimeSettingsSnapshot['minConfirmationHours'],
     };
+  }
+
+  private isUniqueConstraintError(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+      return false;
+    }
+
+    return error.code === 'P2002';
   }
 }
