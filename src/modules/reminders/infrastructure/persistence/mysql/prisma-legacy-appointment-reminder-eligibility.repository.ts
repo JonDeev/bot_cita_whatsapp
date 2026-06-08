@@ -4,6 +4,7 @@ import type {
   AppointmentReminderEligibilityRepository,
   EligibleAppointmentForReminder,
 } from '../../../domain/ports/appointment-reminder-eligibility.repository';
+import { resolveAppointmentStartsAtFromDate } from '../../../domain/appointment-reminder-timezone';
 
 interface LegacyAgendaSnapshot {
   legacyAgendaId: number;
@@ -350,24 +351,13 @@ export class PrismaLegacyAppointmentReminderEligibilityRepository implements App
     appointmentDate: Date,
     appointmentTimeHhmm: string,
   ): Date {
-    const match = /^(\d{2}):(\d{2})$/.exec(appointmentTimeHhmm);
-    if (!match) {
+    try {
+      return resolveAppointmentStartsAtFromDate({
+        appointmentDate,
+        appointmentTimeHhmm,
+      });
+    } catch {
       return new Date(appointmentDate);
     }
-
-    const hours = Number.parseInt(match[1], 10);
-    const minutes = Number.parseInt(match[2], 10);
-
-    return new Date(
-      Date.UTC(
-        appointmentDate.getUTCFullYear(),
-        appointmentDate.getUTCMonth(),
-        appointmentDate.getUTCDate(),
-        hours,
-        minutes,
-        0,
-        0,
-      ),
-    );
   }
 }

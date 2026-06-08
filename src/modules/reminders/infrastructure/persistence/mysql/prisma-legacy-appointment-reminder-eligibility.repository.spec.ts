@@ -1,6 +1,73 @@
 import { PrismaLegacyAppointmentReminderEligibilityRepository } from './prisma-legacy-appointment-reminder-eligibility.repository';
 
 describe('PrismaLegacyAppointmentReminderEligibilityRepository', () => {
+  it('keeps morning business appointments within the reminder eligibility window', async () => {
+    const prisma = {
+      agenda: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            idagenda: 103,
+            idusuario: '17',
+            IdSede: 7,
+            fecha_cita: new Date('2026-06-10T00:00:00.000Z'),
+            idhora: '07:00',
+            Estado: 'Asignada',
+            IdModalidad: 0,
+            idmedico: 'DOC03',
+          },
+        ]),
+      },
+      usuarios: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            IdUsuario: 17,
+            Primer_nombre: 'ANA',
+            Primer_apellido: 'PEREZ',
+            Tel_fono: '3005550101',
+            telefono_verificado_en: null,
+          },
+        ]),
+      },
+      empleados: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            C_digo_empleado: 'DOC03',
+            Nombre_empleado: 'MEDICO 3',
+          },
+        ]),
+      },
+      especialidad_empleados: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      tvespecialidades: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      sedes: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            IdSede: 7,
+            Sede: 'SANTA MARTA',
+            Direccion: 'CALLE 24 # 6-30',
+          },
+        ]),
+      },
+    };
+
+    const repository = new PrismaLegacyAppointmentReminderEligibilityRepository(
+      prisma as any,
+    );
+
+    const results = await repository.findFutureAssignedAppointments({
+      nowIso: '2026-06-09T12:30:00.000Z',
+      maxWindowHours: 48,
+      limit: 10,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.appointmentDateIso).toBe('2026-06-10T00:00:00.000Z');
+    expect(results[0]?.appointmentTimeHhmm).toBe('07:00');
+  });
+
   it('resolves specialty and site details from legacy tables', async () => {
     const prisma = {
       agenda: {

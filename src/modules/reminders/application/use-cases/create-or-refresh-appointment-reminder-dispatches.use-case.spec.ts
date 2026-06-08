@@ -79,6 +79,12 @@ describe('CreateOrRefreshAppointmentReminderDispatchesUseCase', () => {
     const result = await useCase.execute({ runAtIso: '2026-05-26T15:00:00.000Z' });
 
     expect(dispatchRepository.upsertDispatch).toHaveBeenCalledTimes(1);
+    expect(dispatchRepository.upsertDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appointmentStartsAtIso: '2026-05-27T20:00:00.000Z',
+        scheduledForIso: '2026-05-26T20:00:00.000Z',
+      }),
+    );
     expect(dispatchQueue.scheduleDispatchJob).toHaveBeenCalledWith(
       expect.objectContaining({
         dispatchId: 501,
