@@ -1,10 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  ReminderRuntimeSettingsUpdateRequestSchema,
-  type ReminderRuntimeSettingsUpdateRequestDto,
-} from '@whatsapp-bot/shared';
 import { z, ZodError, type ZodType } from 'zod';
+import type { ReminderRuntimeSettingsUpdateRequestDto } from '@whatsapp-bot/shared';
 import type { ListAdminReminderDispatchesQuery } from '../../domain/ports/admin-reminders.repository';
+import { adminReminderRuntimeSettingsUpdateRequestSchema } from './admin-reminder-runtime-settings-update-request.schema';
 
 const listDispatchesSchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
@@ -52,7 +50,7 @@ export class AdminRemindersQueryParserService {
   parseReminderRuntimeSettingsUpdateRequest(
     raw: unknown,
   ): ReminderRuntimeSettingsUpdateRequestDto {
-    return this.parseOrThrow(ReminderRuntimeSettingsUpdateRequestSchema, raw);
+    return this.parseOrThrow(adminReminderRuntimeSettingsUpdateRequestSchema, raw);
   }
 
   parseEmergencyPauseRequest(raw: unknown): {
