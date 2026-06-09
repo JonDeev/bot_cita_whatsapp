@@ -207,6 +207,7 @@ export class PatientValidatedHandler implements ConversationStateHandler {
           requiresEmailUpdate: !contactProfileResult.isPrimaryEmailValid,
           selectedUpdateMode: undefined,
           pendingPhone: undefined,
+          verifiedPhone: undefined,
           completedForCurrentFlow: false,
           invalidPhoneAttempts: 0,
           invalidEmailAttempts: 0,

@@ -55,10 +55,11 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
     }
 
     const patientId = session.context?.patientValidation?.patientId;
+    const consentPhone = session.context?.contactVerification?.verifiedPhone;
     const consentResult = await this.registerWhatsappPostBookingConsent.execute(
       {
         patientId,
-        phone: session.participantPhone,
+        phone: consentPhone,
         granted: decision.granted,
         consentTextSnapshot: APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
         respondedAtIso: event.receivedAt,
@@ -78,6 +79,41 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
       granted: decision.granted,
       persistenceStatus: consentResult.status,
     });
+
+    if (session.context?.flowIntent && session.context.flowIntent !== 'UPDATE_CONTACT') {
+      await this.auditService.record(
+        'conversation.continued.after_opt_in_response',
+        {
+          conversationKey: session.conversationKey,
+          patientId: patientId ?? null,
+          flowIntent: session.context.flowIntent,
+        },
+      );
+
+      return {
+        nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
+        nextContext: {
+          ...session.context,
+          contactVerification: session.context.contactVerification
+            ? {
+                ...session.context.contactVerification,
+                completedForCurrentFlow: true,
+                pendingPhone: undefined,
+                verifiedPhone: undefined,
+                selectedUpdateMode: undefined,
+                invalidPhoneAttempts: 0,
+                invalidEmailAttempts: 0,
+              }
+            : undefined,
+        },
+        outboundMessages: [
+          {
+            type: 'text',
+            body: responseMessage,
+          },
+        ],
+      };
+    }
 
     await this.auditService.record('conversation.closed.by_patient', {
       conversationKey: session.conversationKey,
@@ -141,7 +177,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
     persistenceStatus: 'RECORDED' | 'SKIPPED';
   }): string {
     if (input.persistenceStatus === 'SKIPPED') {
-      return 'Gracias por tu respuesta. Ya registramos tu preferencia para esta conversacion.';
+      return 'Gracias por tu respuesta. Continuaremos con tu solicitud, pero no pudimos registrar esta preferencia en este momento.';
     }
 
     if (input.granted) {

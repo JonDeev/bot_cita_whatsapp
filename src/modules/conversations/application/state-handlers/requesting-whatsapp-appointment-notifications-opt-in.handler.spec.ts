@@ -195,4 +195,65 @@ describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
       body: expect.stringContaining('Gracias por tu respuesta'),
     });
   });
+
+  it('resumes the current flow when opt-in is requested from a non-finalized flow', async () => {
+    const registerConsent = {
+      execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+    } as unknown as RegisterWhatsappPostBookingConsentUseCase;
+    const handler = buildHandler(registerConsent);
+
+    const result = await handler.handle(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+        status: 'BOT_ACTIVE',
+        context: {
+          flowIntent: 'REQUEST_APPOINTMENT',
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 98,
+          },
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            completedForCurrentFlow: true,
+            verifiedPhone: '3014445566',
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
+        },
+        createdAt: '2026-05-09T10:00:00.000Z',
+        updatedAt: '2026-05-09T10:00:00.000Z',
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-203',
+        from: '573001112233',
+        timestamp: '1711120002',
+        messageType: 'interactive',
+        interactiveReplyId: 'appointment_notifications_opt_in:accept',
+        interactiveReplyTitle: 'Si autorizo',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(registerConsent.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: '3014445566',
+      }),
+    );
+    expect(result.nextState).toBe('PATIENT_VALIDATED');
+    expect(result.nextStatus).toBeUndefined();
+    expect(result.nextContext?.contactVerification?.completedForCurrentFlow).toBe(
+      true,
+    );
+    expect(result.nextContext?.contactVerification?.pendingPhone).toBeUndefined();
+    expect(result.nextContext?.contactVerification?.verifiedPhone).toBeUndefined();
+  });
 });

@@ -50,6 +50,7 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
                 ...session.context.contactVerification,
                 selectedUpdateMode: 'PHONE',
                 pendingPhone: undefined,
+                verifiedPhone: undefined,
                 invalidPhoneAttempts: 0,
                 invalidEmailAttempts: 0,
               }
@@ -84,6 +85,7 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
                 ...session.context.contactVerification,
                 selectedUpdateMode: 'EMAIL',
                 pendingPhone: undefined,
+                verifiedPhone: undefined,
                 invalidPhoneAttempts: 0,
                 invalidEmailAttempts: 0,
               }
@@ -118,6 +120,7 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
                 ...session.context.contactVerification,
                 selectedUpdateMode: 'BOTH',
                 pendingPhone: undefined,
+                verifiedPhone: undefined,
                 invalidPhoneAttempts: 0,
                 invalidEmailAttempts: 0,
               }

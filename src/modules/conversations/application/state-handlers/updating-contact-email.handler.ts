@@ -8,6 +8,7 @@ import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
+import { ContactUpdateCompletionService } from '../services/contact-update-completion.service';
 import type {
   ConversationStateHandler,
   ConversationStateHandlerResult,
@@ -24,6 +25,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     private readonly updatePatientContactDetails: UpdatePatientContactDetailsUseCase,
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
     private readonly patientContactUpdateSuccessMessageFactory: PatientContactUpdateSuccessMessageFactory,
+    private readonly contactUpdateCompletionService: ContactUpdateCompletionService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -50,6 +52,10 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     const normalizedEmail = this.patientContactInputValidator.normalizeEmail(
       event.textBody,
     );
+    const currentPhone = this.patientContactInputValidator.normalizePhone(
+      contactVerification.primaryPhone,
+    );
+    const verifiedPhone = contactVerification.verifiedPhone ?? undefined;
     const currentEmail = this.patientContactInputValidator.normalizeEmail(
       contactVerification.primaryEmail,
     );
@@ -64,11 +70,37 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
       );
     }
 
-    const mode = selectedMode === 'BOTH' ? 'BOTH' : 'EMAIL';
+    if (selectedMode === 'BOTH' && !verifiedPhone) {
+      return {
+        nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+        nextContext: {
+          ...session.context,
+          contactVerification: {
+            ...contactVerification,
+            pendingPhone: undefined,
+            verifiedPhone: undefined,
+            invalidEmailAttempts: 0,
+          },
+        },
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'No fue posible conservar el numero confirmado para terminar la actualizacion. Selecciona una opcion para continuar.',
+          },
+          this.patientContactUpdateOptionsListFactory.build(),
+        ],
+      };
+    }
+
+    const resolvedVerifiedPhone = verifiedPhone!;
+    const mode =
+      selectedMode === 'BOTH' && resolvedVerifiedPhone !== currentPhone
+        ? 'BOTH'
+        : 'EMAIL';
     const updateResult = await this.updatePatientContactDetails.execute({
       patientId: session.context?.patientValidation?.patientId,
       mode,
-      newPhone: mode === 'BOTH' ? contactVerification.pendingPhone : undefined,
+      newPhone: mode === 'BOTH' ? resolvedVerifiedPhone : undefined,
       newEmail: normalizedEmail,
       updatedBy: 'AdrianaBot',
       triggerFlowIntent: session.context?.flowIntent ?? 'UNKNOWN',
@@ -97,6 +129,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
           contactVerification: {
             ...contactVerification,
             pendingPhone: undefined,
+            verifiedPhone: undefined,
             invalidEmailAttempts: 0,
           },
         },
@@ -120,7 +153,50 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
       result: updateResult.status,
     });
 
-    return this.resolveCompletedFlow(session);
+    if (selectedMode === 'BOTH') {
+      return this.contactUpdateCompletionService.buildResult({
+        session,
+        verifiedPhone: resolvedVerifiedPhone,
+        successMessage: this.patientContactUpdateSuccessMessageFactory.build(),
+      });
+    }
+
+    if (session.context?.flowIntent === 'UPDATE_CONTACT') {
+      return {
+        nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextStatus: CONVERSATION_STATUSES.CLOSED,
+        nextContext: {
+          ...session.context,
+          flowIntent: undefined,
+          contactVerification: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
+        outboundMessages: [
+          this.patientContactUpdateSuccessMessageFactory.build(),
+        ],
+      };
+    }
+
+    return {
+      nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
+      nextContext: {
+        ...session.context,
+        contactVerification: contactVerification
+          ? {
+              ...contactVerification,
+              completedForCurrentFlow: true,
+              pendingPhone: undefined,
+              verifiedPhone: undefined,
+            }
+          : undefined,
+      },
+      outboundMessages: [this.patientContactUpdateSuccessMessageFactory.build()],
+    };
   }
 
   private async handleInvalidEmailInput(
@@ -146,6 +222,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
             ? {
                 ...session.context.contactVerification,
                 pendingPhone: undefined,
+                verifiedPhone: undefined,
                 invalidEmailAttempts: 0,
               }
             : undefined,
@@ -177,45 +254,6 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
           body: 'El correo debe ser valido y diferente al actual. Intenta nuevamente.',
         },
       ],
-    };
-  }
-
-  private resolveCompletedFlow(
-    session: ConversationSession,
-  ): ConversationStateHandlerResult {
-    if (session.context?.flowIntent === 'UPDATE_CONTACT') {
-      return {
-        nextState: CONVERSATION_STATES.MAIN_MENU,
-        nextStatus: CONVERSATION_STATUSES.CLOSED,
-        nextContext: {
-          ...session.context,
-          flowIntent: undefined,
-          contactVerification: undefined,
-          assignedAppointmentSelection: undefined,
-          appointmentReschedule: undefined,
-          specialtySelection: undefined,
-          appointmentDoctorSelection: undefined,
-          appointmentDateSelection: undefined,
-          appointmentTimeSelection: undefined,
-        },
-        outboundMessages: [
-          this.patientContactUpdateSuccessMessageFactory.build(),
-        ],
-      };
-    }
-
-    return {
-      nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
-      nextContext: {
-        ...session.context,
-        contactVerification: session.context?.contactVerification
-          ? {
-              ...session.context.contactVerification,
-              completedForCurrentFlow: true,
-            }
-          : undefined,
-      },
-      outboundMessages: [],
     };
   }
 

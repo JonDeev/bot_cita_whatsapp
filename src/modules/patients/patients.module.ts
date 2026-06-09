@@ -8,10 +8,12 @@ import { ResolveEligibleSpecialtiesByPatientUseCase } from './application/use-ca
 import { ResolvePatientContactProfileUseCase } from './application/use-cases/resolve-patient-contact-profile.use-case';
 import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from './application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { RegisterWhatsappPostBookingConsentUseCase } from './application/use-cases/register-whatsapp-post-booking-consent.use-case';
+import { MarkPatientPhoneVerifiedUseCase } from './application/use-cases/mark-patient-phone-verified.use-case';
 import { UpdatePatientContactDetailsUseCase } from './application/use-cases/update-patient-contact-details.use-case';
 import { ValidatePatientByDocumentAndBirthDateUseCase } from './application/use-cases/validate-patient-by-document-and-birth-date.use-case';
 import {
   CONTRACTED_EPS_REPOSITORY,
+  MARK_PATIENT_PHONE_VERIFIED_REPOSITORY,
   PATIENT_CONTACT_PROFILE_REPOSITORY,
   PATIENT_ASSIGNED_DISPENSARY_REPOSITORY,
   PATIENT_SPECIALTY_ELIGIBILITY_REPOSITORY,
@@ -39,7 +41,9 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     ResolvePatientContactProfileUseCase,
     ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
+    MarkPatientPhoneVerifiedUseCase,
     UpdatePatientContactDetailsUseCase,
+    MariadbLegacyPatientContactDetailsRepository,
     PrismaBotWhatsappContactConsentRepository,
     {
       provide: PATIENT_VALIDATION_REPOSITORY,
@@ -71,7 +75,11 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     },
     {
       provide: UPDATE_PATIENT_CONTACT_DETAILS_REPOSITORY,
-      useClass: MariadbLegacyPatientContactDetailsRepository,
+      useExisting: MariadbLegacyPatientContactDetailsRepository,
+    },
+    {
+      provide: MARK_PATIENT_PHONE_VERIFIED_REPOSITORY,
+      useExisting: MariadbLegacyPatientContactDetailsRepository,
     },
   ],
   exports: [
@@ -83,6 +91,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     ResolvePatientContactProfileUseCase,
     ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
+    MarkPatientPhoneVerifiedUseCase,
     UpdatePatientContactDetailsUseCase,
   ],
 })

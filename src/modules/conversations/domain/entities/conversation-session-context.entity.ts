@@ -27,6 +27,7 @@ export interface ContactVerificationSessionContext {
   requiresEmailUpdate: boolean;
   selectedUpdateMode?: ContactUpdateMode;
   pendingPhone?: string;
+  verifiedPhone?: string;
   completedForCurrentFlow: boolean;
   invalidPhoneAttempts: number;
   invalidEmailAttempts: number;
