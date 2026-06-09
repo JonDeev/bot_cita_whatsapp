@@ -310,6 +310,7 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         appointmentStartsAtIso: '2099-05-01T12:00:00.000Z',
         templateName: 'recordatorio_cita_24h',
       }),
+      markPostVerificationPausedHold: jest.fn().mockResolvedValue(true),
       markPostVerificationSkipped: jest.fn().mockResolvedValue(true),
       markInboundDedupProcessed: jest.fn().mockResolvedValue(undefined),
     };
@@ -754,6 +755,13 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
     const registerWhatsappPostBookingConsent = {
       execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
     };
+    const recipientPolicyRepository = {
+      hasActiveSuppression: jest.fn().mockResolvedValue(false),
+      hasAppointmentNotificationsOptIn: jest.fn().mockResolvedValue(true),
+      isHumanHandoffActive: jest.fn().mockResolvedValue(false),
+      upsertUnknownPersonSuppression: jest.fn(),
+      clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
+    };
 
     const useCase = createUseCase({
       dispatchRepository,
@@ -762,13 +770,7 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
         markPhoneVerified: jest.fn().mockResolvedValue(undefined),
         clearPhoneAndVerification: jest.fn(),
       },
-      recipientPolicyRepository: {
-        hasActiveSuppression: jest.fn().mockResolvedValue(false),
-        hasAppointmentNotificationsOptIn: jest.fn().mockResolvedValue(true),
-        isHumanHandoffActive: jest.fn().mockResolvedValue(false),
-        upsertUnknownPersonSuppression: jest.fn(),
-        clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
-      },
+      recipientPolicyRepository,
       templateConfig,
       tokenService,
       configService: {

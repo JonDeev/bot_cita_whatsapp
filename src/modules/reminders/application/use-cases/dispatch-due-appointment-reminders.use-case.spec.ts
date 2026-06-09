@@ -989,6 +989,11 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
     fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn.mockResolvedValue(
       true,
     );
+    fixture.resolveWhatsappAppointmentNotificationsOptInGate.execute =
+      jest.fn().mockResolvedValue({
+        status: 'PROMPT_REQUIRED',
+        reason: 'PHONE_NOT_VERIFIED',
+      });
     fixture.dispatchRepository.markVerificationPending.mockResolvedValue(true);
     fixture.dispatchRepository.renewLock.mockResolvedValue(true);
     fixture.buttonTokenService.createToken.mockReturnValue('token-905');

@@ -3,6 +3,7 @@ import { AdminPasswordHasherService } from './admin-password-hasher.service';
 describe('AdminPasswordHasherService', () => {
   const service = new AdminPasswordHasherService({
     getDummyPasswordHash: () => null,
+    isProductionEnvironment: () => false,
     getArgon2MemoryKib: () => 65_536,
     getArgon2Passes: () => 3,
     getArgon2Parallelism: () => 1,
