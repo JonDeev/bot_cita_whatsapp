@@ -15,6 +15,7 @@ import type {
 } from './conversation-state-handler';
 
 const MAX_INVALID_PHONE_ATTEMPTS = 3;
+type PhoneUpdateMode = 'PHONE' | 'BOTH';
 
 @Injectable()
 export class UpdatingContactPhoneHandler implements ConversationStateHandler {
@@ -47,6 +48,36 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
       return {
         nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
         outboundMessages: [this.patientContactUpdateOptionsListFactory.build()],
+      };
+    }
+    const phoneUpdateMode = this.resolvePhoneUpdateMode(selectedMode);
+    if (!phoneUpdateMode) {
+      await this.auditService.record('patient.contact_update.invalid_state', {
+        conversationKey: session.conversationKey,
+        patientId: session.context?.patientValidation?.patientId ?? null,
+        flowIntent: session.context?.flowIntent ?? null,
+        updateMode: selectedMode,
+        state: this.state,
+      });
+
+      return {
+        nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+        nextContext: {
+          ...session.context,
+          contactVerification: {
+            ...contactVerification,
+            pendingPhone: undefined,
+            verifiedPhone: undefined,
+            invalidPhoneAttempts: 0,
+          },
+        },
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'Selecciona nuevamente el dato de contacto que deseas actualizar.',
+          },
+          this.patientContactUpdateOptionsListFactory.build(),
+        ],
       };
     }
 
@@ -82,13 +113,13 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
           conversationKey: session.conversationKey,
           patientId: session.context?.patientValidation?.patientId ?? null,
           flowIntent: session.context?.flowIntent ?? null,
-          updateMode: selectedMode,
+          updateMode: phoneUpdateMode,
           result: 'NO_CHANGE_ACCEPTED',
         },
       );
     }
 
-    if (selectedMode === 'BOTH') {
+    if (phoneUpdateMode === 'BOTH') {
       if (isSameValidPhone) {
         const verificationResult = await this.markPatientPhoneVerified.execute({
           patientId: session.context?.patientValidation?.patientId,
@@ -100,7 +131,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
           return this.handlePhoneVerificationFailure(
             session,
             contactVerification,
-            selectedMode,
+            phoneUpdateMode,
             verificationResult,
           );
         }
@@ -111,7 +142,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
             conversationKey: session.conversationKey,
             patientId: session.context?.patientValidation?.patientId ?? null,
             flowIntent: session.context?.flowIntent ?? null,
-            updateMode: selectedMode,
+            updateMode: phoneUpdateMode,
             phoneMasked: verificationResult.phoneMasked,
           },
         );
@@ -167,7 +198,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         return this.handlePhoneVerificationFailure(
           session,
           contactVerification,
-          selectedMode,
+          phoneUpdateMode,
           verificationResult,
         );
       }
@@ -178,7 +209,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
           conversationKey: session.conversationKey,
           patientId: session.context?.patientValidation?.patientId ?? null,
           flowIntent: session.context?.flowIntent ?? null,
-          updateMode: selectedMode,
+          updateMode: phoneUpdateMode,
           phoneMasked: verificationResult.phoneMasked,
         },
       );
@@ -255,7 +286,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
     contactVerification: NonNullable<
       ConversationSession['context']
     >['contactVerification'],
-    updateMode: 'PHONE' | 'BOTH',
+    updateMode: PhoneUpdateMode,
     result: Exclude<
       Awaited<ReturnType<MarkPatientPhoneVerifiedUseCase['execute']>>,
       { status: 'UPDATED' }
@@ -294,6 +325,18 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         this.patientContactUpdateOptionsListFactory.build(),
       ],
     };
+  }
+
+  private resolvePhoneUpdateMode(
+    selectedMode: NonNullable<
+      NonNullable<ConversationSession['context']>['contactVerification']
+    >['selectedUpdateMode'],
+  ): PhoneUpdateMode | null {
+    if (selectedMode === 'PHONE' || selectedMode === 'BOTH') {
+      return selectedMode;
+    }
+
+    return null;
   }
 
   private async handleInvalidPhoneInput(

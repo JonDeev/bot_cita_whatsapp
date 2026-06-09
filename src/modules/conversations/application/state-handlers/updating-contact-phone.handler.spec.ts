@@ -270,4 +270,42 @@ describe('UpdatingContactPhoneHandler', () => {
       '3001234567',
     );
   });
+
+  it('resets to field selection when the handler receives EMAIL mode', async () => {
+    const contactUpdateCompletionService = {
+      buildResult: jest.fn(),
+    } as unknown as ContactUpdateCompletionService;
+
+    const handler = buildHandler({
+      execute: jest.fn(),
+    } as unknown as MarkPatientPhoneVerifiedUseCase, {
+      execute: jest.fn(),
+    } as unknown as UpdatePatientContactDetailsUseCase, contactUpdateCompletionService);
+
+    const result = await handler.handle(
+      {
+        ...baseSession,
+        context: {
+          ...baseSession.context,
+          contactVerification: {
+            ...baseSession.context.contactVerification,
+            selectedUpdateMode: 'EMAIL',
+          },
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-5',
+        from: '573001112233',
+        timestamp: '1711111115',
+        messageType: 'text',
+        textBody: '3001234567',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('SELECTING_CONTACT_UPDATE_FIELD');
+    expect(result.nextContext?.contactVerification?.verifiedPhone).toBeUndefined();
+    expect(result.outboundMessages).toHaveLength(2);
+  });
 });

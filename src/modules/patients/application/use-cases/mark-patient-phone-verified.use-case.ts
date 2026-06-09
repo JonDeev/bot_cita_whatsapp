@@ -127,10 +127,19 @@ export class MarkPatientPhoneVerifiedUseCase {
         };
       }
 
+      const maskedPhone =
+        this.patientContactInputValidator.maskPhone(normalizedPhone);
+      if (!maskedPhone) {
+        return {
+          status: 'TECHNICAL_FAILURE',
+          reason: 'UNEXPECTED_ERROR',
+          technicalDetail: 'Unable to mask a validated phone number',
+        };
+      }
+
       return {
         status: 'UPDATED',
-        phoneMasked:
-          this.patientContactInputValidator.maskPhone(normalizedPhone),
+        phoneMasked: maskedPhone,
       };
     } catch (error) {
       const technicalDetail =
