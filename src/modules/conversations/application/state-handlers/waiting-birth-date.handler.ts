@@ -18,7 +18,7 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
     private readonly inputNormalizer: PatientIdentityInputNormalizerService,
     private readonly validatePatient: ValidatePatientByDocumentAndBirthDateUseCase,
     private readonly auditService: AuditService,
-  ) {}
+  ) { }
 
   async handle(
     session: ConversationSession,
@@ -85,7 +85,7 @@ export class WaitingBirthDateHandler implements ConversationStateHandler {
         outboundMessages: [
           {
             type: 'text',
-            body: 'La fecha no tiene el formato esperado. Escribe tu fecha de nacimiento en DD-MM-YYYY o DD/MM/YYYY.',
+            body: 'La fecha no tiene el formato esperado. Escribe tu fecha de nacimiento en 23-02-1998 o 23/02/1998.',
           },
         ],
       };

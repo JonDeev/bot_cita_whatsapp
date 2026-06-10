@@ -14,7 +14,7 @@ export class WaitingDocumentHandler implements ConversationStateHandler {
 
   constructor(
     private readonly inputNormalizer: PatientIdentityInputNormalizerService,
-  ) {}
+  ) { }
 
   async handle(
     session: ConversationSession,
@@ -67,7 +67,7 @@ export class WaitingDocumentHandler implements ConversationStateHandler {
       outboundMessages: [
         {
           type: 'text',
-          body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY.',
+          body: 'Ahora escribe tu fecha de nacimiento en formato 23-02-1998 o 23/02/1998.',
         },
       ],
     };

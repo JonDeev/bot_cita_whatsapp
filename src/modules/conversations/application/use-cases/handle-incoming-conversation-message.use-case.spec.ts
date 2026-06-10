@@ -146,7 +146,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         outboundMessages: [
           {
             type: 'text',
-            body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY.',
+            body: 'Ahora escribe tu fecha de nacimiento en formato 23-02-1998 o 23/02/1998.',
           },
         ],
       }),
@@ -542,7 +542,7 @@ describe('HandleIncomingConversationMessageUseCase', () => {
         outboundMessages: [
           {
             type: 'text',
-            body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY.',
+            body: 'Ahora escribe tu fecha de nacimiento en formato 23-02-1998 o 23/02/1998.',
           },
         ],
       }),

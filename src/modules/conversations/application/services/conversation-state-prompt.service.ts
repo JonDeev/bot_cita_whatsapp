@@ -38,7 +38,7 @@ export class ConversationStatePromptService {
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
     private readonly patientContactConfirmationMessageFactory: PatientContactConfirmationMessageFactory,
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
-  ) {}
+  ) { }
 
   buildForState(
     session: ConversationSession,
@@ -75,7 +75,7 @@ export class ConversationStatePromptService {
           outboundMessages: [
             {
               type: 'text',
-              body: 'Ahora escribe tu fecha de nacimiento en formato DD-MM-YYYY o DD/MM/YYYY.',
+              body: 'Ahora escribe tu fecha de nacimiento en formato 23-02-1998 o 23/02/1998.',
             },
           ],
         };
