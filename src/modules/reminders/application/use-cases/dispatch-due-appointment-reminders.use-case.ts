@@ -6,7 +6,6 @@ import {
   APPOINTMENT_REMINDER_ELIGIBILITY_REPOSITORY,
   APPOINTMENT_REMINDER_RECIPIENT_POLICY_REPOSITORY,
 } from '../../domain/reminders.tokens';
-import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import type { AppointmentReminderDispatchQueuePort } from '../../domain/ports/appointment-reminder-dispatch-queue.port';
 import type {
   AppointmentReminderDispatchRecord,
@@ -14,6 +13,7 @@ import type {
 } from '../../domain/ports/appointment-reminder-dispatch.repository';
 import type { AppointmentReminderEligibilityRepository } from '../../domain/ports/appointment-reminder-eligibility.repository';
 import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/ports/appointment-reminder-recipient-policy.repository';
+import { AppointmentReminderDispatchContactDecisionService } from '../services/appointment-reminder-dispatch-contact-decision.service';
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
@@ -29,19 +29,6 @@ export interface DispatchDueAppointmentRemindersResult {
   skipped: number;
   failed: number;
 }
-
-type OptInGateReason =
-  | 'INVALID_PATIENT_ID'
-  | 'INVALID_PHONE'
-  | 'PATIENT_NOT_FOUND'
-  | 'PHONE_NOT_VERIFIED'
-  | 'PHONE_MISMATCH'
-  | 'CONSENT_NOT_GRANTED'
-  | 'CONSENT_PHONE_MISMATCH'
-  | 'CONSENT_TIMESTAMP_MISSING'
-  | 'CONSENT_OUTDATED_AFTER_PHONE_VERIFICATION'
-  | 'INVALID_PHONE_VERIFIED_AT'
-  | 'INVALID_CONSENT_GRANTED_AT';
 
 interface ReminderDispatchLeaseHeartbeat {
   renewNow(): Promise<boolean>;
@@ -64,7 +51,7 @@ export class DispatchDueAppointmentRemindersUseCase {
     private readonly recipientPolicyRepository: AppointmentReminderRecipientPolicyRepository,
     @Inject(APPOINTMENT_REMINDER_DISPATCH_QUEUE)
     private readonly dispatchQueue: AppointmentReminderDispatchQueuePort,
-    private readonly resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
+    private readonly dispatchContactDecisionService: AppointmentReminderDispatchContactDecisionService,
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly templateConfig: AppointmentReminderTemplateConfigService,
     private readonly windowService: AppointmentReminderWindowService,
@@ -141,48 +128,50 @@ export class DispatchDueAppointmentRemindersUseCase {
         continue;
       }
 
-      const hasOptIn =
-        await this.recipientPolicyRepository.hasAppointmentNotificationsOptIn({
-          patientLegacyUserId: dispatch.patientLegacyUserId,
-        });
-      if (!hasOptIn) {
-        await this.markSkipped(dispatch, workerId, 'SKIPPED_NO_OPT_IN');
+      const recipientPhoneE164 =
+        this.resolveCanonicalRecipientPhoneE164(dispatch);
+      if (!recipientPhoneE164) {
+        await this.markSkipped(dispatch, workerId, 'SKIPPED_INVALID_PHONE');
         skipped += 1;
         continue;
       }
 
-      const optInGate =
-        await this.resolveWhatsappAppointmentNotificationsOptInGate.execute({
-          patientId: dispatch.patientLegacyUserId,
-          whatsappPhone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
-        });
-      const shouldSendReminder = optInGate.status === 'PROMPT_NOT_REQUIRED';
-      const requiresPhoneVerification =
-        optInGate.status === 'PROMPT_REQUIRED' &&
-        this.requiresPhoneVerification(optInGate.reason);
-      if (!shouldSendReminder && !requiresPhoneVerification) {
-        await this.markSkipped(dispatch, workerId, 'SKIPPED_NO_OPT_IN');
-        skipped += 1;
-        continue;
-      }
+      const [hasAppointmentNotificationsOptIn, suppressionDecision] =
+        await Promise.all([
+          this.recipientPolicyRepository.hasAppointmentNotificationsOptIn({
+            patientLegacyUserId: dispatch.patientLegacyUserId,
+          }),
+          this.recipientPolicyRepository.resolveReminderContactSuppression({
+            patientLegacyUserId: dispatch.patientLegacyUserId,
+            phone: recipientPhoneE164,
+          }),
+        ]);
 
-      const hasSuppression =
-        await this.recipientPolicyRepository.hasActiveSuppression({
-          patientLegacyUserId: dispatch.patientLegacyUserId,
-          phone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
+      const contactDecision =
+        this.dispatchContactDecisionService.resolve({
+          recipientPhoneE164,
+          hasAppointmentNotificationsOptIn,
+          suppressionDecision,
         });
-      if (hasSuppression) {
+
+      if (contactDecision.kind === 'SKIP_SUPPRESSED_CONTACT') {
         await this.markSkipped(
           dispatch,
           workerId,
           'SKIPPED_SUPPRESSED_CONTACT',
+          contactDecision.suppressionReason,
         );
         skipped += 1;
         continue;
       }
 
-      if (!dispatch.recipientPhoneE164) {
-        await this.markSkipped(dispatch, workerId, 'SKIPPED_INVALID_PHONE');
+      if (contactDecision.kind === 'SKIP_INVALID_PHONE') {
+        await this.markSkipped(
+          dispatch,
+          workerId,
+          'SKIPPED_INVALID_PHONE',
+          'INVALID_PHONE',
+        );
         skipped += 1;
         continue;
       }
@@ -220,7 +209,7 @@ export class DispatchDueAppointmentRemindersUseCase {
           continue;
         }
 
-        if (shouldSendReminder) {
+        if (contactDecision.kind === 'SEND_REMINDER') {
           const bodyTextParameters =
             this.buildReminderBodyParameters(appointment);
           const sendResult = await this.sendWithLeaseHeartbeat({
@@ -229,10 +218,13 @@ export class DispatchDueAppointmentRemindersUseCase {
             runtimeSettings,
             send: () =>
               this.templateDeliveryService.send({
-                conversationKey: this.resolveConversationKey(dispatch),
+                conversationKey: this.resolveConversationKey(
+                  dispatch,
+                  contactDecision.recipientPhoneE164,
+                ),
                 dispatchId: dispatch.id,
                 patientLegacyUserId: dispatch.patientLegacyUserId,
-                to: dispatch.recipientPhoneE164!,
+                to: contactDecision.recipientPhoneE164,
                 templateName: dispatch.templateName,
                 languageCode: this.templateConfig.getTemplateLanguageCode(),
                 bodyTextParameters,
@@ -313,10 +305,13 @@ export class DispatchDueAppointmentRemindersUseCase {
           runtimeSettings,
           send: () =>
             this.templateDeliveryService.send({
-              conversationKey: this.resolveConversationKey(dispatch),
+              conversationKey: this.resolveConversationKey(
+                dispatch,
+                contactDecision.recipientPhoneE164,
+              ),
               dispatchId: dispatch.id,
               patientLegacyUserId: dispatch.patientLegacyUserId,
-              to: dispatch.recipientPhoneE164!,
+              to: contactDecision.recipientPhoneE164,
               templateName: dispatch.verificationTemplateName,
               languageCode: this.templateConfig.getTemplateLanguageCode(),
               bodyTextParameters:
@@ -483,17 +478,20 @@ export class DispatchDueAppointmentRemindersUseCase {
       | 'SKIPPED_SUPPRESSED_CONTACT'
       | 'SKIPPED_HANDOFF_ACTIVE'
       | 'PHONE_VERIFICATION_EXPIRED',
+    reason?: string,
   ): Promise<void> {
     await this.dispatchRepository.markSkipped({
       dispatchId: dispatch.id,
       expectedLockVersion: dispatch.lockVersion,
       workerId,
       status,
+      reason,
     });
 
     await this.auditService.record('appointment_reminder.dispatch.skipped', {
       dispatchId: dispatch.id,
       status,
+      reason,
     });
   }
 
@@ -553,34 +551,34 @@ export class DispatchDueAppointmentRemindersUseCase {
 
   private resolveConversationKey(dispatch: {
     conversationKey: string | null;
-    recipientPhoneE164: string | null;
-    recipientPhoneRaw: string;
-  }): string {
+  }, recipientPhoneE164: string): string {
     if (dispatch.conversationKey?.trim()) {
       return dispatch.conversationKey;
     }
 
     const phoneNumberId = this.configService.getWhatsAppPhoneNumberId();
-    const recipientPhone =
-      dispatch.recipientPhoneE164 ??
-      this.phoneNormalizer.toE164Colombia(
-        this.phoneNormalizer.normalizeLegacyPhone(dispatch.recipientPhoneRaw) ??
-          dispatch.recipientPhoneRaw,
-      );
-
-    return `whatsapp:${phoneNumberId || 'unknown'}:${recipientPhone}`;
+    return `whatsapp:${phoneNumberId || 'unknown'}:${recipientPhoneE164}`;
   }
 
-  private requiresPhoneVerification(reason: OptInGateReason): boolean {
-    return (
-      reason === 'PHONE_NOT_VERIFIED' ||
-      reason === 'PHONE_MISMATCH' ||
-      reason === 'CONSENT_PHONE_MISMATCH' ||
-      reason === 'CONSENT_TIMESTAMP_MISSING' ||
-      reason === 'CONSENT_OUTDATED_AFTER_PHONE_VERIFICATION' ||
-      reason === 'INVALID_PHONE_VERIFIED_AT' ||
-      reason === 'INVALID_CONSENT_GRANTED_AT'
+  private resolveCanonicalRecipientPhoneE164(dispatch: {
+    recipientPhoneE164: string | null;
+    recipientPhoneRaw: string;
+  }): string | null {
+    const normalizedE164 = this.phoneNormalizer.normalizeE164Colombia(
+      dispatch.recipientPhoneE164,
     );
+    if (normalizedE164) {
+      return normalizedE164;
+    }
+
+    const normalizedLegacyPhone = this.phoneNormalizer.normalizeLegacyPhone(
+      dispatch.recipientPhoneRaw,
+    );
+    if (!normalizedLegacyPhone) {
+      return null;
+    }
+
+    return this.phoneNormalizer.toE164Colombia(normalizedLegacyPhone);
   }
 
   private async sendWithLeaseHeartbeat<T>(input: {

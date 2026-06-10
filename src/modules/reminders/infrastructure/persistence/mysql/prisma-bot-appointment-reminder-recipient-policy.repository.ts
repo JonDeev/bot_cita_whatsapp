@@ -5,13 +5,20 @@ import {
 } from '@whatsapp-bot/prisma-client';
 import { Injectable } from '@nestjs/common';
 import { PrismaBotService } from '../../../../../shared/infrastructure/prisma-bot/prisma-bot.service';
-import type { AppointmentReminderRecipientPolicyRepository } from '../../../domain/ports/appointment-reminder-recipient-policy.repository';
+import { AppointmentReminderSuppressionPolicyService } from '../../../application/services/appointment-reminder-suppression-policy.service';
+import type {
+  AppointmentReminderContactSuppressionDecision,
+  AppointmentReminderRecipientPolicyRepository,
+} from '../../../domain/ports/appointment-reminder-recipient-policy.repository';
 
 @Injectable()
 export class PrismaBotAppointmentReminderRecipientPolicyRepository
   implements AppointmentReminderRecipientPolicyRepository
 {
-  constructor(private readonly prismaBot: PrismaBotService) {}
+  constructor(
+    private readonly prismaBot: PrismaBotService,
+    private readonly suppressionPolicyService: AppointmentReminderSuppressionPolicyService,
+  ) {}
 
   async hasAppointmentNotificationsOptIn(input: {
     patientLegacyUserId: number;
@@ -32,59 +39,79 @@ export class PrismaBotAppointmentReminderRecipientPolicyRepository
     return consent?.granted === true;
   }
 
+  async resolveReminderContactSuppression(input: {
+    patientLegacyUserId: number;
+    phone: string;
+  }): Promise<AppointmentReminderContactSuppressionDecision> {
+    const phoneFilter = this.resolvePhoneFilter(input.phone);
+    const phoneScopedBlockingReasons =
+      this.suppressionPolicyService.getPhoneScopedBlockingReasons();
+    const patientScopedBlockingReasons =
+      this.suppressionPolicyService.getPatientScopedBlockingReasons();
+
+    const suppressions = await this.prismaBot.botContactSuppression.findMany({
+      where: {
+        channel: BotContactChannel.WHATSAPP,
+        active: true,
+        scope: 'APPOINTMENT_NOTIFICATIONS',
+        OR: [
+          {
+            phone: {
+              in: phoneFilter,
+            },
+            reason: {
+              in: [...phoneScopedBlockingReasons],
+            },
+          },
+          {
+            patientLegacyUserId: input.patientLegacyUserId,
+            reason: {
+              in: [...patientScopedBlockingReasons],
+            },
+          },
+        ],
+      },
+      select: {
+        reason: true,
+      },
+    });
+
+    return this.suppressionPolicyService.resolveHighestPriority(
+      suppressions.map((suppression) => suppression.reason),
+    );
+  }
+
   async hasActiveSuppression(input: {
     patientLegacyUserId: number;
     phone: string;
   }): Promise<boolean> {
-    const suppression = await this.prismaBot.botContactSuppression.findFirst({
-      where: {
-        channel: BotContactChannel.WHATSAPP,
-        active: true,
-        OR: [
-          { patientLegacyUserId: input.patientLegacyUserId },
-          { phone: input.phone },
-        ],
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    return Boolean(suppression);
+    const decision = await this.resolveReminderContactSuppression(input);
+    return decision.kind !== 'ALLOW_CONTACT';
   }
 
   async clearUnknownPersonSuppression(input: {
     patientLegacyUserId: number;
     phone: string;
   }): Promise<boolean> {
-    const suppression = await this.prismaBot.botContactSuppression.findFirst({
+    const phoneFilter = this.resolvePhoneFilter(input.phone);
+
+    const result = await this.prismaBot.botContactSuppression.updateMany({
       where: {
         channel: BotContactChannel.WHATSAPP,
         active: true,
         reason: BotContactSuppressionReason.UNKNOWN_PERSON,
         scope: 'APPOINTMENT_NOTIFICATIONS',
         patientLegacyUserId: input.patientLegacyUserId,
-        phone: input.phone,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!suppression) {
-      return false;
-    }
-
-    await this.prismaBot.botContactSuppression.update({
-      where: {
-        id: suppression.id,
+        phone: {
+          in: phoneFilter,
+        },
       },
       data: {
         active: false,
       },
     });
 
-    return true;
+    return result.count > 0;
   }
 
   async isHumanHandoffActive(input: {
@@ -111,24 +138,25 @@ export class PrismaBotAppointmentReminderRecipientPolicyRepository
     phone: string;
     notes?: string;
   }): Promise<void> {
-    const existing = await this.prismaBot.botContactSuppression.findFirst({
+    const phoneFilter = this.resolvePhoneFilter(input.phone);
+
+    const updated = await this.prismaBot.botContactSuppression.updateMany({
       where: {
         patientLegacyUserId: input.patientLegacyUserId,
-        phone: input.phone,
+        phone: {
+          in: phoneFilter,
+        },
         channel: BotContactChannel.WHATSAPP,
         reason: BotContactSuppressionReason.UNKNOWN_PERSON,
+        scope: 'APPOINTMENT_NOTIFICATIONS',
       },
-      select: { id: true },
+      data: {
+        active: true,
+        notes: input.notes ?? null,
+      },
     });
 
-    if (existing) {
-      await this.prismaBot.botContactSuppression.update({
-        where: { id: existing.id },
-        data: {
-          active: true,
-          notes: input.notes ?? null,
-        },
-      });
+    if (updated.count > 0) {
       return;
     }
 
@@ -143,5 +171,25 @@ export class PrismaBotAppointmentReminderRecipientPolicyRepository
         notes: input.notes ?? null,
       },
     });
+  }
+
+  private resolvePhoneCandidates(phone: string): string[] {
+    const digitsOnly = phone.replace(/\D+/g, '');
+    const candidates = new Set<string>();
+
+    if (/^3\d{9}$/.test(digitsOnly)) {
+      candidates.add(digitsOnly);
+      candidates.add(`57${digitsOnly}`);
+    } else if (/^57(3\d{9})$/.test(digitsOnly)) {
+      candidates.add(digitsOnly);
+      candidates.add(digitsOnly.slice(2));
+    }
+
+    return [...candidates];
+  }
+
+  private resolvePhoneFilter(phone: string): string[] {
+    const candidates = this.resolvePhoneCandidates(phone);
+    return candidates.length > 0 ? candidates : [phone];
   }
 }

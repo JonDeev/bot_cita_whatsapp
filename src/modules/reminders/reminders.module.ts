@@ -16,9 +16,11 @@ import { GetAppointmentReminderMetricsUseCase } from './application/use-cases/ge
 import { AppointmentReminderAppointmentTimeService } from './application/services/appointment-reminder-appointment-time.service';
 import { AppointmentReminderBootstrapConfigService } from './application/services/appointment-reminder-bootstrap-config.service';
 import { AppointmentReminderButtonTokenService } from './application/services/appointment-reminder-button-token.service';
+import { AppointmentReminderDispatchContactDecisionService } from './application/services/appointment-reminder-dispatch-contact-decision.service';
 import { AppointmentReminderDispatchConfigService } from './application/services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderMetricsAccessConfigService } from './application/services/appointment-reminder-metrics-access-config.service';
 import { AppointmentReminderPhoneNormalizerService } from './application/services/appointment-reminder-phone-normalizer.service';
+import { AppointmentReminderSuppressionPolicyService } from './application/services/appointment-reminder-suppression-policy.service';
 import { AppointmentReminderRuntimeSettingsCatalogService } from './application/services/appointment-reminder-runtime-settings-catalog.service';
 import { AppointmentReminderRuntimeSettingsInitializerService } from './application/services/appointment-reminder-runtime-settings-initializer.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from './application/services/appointment-reminder-runtime-settings-resolver.service';
@@ -66,9 +68,11 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     AppointmentReminderAppointmentTimeService,
     AppointmentReminderBootstrapConfigService,
     AppointmentReminderButtonTokenService,
+    AppointmentReminderDispatchContactDecisionService,
     AppointmentReminderDispatchConfigService,
     AppointmentReminderMetricsAccessConfigService,
     AppointmentReminderPhoneNormalizerService,
+    AppointmentReminderSuppressionPolicyService,
     AppointmentReminderRuntimeSettingsCatalogService,
     AppointmentReminderRuntimeSettingsInitializerService,
     AppointmentReminderRuntimeSettingsResolverService,

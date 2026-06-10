@@ -6,8 +6,8 @@ import type {
 } from '../../domain/ports/appointment-reminder-dispatch.repository';
 import type { AppointmentReminderEligibilityRepository } from '../../domain/ports/appointment-reminder-eligibility.repository';
 import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/ports/appointment-reminder-recipient-policy.repository';
-import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
+import { AppointmentReminderDispatchContactDecisionService } from '../services/appointment-reminder-dispatch-contact-decision.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
@@ -95,10 +95,16 @@ type RecipientPolicyRepositoryMock = {
       AppointmentReminderRecipientPolicyRepository['hasAppointmentNotificationsOptIn']
     >
   >;
-  hasActiveSuppression: jest.Mock<
-    Promise<boolean>,
+  resolveReminderContactSuppression: jest.Mock<
+    Promise<
+      Awaited<
+        ReturnType<
+          AppointmentReminderRecipientPolicyRepository['resolveReminderContactSuppression']
+        >
+      >
+    >,
     Parameters<
-      AppointmentReminderRecipientPolicyRepository['hasActiveSuppression']
+      AppointmentReminderRecipientPolicyRepository['resolveReminderContactSuppression']
     >
   >;
 };
@@ -109,11 +115,6 @@ type DispatchQueueMock = {
     Parameters<AppointmentReminderDispatchQueuePort['scheduleDispatchJob']>
   >;
 };
-
-type ResolveWhatsappAppointmentNotificationsOptInGateUseCaseMock = Pick<
-  ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
-  'execute'
->;
 
 type DispatchConfigServiceMock = Pick<
   AppointmentReminderDispatchConfigService,
@@ -143,7 +144,7 @@ type ButtonTokenServiceMock = Pick<
 
 type PhoneNormalizerServiceMock = Pick<
   AppointmentReminderPhoneNormalizerService,
-  'toE164Colombia' | 'normalizeLegacyPhone'
+  'toE164Colombia' | 'normalizeLegacyPhone' | 'normalizeE164Colombia'
 >;
 
 type TemplateDeliveryServiceMock = {
@@ -159,7 +160,6 @@ type DispatchDueAppointmentRemindersFixture = {
   eligibilityRepository: EligibilityRepositoryMock;
   recipientPolicyRepository: RecipientPolicyRepositoryMock;
   dispatchQueue: DispatchQueueMock;
-  resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCaseMock;
   configService: DispatchConfigServiceMock;
   templateConfig: TemplateConfigServiceMock;
   windowService: WindowServiceMock;
@@ -292,14 +292,20 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
         >
       >()
       .mockResolvedValue(false),
-    hasActiveSuppression: jest
+    resolveReminderContactSuppression: jest
       .fn<
-        Promise<boolean>,
+        Promise<
+          Awaited<
+            ReturnType<
+              AppointmentReminderRecipientPolicyRepository['resolveReminderContactSuppression']
+            >
+          >
+        >,
         Parameters<
-          AppointmentReminderRecipientPolicyRepository['hasActiveSuppression']
+          AppointmentReminderRecipientPolicyRepository['resolveReminderContactSuppression']
         >
       >()
-      .mockResolvedValue(false),
+      .mockResolvedValue({ kind: 'ALLOW_CONTACT' }),
   };
 
   const dispatchQueue: DispatchQueueMock = {
@@ -310,15 +316,6 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
       >()
       .mockResolvedValue(undefined),
   };
-
-  const resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCaseMock =
-    {
-      execute: jest.fn().mockResolvedValue({
-        status: 'PROMPT_NOT_REQUIRED',
-        consentGrantedAtIso: '2026-05-01T10:00:00.000Z',
-        phoneVerifiedAtIso: '2026-05-01T10:00:00.000Z',
-      }),
-    };
 
   const configService: DispatchConfigServiceMock = {
     getLockTtlSeconds: jest.fn().mockReturnValue(300),
@@ -349,11 +346,26 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     toE164Colombia: jest
       .fn()
       .mockImplementation((phone: string) => `57${phone}`),
+    normalizeE164Colombia: jest
+      .fn()
+      .mockImplementation((rawPhone: string | null | undefined) => {
+        if (!rawPhone) {
+          return null;
+        }
+
+        const digitsOnly = rawPhone.replace(/\D+/g, '');
+        return /^573\d{9}$/.test(digitsOnly) ? digitsOnly : null;
+      }),
     normalizeLegacyPhone: jest
       .fn()
-      .mockImplementation((rawPhone: string | null | undefined) =>
-        rawPhone ? rawPhone.replace(/\D+/g, '') : null,
-      ),
+      .mockImplementation((rawPhone: string | null | undefined) => {
+        if (!rawPhone) {
+          return null;
+        }
+
+        const digitsOnly = rawPhone.replace(/\D+/g, '');
+        return /^3\d{9}$/.test(digitsOnly) ? digitsOnly : null;
+      }),
   };
 
   const templateDeliveryService: TemplateDeliveryServiceMock = {
@@ -382,12 +394,15 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     }),
   };
 
+  const dispatchContactDecisionService =
+    new AppointmentReminderDispatchContactDecisionService();
+
   const useCase = new DispatchDueAppointmentRemindersUseCase(
     dispatchRepository as unknown as AppointmentReminderDispatchRepository,
     eligibilityRepository as unknown as AppointmentReminderEligibilityRepository,
     recipientPolicyRepository as unknown as AppointmentReminderRecipientPolicyRepository,
     dispatchQueue,
-    resolveWhatsappAppointmentNotificationsOptInGate as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
+    dispatchContactDecisionService,
     configService as unknown as AppointmentReminderDispatchConfigService,
     templateConfig as unknown as AppointmentReminderTemplateConfigService,
     windowService as unknown as AppointmentReminderWindowService,
@@ -404,7 +419,6 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     eligibilityRepository,
     recipientPolicyRepository,
     dispatchQueue,
-    resolveWhatsappAppointmentNotificationsOptInGate,
     configService,
     templateConfig,
     windowService,
@@ -938,7 +952,7 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
     });
   });
 
-  it('sends verification template with patientShortName in body parameter {{1}}', async () => {
+  it('sends reminder template when phone is valid and opt-in is granted', async () => {
     const fixture = createDispatchDueAppointmentRemindersFixture();
     fixture.dispatchRepository.claimDueDispatches.mockResolvedValue([
       {
@@ -989,15 +1003,8 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
     fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn.mockResolvedValue(
       true,
     );
-    fixture.resolveWhatsappAppointmentNotificationsOptInGate.execute =
-      jest.fn().mockResolvedValue({
-        status: 'PROMPT_REQUIRED',
-        reason: 'PHONE_NOT_VERIFIED',
-      });
-    fixture.dispatchRepository.markVerificationPending.mockResolvedValue(true);
+    fixture.dispatchRepository.markSent.mockResolvedValue(true);
     fixture.dispatchRepository.renewLock.mockResolvedValue(true);
-    fixture.buttonTokenService.createToken.mockReturnValue('token-905');
-    fixture.buttonTokenService.hashToken.mockReturnValue('hash-905');
     fixture.templateDeliveryService.send.mockResolvedValue({
       messageId: 'wamid-905',
     });
@@ -1010,16 +1017,106 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
 
     expect(fixture.templateDeliveryService.send).toHaveBeenCalledWith(
       expect.objectContaining({
+        templateName: 'recordatorio_cita_24h',
+        bodyTextParameters: [
+          'ADRIANA RUIZ',
+          'MEDICINA GENERAL',
+          'PRESENCIAL',
+          '2026-05-26',
+          '15:00',
+          'SANTA MARTA',
+          'CALLE 1',
+          'MEDICO',
+        ],
+        to: '573001234561',
+      }),
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      sent: 1,
+      verificationSent: 0,
+      skipped: 0,
+      failed: 0,
+    });
+  });
+
+  it('sends verification template when phone is valid but opt-in is missing', async () => {
+    const fixture = createDispatchDueAppointmentRemindersFixture();
+    fixture.dispatchRepository.claimDueDispatches.mockResolvedValue([
+      {
+        id: 906,
+        legacyAgendaId: 3006,
+        patientLegacyUserId: 81,
+        conversationKey: 'whatsapp:1:573001234562',
+        recipientPhoneRaw: '3001234562',
+        recipientPhoneE164: '573001234562',
+        appointmentStartsAtIso: '2026-05-26T15:00:00.000Z',
+        scheduledForIso: '2026-05-25T15:00:00.000Z',
+        reminderType: 'APPOINTMENT_24H',
+        status: 'LOCKED',
+        templateName: 'recordatorio_cita_24h',
+        verificationTemplateName: 'verificacion_telefono_paciente',
+        metaMessageId: null,
+        verificationMessageId: null,
+        attempts: 0,
+        nextAttemptAtIso: null,
+        lockAcquiredAtIso: '2026-05-25T10:00:00.000Z',
+        lockExpiresAtIso: '2026-05-25T10:05:00.000Z',
+        lockedBy: 'worker:test',
+        lockVersion: 4,
+        verificationTokenHash: null,
+        verificationRequestedAtIso: null,
+        verificationExpiresAtIso: null,
+        sentAtIso: null,
+      },
+    ]);
+    fixture.eligibilityRepository.findByLegacyAgendaIds.mockResolvedValue([
+      {
+        legacyAgendaId: 3006,
+        patientLegacyUserId: 81,
+        patientFirstName: 'ADRIANA',
+        patientLastName: 'RUIZ',
+        patientPhoneRaw: '3001234562',
+        patientPhoneVerifiedAtIso: null,
+        appointmentDateIso: '2026-05-26T00:00:00.000Z',
+        appointmentTimeHhmm: '15:00',
+        legacyState: 'Asignada',
+        modalityId: 0,
+        specialtyName: 'MEDICINA GENERAL',
+        siteCity: 'SANTA MARTA',
+        siteAddress: 'CALLE 1',
+        doctorName: 'MEDICO',
+      },
+    ]);
+    fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn.mockResolvedValue(
+      false,
+    );
+    fixture.dispatchRepository.markVerificationPending.mockResolvedValue(true);
+    fixture.dispatchRepository.renewLock.mockResolvedValue(true);
+    fixture.buttonTokenService.createToken.mockReturnValue('token-906');
+    fixture.buttonTokenService.hashToken.mockReturnValue('hash-906');
+    fixture.templateDeliveryService.send.mockResolvedValue({
+      messageId: 'wamid-906',
+    });
+
+    const result = await fixture.useCase.execute({
+      runAtIso: '2026-05-25T10:00:00.000Z',
+      workerId: 'worker:test',
+      restrictToDispatchIds: [906],
+    });
+
+    expect(fixture.templateDeliveryService.send).toHaveBeenCalledWith(
+      expect.objectContaining({
         templateName: 'verificacion_telefono_paciente',
         bodyTextParameters: ['ADRIANA RUIZ'],
         quickReplyButtons: [
           {
             index: '0',
-            payload: 'confirm:token-905',
+            payload: 'confirm:token-906',
           },
           {
             index: '1',
-            payload: 'reject:token-905',
+            payload: 'reject:token-906',
           },
         ],
       }),
@@ -1028,6 +1125,334 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
       claimed: 1,
       sent: 0,
       verificationSent: 1,
+      skipped: 0,
+      failed: 0,
+    });
+  });
+
+  it('marks dispatch as invalid phone and skips templates when phone is malformed', async () => {
+    const fixture = createDispatchDueAppointmentRemindersFixture();
+    fixture.dispatchRepository.claimDueDispatches.mockResolvedValue([
+      {
+        id: 907,
+        legacyAgendaId: 3007,
+        patientLegacyUserId: 82,
+        conversationKey: 'whatsapp:1:6011234567',
+        recipientPhoneRaw: '6011234567',
+        recipientPhoneE164: null,
+        appointmentStartsAtIso: '2026-05-26T15:00:00.000Z',
+        scheduledForIso: '2026-05-25T15:00:00.000Z',
+        reminderType: 'APPOINTMENT_24H',
+        status: 'LOCKED',
+        templateName: 'recordatorio_cita_24h',
+        verificationTemplateName: 'verificacion_telefono_paciente',
+        metaMessageId: null,
+        verificationMessageId: null,
+        attempts: 0,
+        nextAttemptAtIso: null,
+        lockAcquiredAtIso: '2026-05-25T10:00:00.000Z',
+        lockExpiresAtIso: '2026-05-25T10:05:00.000Z',
+        lockedBy: 'worker:test',
+        lockVersion: 4,
+        verificationTokenHash: null,
+        verificationRequestedAtIso: null,
+        verificationExpiresAtIso: null,
+        sentAtIso: null,
+      },
+    ]);
+    fixture.eligibilityRepository.findByLegacyAgendaIds.mockResolvedValue([
+      {
+        legacyAgendaId: 3007,
+        patientLegacyUserId: 82,
+        patientFirstName: 'ADRIANA',
+        patientLastName: 'RUIZ',
+        patientPhoneRaw: '6011234567',
+        patientPhoneVerifiedAtIso: null,
+        appointmentDateIso: '2026-05-26T00:00:00.000Z',
+        appointmentTimeHhmm: '15:00',
+        legacyState: 'Asignada',
+        modalityId: 0,
+        specialtyName: 'MEDICINA GENERAL',
+        siteCity: 'SANTA MARTA',
+        siteAddress: 'CALLE 1',
+        doctorName: 'MEDICO',
+      },
+    ]);
+
+    const result = await fixture.useCase.execute({
+      runAtIso: '2026-05-25T10:00:00.000Z',
+      workerId: 'worker:test',
+      restrictToDispatchIds: [907],
+    });
+
+    expect(
+      fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn,
+    ).not.toHaveBeenCalled();
+    expect(
+      fixture.recipientPolicyRepository.resolveReminderContactSuppression,
+    ).not.toHaveBeenCalled();
+    expect(fixture.templateDeliveryService.send).not.toHaveBeenCalled();
+    expect(fixture.dispatchRepository.markSkipped).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dispatchId: 907,
+        status: 'SKIPPED_INVALID_PHONE',
+      }),
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      sent: 0,
+      verificationSent: 0,
+      skipped: 1,
+      failed: 0,
+    });
+  });
+
+  it('skips reminder when the canonical phone has an active suppression', async () => {
+    const fixture = createDispatchDueAppointmentRemindersFixture();
+    fixture.dispatchRepository.claimDueDispatches.mockResolvedValue([
+      {
+        id: 908,
+        legacyAgendaId: 3008,
+        patientLegacyUserId: 83,
+        conversationKey: 'whatsapp:1:573001234563',
+        recipientPhoneRaw: '3001234563',
+        recipientPhoneE164: '573001234563',
+        appointmentStartsAtIso: '2026-05-26T15:00:00.000Z',
+        scheduledForIso: '2026-05-25T15:00:00.000Z',
+        reminderType: 'APPOINTMENT_24H',
+        status: 'LOCKED',
+        templateName: 'recordatorio_cita_24h',
+        verificationTemplateName: 'verificacion_telefono_paciente',
+        metaMessageId: null,
+        verificationMessageId: null,
+        attempts: 0,
+        nextAttemptAtIso: null,
+        lockAcquiredAtIso: '2026-05-25T10:00:00.000Z',
+        lockExpiresAtIso: '2026-05-25T10:05:00.000Z',
+        lockedBy: 'worker:test',
+        lockVersion: 4,
+        verificationTokenHash: null,
+        verificationRequestedAtIso: null,
+        verificationExpiresAtIso: null,
+        sentAtIso: null,
+      },
+    ]);
+    fixture.eligibilityRepository.findByLegacyAgendaIds.mockResolvedValue([
+      {
+        legacyAgendaId: 3008,
+        patientLegacyUserId: 83,
+        patientFirstName: 'ADRIANA',
+        patientLastName: 'RUIZ',
+        patientPhoneRaw: '3001234563',
+        patientPhoneVerifiedAtIso: null,
+        appointmentDateIso: '2026-05-26T00:00:00.000Z',
+        appointmentTimeHhmm: '15:00',
+        legacyState: 'Asignada',
+        modalityId: 0,
+        specialtyName: 'MEDICINA GENERAL',
+        siteCity: 'SANTA MARTA',
+        siteAddress: 'CALLE 1',
+        doctorName: 'MEDICO',
+      },
+    ]);
+    fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn.mockResolvedValue(
+      false,
+    );
+    fixture.recipientPolicyRepository.resolveReminderContactSuppression.mockResolvedValue(
+      {
+        kind: 'BLOCK_SUPPRESSED_CONTACT',
+        reason: 'UNKNOWN_PERSON',
+      },
+    );
+
+    const result = await fixture.useCase.execute({
+      runAtIso: '2026-05-25T10:00:00.000Z',
+      workerId: 'worker:test',
+      restrictToDispatchIds: [908],
+    });
+
+    expect(fixture.templateDeliveryService.send).not.toHaveBeenCalled();
+    expect(fixture.dispatchRepository.markSkipped).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dispatchId: 908,
+        status: 'SKIPPED_SUPPRESSED_CONTACT',
+        reason: 'UNKNOWN_PERSON',
+      }),
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      sent: 0,
+      verificationSent: 0,
+      skipped: 1,
+      failed: 0,
+    });
+  });
+
+  it('marks invalid-phone status when suppression policy blocks the canonical phone as invalid', async () => {
+    const fixture = createDispatchDueAppointmentRemindersFixture();
+    fixture.dispatchRepository.claimDueDispatches.mockResolvedValue([
+      {
+        id: 910,
+        legacyAgendaId: 3010,
+        patientLegacyUserId: 85,
+        conversationKey: 'whatsapp:1:573001234565',
+        recipientPhoneRaw: '3001234565',
+        recipientPhoneE164: '573001234565',
+        appointmentStartsAtIso: '2026-05-26T15:00:00.000Z',
+        scheduledForIso: '2026-05-25T15:00:00.000Z',
+        reminderType: 'APPOINTMENT_24H',
+        status: 'LOCKED',
+        templateName: 'recordatorio_cita_24h',
+        verificationTemplateName: 'verificacion_telefono_paciente',
+        metaMessageId: null,
+        verificationMessageId: null,
+        attempts: 0,
+        nextAttemptAtIso: null,
+        lockAcquiredAtIso: '2026-05-25T10:00:00.000Z',
+        lockExpiresAtIso: '2026-05-25T10:05:00.000Z',
+        lockedBy: 'worker:test',
+        lockVersion: 4,
+        verificationTokenHash: null,
+        verificationRequestedAtIso: null,
+        verificationExpiresAtIso: null,
+        sentAtIso: null,
+      },
+    ]);
+    fixture.eligibilityRepository.findByLegacyAgendaIds.mockResolvedValue([
+      {
+        legacyAgendaId: 3010,
+        patientLegacyUserId: 85,
+        patientFirstName: 'ADRIANA',
+        patientLastName: 'RUIZ',
+        patientPhoneRaw: '3001234565',
+        patientPhoneVerifiedAtIso: null,
+        appointmentDateIso: '2026-05-26T00:00:00.000Z',
+        appointmentTimeHhmm: '15:00',
+        legacyState: 'Asignada',
+        modalityId: 0,
+        specialtyName: 'MEDICINA GENERAL',
+        siteCity: 'SANTA MARTA',
+        siteAddress: 'CALLE 1',
+        doctorName: 'MEDICO',
+      },
+    ]);
+    fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn.mockResolvedValue(
+      true,
+    );
+    fixture.recipientPolicyRepository.resolveReminderContactSuppression.mockResolvedValue(
+      {
+        kind: 'BLOCK_INVALID_PHONE',
+      },
+    );
+
+    const result = await fixture.useCase.execute({
+      runAtIso: '2026-05-25T10:00:00.000Z',
+      workerId: 'worker:test',
+      restrictToDispatchIds: [910],
+    });
+
+    expect(fixture.templateDeliveryService.send).not.toHaveBeenCalled();
+    expect(fixture.dispatchRepository.markSkipped).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dispatchId: 910,
+        status: 'SKIPPED_INVALID_PHONE',
+        reason: 'INVALID_PHONE',
+      }),
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      sent: 0,
+      verificationSent: 0,
+      skipped: 1,
+      failed: 0,
+    });
+  });
+
+  it('uses stored e164 as canonical phone when raw phone is malformed', async () => {
+    const fixture = createDispatchDueAppointmentRemindersFixture();
+    fixture.dispatchRepository.claimDueDispatches.mockResolvedValue([
+      {
+        id: 909,
+        legacyAgendaId: 3009,
+        patientLegacyUserId: 84,
+        conversationKey: null,
+        recipientPhoneRaw: 'no-valido',
+        recipientPhoneE164: '573001234564',
+        appointmentStartsAtIso: '2026-05-26T16:00:00.000Z',
+        scheduledForIso: '2026-05-25T16:00:00.000Z',
+        reminderType: 'APPOINTMENT_24H',
+        status: 'LOCKED',
+        templateName: 'recordatorio_cita_24h',
+        verificationTemplateName: 'verificacion_telefono_paciente',
+        metaMessageId: null,
+        verificationMessageId: null,
+        attempts: 0,
+        nextAttemptAtIso: null,
+        lockAcquiredAtIso: '2026-05-25T10:00:00.000Z',
+        lockExpiresAtIso: '2026-05-25T10:05:00.000Z',
+        lockedBy: 'worker:test',
+        lockVersion: 4,
+        verificationTokenHash: null,
+        verificationRequestedAtIso: null,
+        verificationExpiresAtIso: null,
+        sentAtIso: null,
+      },
+    ]);
+    fixture.eligibilityRepository.findByLegacyAgendaIds.mockResolvedValue([
+      {
+        legacyAgendaId: 3009,
+        patientLegacyUserId: 84,
+        patientFirstName: 'ADRIANA',
+        patientLastName: 'RUIZ',
+        patientPhoneRaw: '3001234564',
+        patientPhoneVerifiedAtIso: null,
+        appointmentDateIso: '2026-05-26T00:00:00.000Z',
+        appointmentTimeHhmm: '16:00',
+        legacyState: 'Asignada',
+        modalityId: 0,
+        specialtyName: 'MEDICINA GENERAL',
+        siteCity: 'SANTA MARTA',
+        siteAddress: 'CALLE 1',
+        doctorName: 'MEDICO',
+      },
+    ]);
+    fixture.recipientPolicyRepository.hasAppointmentNotificationsOptIn.mockResolvedValue(
+      true,
+    );
+    fixture.dispatchRepository.markSent.mockResolvedValue(true);
+    fixture.dispatchRepository.renewLock.mockResolvedValue(true);
+    fixture.templateDeliveryService.send.mockResolvedValue({
+      messageId: 'wamid-909',
+    });
+
+    const result = await fixture.useCase.execute({
+      runAtIso: '2026-05-25T10:00:00.000Z',
+      workerId: 'worker:test',
+      restrictToDispatchIds: [909],
+    });
+
+    expect(
+      fixture.recipientPolicyRepository.resolveReminderContactSuppression,
+    ).toHaveBeenCalledWith({
+      patientLegacyUserId: 84,
+      phone: '573001234564',
+    });
+    expect(fixture.templateDeliveryService.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationKey: 'whatsapp:12345:573001234564',
+        to: '573001234564',
+      }),
+    );
+    expect(fixture.dispatchRepository.markSkipped).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        dispatchId: 909,
+        status: 'SKIPPED_INVALID_PHONE',
+      }),
+    );
+    expect(result).toEqual({
+      claimed: 1,
+      sent: 1,
+      verificationSent: 0,
       skipped: 0,
       failed: 0,
     });

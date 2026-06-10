@@ -277,23 +277,36 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       );
     }
 
-    const hasSuppression =
-      await this.recipientPolicyRepository.hasActiveSuppression({
+    const suppressionDecision =
+      await this.recipientPolicyRepository.resolveReminderContactSuppression({
         patientLegacyUserId: dispatch.patientLegacyUserId,
         phone: dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw,
       });
-    if (hasSuppression) {
+    if (suppressionDecision.kind !== 'ALLOW_CONTACT') {
+      const skipStatus =
+        suppressionDecision.kind === 'BLOCK_INVALID_PHONE'
+          ? 'SKIPPED_INVALID_PHONE'
+          : 'SKIPPED_SUPPRESSED_CONTACT';
+      const processedStatus =
+        suppressionDecision.kind === 'BLOCK_INVALID_PHONE'
+          ? 'PROCESSED_INVALID_PHONE'
+          : 'PROCESSED_SUPPRESSED_CONTACT';
+      const skipReason =
+        suppressionDecision.kind === 'BLOCK_INVALID_PHONE'
+          ? 'INVALID_PHONE'
+          : suppressionDecision.reason;
       const markedSkipped =
         await this.dispatchRepository.markPostVerificationSkipped({
           dispatchId: dispatch.id,
-          status: 'SKIPPED_SUPPRESSED_CONTACT',
+          status: skipStatus,
+          reason: skipReason,
         });
       if (!markedSkipped) {
         await this.auditService.record(
           'appointment_reminder.phone_confirmed_state_lost',
           {
             dispatchId: dispatch.id,
-            skipStatus: 'SKIPPED_SUPPRESSED_CONTACT',
+            skipStatus,
           },
         );
       }
@@ -302,7 +315,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
         inboundMessageId: input.inboundMessageId,
         buttonPayloadId: input.interactiveReplyId,
         processedAtIso: input.receivedAtIso,
-        resultStatus: 'PROCESSED_SUPPRESSED_CONTACT',
+        resultStatus: processedStatus,
       });
       return;
     }

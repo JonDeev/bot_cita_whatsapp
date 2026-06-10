@@ -435,7 +435,7 @@ describe('PrismaBotAppointmentReminderDispatchRepository', () => {
     expect(marked).toBe(true);
   });
 
-  it('marks post-verification reminder as skipped for handoff and opt-in guards', async () => {
+  it('marks post-verification reminder as skipped for invalid phone, handoff and opt-in guards', async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prismaBot = {
       botAppointmentReminderDispatch: {
@@ -446,6 +446,12 @@ describe('PrismaBotAppointmentReminderDispatchRepository', () => {
     const repository = new PrismaBotAppointmentReminderDispatchRepository(
       prismaBot as never,
     );
+
+    const invalidPhoneMarked = await repository.markPostVerificationSkipped({
+      dispatchId: 61,
+      status: 'SKIPPED_INVALID_PHONE',
+      reason: 'INVALID_PHONE',
+    });
 
     const handoffMarked = await repository.markPostVerificationSkipped({
       dispatchId: 62,
@@ -471,15 +477,26 @@ describe('PrismaBotAppointmentReminderDispatchRepository', () => {
         lastError: string | null;
       };
     };
+    const thirdCall = calls[2]?.[0] as {
+      data: {
+        status: BotAppointmentReminderDispatchStatus;
+        lastError: string | null;
+      };
+    };
 
     expect(firstCall.data).toMatchObject({
+      status: BotAppointmentReminderDispatchStatus.SKIPPED_INVALID_PHONE,
+      lastError: 'INVALID_PHONE',
+    });
+    expect(secondCall.data).toMatchObject({
       status: BotAppointmentReminderDispatchStatus.SKIPPED_HANDOFF_ACTIVE,
       lastError: null,
     });
-    expect(secondCall.data).toMatchObject({
+    expect(thirdCall.data).toMatchObject({
       status: BotAppointmentReminderDispatchStatus.SKIPPED_NO_OPT_IN,
       lastError: 'Opt-in missing after phone confirmation.',
     });
+    expect(invalidPhoneMarked).toBe(true);
     expect(handoffMarked).toBe(true);
     expect(optInMarked).toBe(true);
   });

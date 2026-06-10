@@ -637,6 +637,7 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
   async markPostVerificationSkipped(input: {
     dispatchId: number;
     status:
+      | 'SKIPPED_INVALID_PHONE'
       | 'SKIPPED_LATE_CONFIRMATION'
       | 'SKIPPED_SUPPRESSED_CONTACT'
       | 'SKIPPED_APPOINTMENT_CANCELLED'
@@ -653,7 +654,9 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
         },
         data: {
           status:
-            input.status === 'SKIPPED_LATE_CONFIRMATION'
+            input.status === 'SKIPPED_INVALID_PHONE'
+              ? BotAppointmentReminderDispatchStatus.SKIPPED_INVALID_PHONE
+              : input.status === 'SKIPPED_LATE_CONFIRMATION'
               ? BotAppointmentReminderDispatchStatus.SKIPPED_LATE_CONFIRMATION
               : input.status === 'SKIPPED_SUPPRESSED_CONTACT'
                 ? BotAppointmentReminderDispatchStatus.SKIPPED_SUPPRESSED_CONTACT

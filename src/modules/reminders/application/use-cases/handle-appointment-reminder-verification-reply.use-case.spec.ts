@@ -38,6 +38,7 @@ type PatientContactRepositoryMock = Pick<
 
 type RecipientPolicyRepositoryMock = Pick<
   AppointmentReminderRecipientPolicyRepository,
+  | 'resolveReminderContactSuppression'
   | 'hasActiveSuppression'
   | 'upsertUnknownPersonSuppression'
   | 'clearUnknownPersonSuppression'
@@ -80,7 +81,7 @@ function createUseCase(input: {
   recipientPolicyRepository: Partial<RecipientPolicyRepositoryMock> &
     Pick<
       RecipientPolicyRepositoryMock,
-      'hasActiveSuppression' | 'upsertUnknownPersonSuppression'
+      'upsertUnknownPersonSuppression'
     >;
   configService: DispatchConfigMock;
   templateDeliveryService: TemplateDeliveryServiceMock;
@@ -112,8 +113,23 @@ function createUseCase(input: {
     input.eligibilityRepository as AppointmentReminderEligibilityRepository,
     input.patientContactRepository,
     {
+      resolveReminderContactSuppression:
+        input.recipientPolicyRepository.resolveReminderContactSuppression ??
+        jest.fn().mockResolvedValue({ kind: 'ALLOW_CONTACT' }),
       hasActiveSuppression:
-        input.recipientPolicyRepository.hasActiveSuppression,
+        input.recipientPolicyRepository.hasActiveSuppression ??
+        jest
+          .fn()
+          .mockImplementation(async (command: {
+            patientLegacyUserId: number;
+            phone: string;
+          }) => {
+            const decision =
+              await input.recipientPolicyRepository.resolveReminderContactSuppression(
+                command,
+              );
+            return decision.kind !== 'ALLOW_CONTACT';
+          }),
       upsertUnknownPersonSuppression:
         input.recipientPolicyRepository.upsertUnknownPersonSuppression,
       clearUnknownPersonSuppression:
@@ -203,6 +219,10 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
     };
 
     const recipientPolicyRepository = {
+      resolveReminderContactSuppression: jest.fn().mockResolvedValue({
+        kind: 'BLOCK_SUPPRESSED_CONTACT',
+        reason: 'UNKNOWN_PERSON',
+      }),
       hasActiveSuppression: jest.fn().mockResolvedValue(true),
       upsertUnknownPersonSuppression: jest.fn(),
       clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
@@ -258,6 +278,7 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
       {
         dispatchId: 1001,
         status: 'SKIPPED_SUPPRESSED_CONTACT',
+        reason: 'UNKNOWN_PERSON',
       },
     );
     expect(dispatchRepository.markInboundDedupProcessed).toHaveBeenCalledWith(
@@ -286,6 +307,92 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
       respondedAtIso: '2026-05-25T15:00:00.000Z',
     });
     expect(templateDeliveryService.send).not.toHaveBeenCalled();
+  });
+
+  it('marks inbound dedup as processed with invalid-phone status when reminder policy blocks the confirmed phone as invalid', async () => {
+    const tokenService = new AppointmentReminderButtonTokenService();
+    const templateConfig = new AppointmentReminderTemplateConfigService();
+    const token = tokenService.createToken({
+      dispatchId: 1002,
+      expiresAtIso: '2099-01-01T00:00:00.000Z',
+    });
+    const interactiveReplyId = `${templateConfig.getConfirmButtonPayloadPrefix()}${token}`;
+
+    const dispatchRepository = {
+      recordInboundDedup: jest.fn().mockResolvedValue(true),
+      findById: jest.fn().mockResolvedValue({
+        id: 1002,
+        status: 'PHONE_VERIFICATION_PENDING',
+        verificationTokenHash: tokenService.hashToken(token),
+        legacyAgendaId: 502,
+        patientLegacyUserId: 81,
+        recipientPhoneRaw: '3001234568',
+        recipientPhoneE164: '573001234568',
+        appointmentStartsAtIso: '2099-02-01T12:00:00.000Z',
+        templateName: 'recordatorio_cita_24h',
+      }),
+      markPostVerificationSkipped: jest.fn().mockResolvedValue(true),
+      markPostVerificationPausedHold: jest.fn().mockResolvedValue(true),
+      markInboundDedupProcessed: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const recipientPolicyRepository = {
+      resolveReminderContactSuppression: jest.fn().mockResolvedValue({
+        kind: 'BLOCK_INVALID_PHONE',
+      }),
+      hasActiveSuppression: jest.fn().mockResolvedValue(true),
+      upsertUnknownPersonSuppression: jest.fn(),
+      clearUnknownPersonSuppression: jest.fn().mockResolvedValue(false),
+    };
+
+    const useCase = createUseCase({
+      dispatchRepository,
+      eligibilityRepository: {
+        findByLegacyAgendaIds: jest.fn().mockResolvedValue([
+          createMinimalEligibleAppointment({
+            legacyAgendaId: 502,
+          }),
+        ]),
+      },
+      patientContactRepository: {
+        markPhoneVerified: jest.fn().mockResolvedValue(undefined),
+        clearPhoneAndVerification: jest.fn(),
+      },
+      recipientPolicyRepository,
+      templateConfig,
+      tokenService,
+      configService: {
+        getVerificationGraceHours: jest.fn().mockReturnValue(3),
+      },
+      templateDeliveryService: { send: jest.fn() },
+      registerWhatsappPostBookingConsent: {
+        execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
+      },
+      auditService: {
+        record: jest.fn().mockResolvedValue(undefined),
+      } as unknown as AuditService,
+    });
+
+    await useCase.execute({
+      inboundMessageId: 'wamid-inbound-invalid-phone',
+      fromPhone: '573001234568',
+      interactiveReplyId,
+      receivedAtIso: '2026-05-25T15:00:00.000Z',
+    });
+
+    expect(dispatchRepository.markPostVerificationSkipped).toHaveBeenCalledWith(
+      {
+        dispatchId: 1002,
+        status: 'SKIPPED_INVALID_PHONE',
+        reason: 'INVALID_PHONE',
+      },
+    );
+    expect(dispatchRepository.markInboundDedupProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inboundMessageId: 'wamid-inbound-invalid-phone',
+        resultStatus: 'PROCESSED_INVALID_PHONE',
+      }),
+    );
   });
 
   it('records consent with a fallback snapshot when the legacy appointment lookup fails', async () => {

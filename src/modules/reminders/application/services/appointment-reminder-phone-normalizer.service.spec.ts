@@ -14,6 +14,10 @@ describe('AppointmentReminderPhoneNormalizerService', () => {
 
   it('formats to e164 and masks values', () => {
     expect(service.toE164Colombia('3001234567')).toBe('573001234567');
+    expect(service.normalizeE164Colombia('57 300 123 4567')).toBe(
+      '573001234567',
+    );
+    expect(service.normalizeE164Colombia('3001234567')).toBeNull();
     expect(service.maskPhone('573001234567')).toBe('******4567');
   });
 });

@@ -175,6 +175,7 @@ export interface AppointmentReminderDispatchRepository {
   markPostVerificationSkipped(input: {
     dispatchId: number;
     status:
+      | 'SKIPPED_INVALID_PHONE'
       | 'SKIPPED_LATE_CONFIRMATION'
       | 'SKIPPED_SUPPRESSED_CONTACT'
       | 'SKIPPED_APPOINTMENT_CANCELLED'

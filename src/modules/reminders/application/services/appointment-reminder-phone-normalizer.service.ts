@@ -15,6 +15,19 @@ export class AppointmentReminderPhoneNormalizerService {
     return digitsOnly;
   }
 
+  normalizeE164Colombia(rawPhone: string | null | undefined): string | null {
+    if (!rawPhone) {
+      return null;
+    }
+
+    const digitsOnly = rawPhone.replace(/\D+/g, '');
+    if (!/^573\d{9}$/.test(digitsOnly)) {
+      return null;
+    }
+
+    return digitsOnly;
+  }
+
   toE164Colombia(normalizedLegacyPhone: string): string {
     return `57${normalizedLegacyPhone}`;
   }
