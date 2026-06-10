@@ -375,6 +375,8 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
           status:
             BotAppointmentReminderDispatchStatus.PHONE_VERIFICATION_PENDING,
           verificationTokenHash: command.verificationTokenHash,
+          verificationConfirmActionKey: command.verificationConfirmActionKey,
+          verificationRejectActionKey: command.verificationRejectActionKey,
           verificationMessageId: command.verificationMessageId,
           verificationRequestedAt: new Date(command.verificationRequestedAtIso),
           verificationExpiresAt: new Date(command.verificationExpiresAtIso),
@@ -389,7 +391,9 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
 
   async markVerificationPendingAfterUncertainOwnership(input: {
     dispatchId: number;
-    verificationTokenHash: string;
+    verificationTokenHash: string | null;
+    verificationConfirmActionKey: string;
+    verificationRejectActionKey: string;
     verificationMessageId: string;
     verificationRequestedAtIso: string;
     verificationExpiresAtIso: string;
@@ -411,6 +415,8 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
           status:
             BotAppointmentReminderDispatchStatus.PHONE_VERIFICATION_PENDING,
           verificationTokenHash: input.verificationTokenHash,
+          verificationConfirmActionKey: input.verificationConfirmActionKey,
+          verificationRejectActionKey: input.verificationRejectActionKey,
           verificationMessageId: input.verificationMessageId,
           verificationRequestedAt: new Date(input.verificationRequestedAtIso),
           verificationExpiresAt: new Date(input.verificationExpiresAtIso),
@@ -685,6 +691,22 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
     return dispatch ? this.mapDispatch(dispatch) : null;
   }
 
+  async findByVerificationActionKey(
+    verificationActionKey: string,
+  ): Promise<AppointmentReminderDispatchRecord | null> {
+    const dispatch =
+      await this.prismaBot.botAppointmentReminderDispatch.findFirst({
+        where: {
+          OR: [
+            { verificationConfirmActionKey: verificationActionKey },
+            { verificationRejectActionKey: verificationActionKey },
+          ],
+        },
+      });
+
+    return dispatch ? this.mapDispatch(dispatch) : null;
+  }
+
   async findById(
     dispatchId: number,
   ): Promise<AppointmentReminderDispatchRecord | null> {
@@ -804,6 +826,8 @@ export class PrismaBotAppointmentReminderDispatchRepository implements Appointme
       lockedBy: row.lockedBy,
       lockVersion: row.lockVersion,
       verificationTokenHash: row.verificationTokenHash,
+      verificationConfirmActionKey: row.verificationConfirmActionKey,
+      verificationRejectActionKey: row.verificationRejectActionKey,
       verificationRequestedAtIso:
         row.verificationRequestedAt?.toISOString() ?? null,
       verificationExpiresAtIso:

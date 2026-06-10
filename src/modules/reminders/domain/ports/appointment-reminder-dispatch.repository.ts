@@ -22,6 +22,8 @@ export interface AppointmentReminderDispatchRecord {
   lockedBy: string | null;
   lockVersion: number;
   verificationTokenHash: string | null;
+  verificationConfirmActionKey: string | null;
+  verificationRejectActionKey: string | null;
   verificationRequestedAtIso: string | null;
   verificationExpiresAtIso: string | null;
   sentAtIso: string | null;
@@ -52,7 +54,9 @@ export interface MarkDispatchVerificationPendingCommand {
   dispatchId: number;
   expectedLockVersion: number;
   workerId: string;
-  verificationTokenHash: string;
+  verificationTokenHash: string | null;
+  verificationConfirmActionKey: string;
+  verificationRejectActionKey: string;
   verificationMessageId: string;
   verificationRequestedAtIso: string;
   verificationExpiresAtIso: string;
@@ -144,7 +148,9 @@ export interface AppointmentReminderDispatchRepository {
   ): Promise<boolean>;
   markVerificationPendingAfterUncertainOwnership(input: {
     dispatchId: number;
-    verificationTokenHash: string;
+    verificationTokenHash: string | null;
+    verificationConfirmActionKey: string;
+    verificationRejectActionKey: string;
     verificationMessageId: string;
     verificationRequestedAtIso: string;
     verificationExpiresAtIso: string;
@@ -188,6 +194,9 @@ export interface AppointmentReminderDispatchRepository {
   ): Promise<AppointmentReminderDispatchRecord | null>;
   findByVerificationTokenHash(
     verificationTokenHash: string,
+  ): Promise<AppointmentReminderDispatchRecord | null>;
+  findByVerificationActionKey(
+    verificationActionKey: string,
   ): Promise<AppointmentReminderDispatchRecord | null>;
   recordInboundDedup(command: RecordInboundDedupCommand): Promise<boolean>;
   markInboundDedupProcessed(input: {

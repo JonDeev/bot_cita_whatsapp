@@ -7,7 +7,10 @@ import {
   APPOINTMENT_REMINDER_PATIENT_CONTACT_REPOSITORY,
   APPOINTMENT_REMINDER_RECIPIENT_POLICY_REPOSITORY,
 } from '../../domain/reminders.tokens';
-import type { AppointmentReminderDispatchRepository } from '../../domain/ports/appointment-reminder-dispatch.repository';
+import type {
+  AppointmentReminderDispatchRecord,
+  AppointmentReminderDispatchRepository,
+} from '../../domain/ports/appointment-reminder-dispatch.repository';
 import type {
   AppointmentReminderEligibilityRepository,
   EligibleAppointmentForReminder,
@@ -20,6 +23,7 @@ import { AppointmentReminderPhoneNormalizerService } from '../services/appointme
 import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
+import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 import {
   APPOINTMENT_REMINDER_VERIFICATION_CONSENT_SOURCE,
@@ -73,6 +77,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     private readonly recipientPolicyRepository: AppointmentReminderRecipientPolicyRepository,
     private readonly templateConfig: AppointmentReminderTemplateConfigService,
     private readonly tokenService: AppointmentReminderButtonTokenService,
+    private readonly verificationActionKeyService: AppointmentReminderVerificationActionKeyService,
     private readonly windowService: AppointmentReminderWindowService,
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
@@ -88,18 +93,6 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     const action = this.resolveAction(input.interactiveReplyId);
     if (!action) {
       return { handled: false };
-    }
-
-    const token = input.interactiveReplyId.slice(action.prefix.length);
-    const verifiedToken = this.tokenService.verifyToken(token);
-    if (!verifiedToken) {
-      await this.auditService.record(
-        'appointment_reminder.inbound.invalid_token',
-        {
-          inboundMessageId: input.inboundMessageId,
-        },
-      );
-      return { handled: true };
     }
 
     const dedupAccepted = await this.dispatchRepository.recordInboundDedup({
@@ -120,10 +113,26 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       return { handled: true };
     }
 
-    const dispatch = await this.dispatchRepository.findById(
-      verifiedToken.dispatchId,
-    );
-    if (!dispatch || dispatch.status !== 'PHONE_VERIFICATION_PENDING') {
+    const dispatchResolution =
+      await this.resolveVerificationDispatch(action, input.interactiveReplyId);
+    if (dispatchResolution.status === 'INVALID_REFERENCE') {
+      await this.auditService.record(
+        'appointment_reminder.inbound.invalid_verification_reference',
+        {
+          inboundMessageId: input.inboundMessageId,
+        },
+      );
+      await this.dispatchRepository.markInboundDedupProcessed({
+        provider: 'META_WHATSAPP',
+        inboundMessageId: input.inboundMessageId,
+        buttonPayloadId: input.interactiveReplyId,
+        processedAtIso: input.receivedAtIso,
+        resultStatus: 'SKIPPED_INVALID_VERIFICATION_REFERENCE',
+      });
+      return { handled: true };
+    }
+
+    if (dispatchResolution.status === 'INVALID_DISPATCH') {
       await this.dispatchRepository.markInboundDedupProcessed({
         provider: 'META_WHATSAPP',
         inboundMessageId: input.inboundMessageId,
@@ -134,18 +143,11 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       return { handled: true };
     }
 
-    const expectedTokenHash = this.tokenService.hashToken(token);
-    if (dispatch.verificationTokenHash !== expectedTokenHash) {
-      await this.dispatchRepository.markInboundDedupProcessed({
-        provider: 'META_WHATSAPP',
-        inboundMessageId: input.inboundMessageId,
-        buttonPayloadId: input.interactiveReplyId,
-        processedAtIso: input.receivedAtIso,
-        resultStatus: 'SKIPPED_INVALID_TOKEN_HASH',
-      });
+    if (dispatchResolution.status !== 'FOUND') {
       return { handled: true };
     }
 
+    const dispatch = dispatchResolution.dispatch;
     const normalizedIncomingPhone = input.fromPhone.replace(/\D+/g, '');
     const expectedPhone = (
       dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw
@@ -755,29 +757,94 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     type: 'CONFIRM' | 'REJECT';
     prefix: string;
   } | null {
-    if (
-      interactiveReplyId.startsWith(
-        this.templateConfig.getConfirmButtonPayloadPrefix(),
-      )
-    ) {
-      return {
-        type: 'CONFIRM',
-        prefix: this.templateConfig.getConfirmButtonPayloadPrefix(),
-      };
+    for (const prefix of this.templateConfig.getConfirmButtonPayloadPrefixes()) {
+      if (interactiveReplyId.startsWith(prefix)) {
+        return {
+          type: 'CONFIRM',
+          prefix,
+        };
+      }
     }
 
-    if (
-      interactiveReplyId.startsWith(
-        this.templateConfig.getRejectButtonPayloadPrefix(),
-      )
-    ) {
-      return {
-        type: 'REJECT',
-        prefix: this.templateConfig.getRejectButtonPayloadPrefix(),
-      };
+    for (const prefix of this.templateConfig.getRejectButtonPayloadPrefixes()) {
+      if (interactiveReplyId.startsWith(prefix)) {
+        return {
+          type: 'REJECT',
+          prefix,
+        };
+      }
     }
 
     return null;
+  }
+
+  private async resolveVerificationDispatch(
+    action: {
+      type: 'CONFIRM' | 'REJECT';
+      prefix: string;
+    },
+    interactiveReplyId: string,
+  ): Promise<
+    | {
+        status: 'FOUND';
+        dispatch: AppointmentReminderDispatchRecord;
+      }
+    | {
+        status: 'INVALID_REFERENCE' | 'INVALID_DISPATCH';
+      }
+  > {
+    const verificationReference = interactiveReplyId
+      .slice(action.prefix.length)
+      .trim();
+    if (!verificationReference) {
+      return { status: 'INVALID_REFERENCE' };
+    }
+
+    if (this.verificationActionKeyService.isValid(verificationReference)) {
+      const dispatch =
+        await this.dispatchRepository.findByVerificationActionKey(
+          verificationReference,
+        );
+      if (!dispatch || dispatch.status !== 'PHONE_VERIFICATION_PENDING') {
+        return { status: 'INVALID_DISPATCH' };
+      }
+
+      const expectedActionKey =
+        action.type === 'CONFIRM'
+          ? dispatch.verificationConfirmActionKey
+          : dispatch.verificationRejectActionKey;
+      if (expectedActionKey !== verificationReference) {
+        return { status: 'INVALID_REFERENCE' };
+      }
+
+      return {
+        status: 'FOUND',
+        dispatch,
+      };
+    }
+
+    const verifiedToken = this.tokenService.verifyToken(verificationReference);
+    if (!verifiedToken) {
+      return { status: 'INVALID_REFERENCE' };
+    }
+
+    const dispatch = await this.dispatchRepository.findById(
+      verifiedToken.dispatchId,
+    );
+    if (!dispatch || dispatch.status !== 'PHONE_VERIFICATION_PENDING') {
+      return { status: 'INVALID_DISPATCH' };
+    }
+
+    const expectedTokenHash =
+      this.tokenService.hashToken(verificationReference);
+    if (dispatch.verificationTokenHash !== expectedTokenHash) {
+      return { status: 'INVALID_REFERENCE' };
+    }
+
+    return {
+      status: 'FOUND',
+      dispatch,
+    };
   }
 
   private buildReminderBodyParameters(input: {

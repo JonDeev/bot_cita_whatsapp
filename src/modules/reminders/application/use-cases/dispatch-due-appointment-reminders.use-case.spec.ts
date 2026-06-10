@@ -7,11 +7,13 @@ import type {
 import type { AppointmentReminderEligibilityRepository } from '../../domain/ports/appointment-reminder-eligibility.repository';
 import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/ports/appointment-reminder-recipient-policy.repository';
 import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
+import { AppointmentReminderDispatchFailurePolicyService } from '../services/appointment-reminder-dispatch-failure-policy.service';
 import { AppointmentReminderDispatchContactDecisionService } from '../services/appointment-reminder-dispatch-contact-decision.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
+import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 import { DispatchDueAppointmentRemindersUseCase } from './dispatch-due-appointment-reminders.use-case';
@@ -166,6 +168,8 @@ type DispatchDueAppointmentRemindersFixture = {
   buttonTokenService: ButtonTokenServiceMock;
   phoneNormalizer: PhoneNormalizerServiceMock;
   templateDeliveryService: TemplateDeliveryServiceMock;
+  verificationActionKeyService: AppointmentReminderVerificationActionKeyService;
+  failurePolicy: AppointmentReminderDispatchFailurePolicyService;
   auditService: {
     record: jest.Mock<Promise<void>, [string, Record<string, unknown>]>;
   };
@@ -327,8 +331,8 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
 
   const templateConfig: TemplateConfigServiceMock = {
     getTemplateLanguageCode: jest.fn().mockReturnValue('es_CO'),
-    getConfirmButtonPayloadPrefix: jest.fn().mockReturnValue('confirm:'),
-    getRejectButtonPayloadPrefix: jest.fn().mockReturnValue('reject:'),
+    getConfirmButtonPayloadPrefix: jest.fn().mockReturnValue('arc:'),
+    getRejectButtonPayloadPrefix: jest.fn().mockReturnValue('arr:'),
   };
 
   const windowService: WindowServiceMock = {
@@ -368,6 +372,10 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
       }),
   };
 
+  const verificationActionKeyService =
+    new AppointmentReminderVerificationActionKeyService();
+  const failurePolicy = new AppointmentReminderDispatchFailurePolicyService();
+
   const templateDeliveryService: TemplateDeliveryServiceMock = {
     send: jest
       .fn<
@@ -406,7 +414,8 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     configService as unknown as AppointmentReminderDispatchConfigService,
     templateConfig as unknown as AppointmentReminderTemplateConfigService,
     windowService as unknown as AppointmentReminderWindowService,
-    buttonTokenService as unknown as AppointmentReminderButtonTokenService,
+    verificationActionKeyService,
+    failurePolicy,
     phoneNormalizer as unknown as AppointmentReminderPhoneNormalizerService,
     templateDeliveryService as unknown as AppointmentReminderTemplateDeliveryService,
     auditService,
@@ -425,6 +434,8 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     buttonTokenService,
     phoneNormalizer,
     templateDeliveryService,
+    verificationActionKeyService,
+    failurePolicy,
     auditService,
     runtimeResolver,
   };
@@ -1093,8 +1104,6 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
     );
     fixture.dispatchRepository.markVerificationPending.mockResolvedValue(true);
     fixture.dispatchRepository.renewLock.mockResolvedValue(true);
-    fixture.buttonTokenService.createToken.mockReturnValue('token-906');
-    fixture.buttonTokenService.hashToken.mockReturnValue('hash-906');
     fixture.templateDeliveryService.send.mockResolvedValue({
       messageId: 'wamid-906',
     });
@@ -1109,18 +1118,13 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
       expect.objectContaining({
         templateName: 'verificacion_telefono_paciente',
         bodyTextParameters: ['ADRIANA RUIZ'],
-        quickReplyButtons: [
-          {
-            index: '0',
-            payload: 'confirm:token-906',
-          },
-          {
-            index: '1',
-            payload: 'reject:token-906',
-          },
-        ],
       }),
     );
+    const callArgs = fixture.templateDeliveryService.send.mock.calls[0]?.[0];
+    expect(callArgs?.quickReplyButtons?.[0]?.payload).toMatch(/^arc:/);
+    expect(callArgs?.quickReplyButtons?.[1]?.payload).toMatch(/^arr:/);
+    expect(callArgs?.quickReplyButtons?.[0]?.payload.length).toBeLessThanOrEqual(128);
+    expect(callArgs?.quickReplyButtons?.[1]?.payload.length).toBeLessThanOrEqual(128);
     expect(result).toEqual({
       claimed: 1,
       sent: 0,

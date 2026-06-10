@@ -227,18 +227,18 @@ model BotOutboxMessage {
 }
 
 model BotAdminUser {
-  id           Int                  @id @default(autoincrement())
-  email        String               @unique(map: "uq_bot_admin_users_email") @db.VarChar(191)
-  username     String               @unique(map: "uq_bot_admin_users_username") @db.VarChar(32)
-  displayName  String               @map("display_name") @db.VarChar(120)
-  passwordHash String               @map("password_hash") @db.VarChar(255)
-  role         BotAdminRole
-  status       BotAdminUserStatus   @default(ACTIVE)
-  lastLoginAt  DateTime?            @map("last_login_at") @db.DateTime(3)
-  createdAt    DateTime             @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt    DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
-  sessions     BotAdminSession[]
-  auditEvents  BotAdminAuditEvent[]
+  id                             Int                                         @id @default(autoincrement())
+  email                          String                                      @unique(map: "uq_bot_admin_users_email") @db.VarChar(191)
+  username                       String                                      @unique(map: "uq_bot_admin_users_username") @db.VarChar(32)
+  displayName                    String                                      @map("display_name") @db.VarChar(120)
+  passwordHash                   String                                      @map("password_hash") @db.VarChar(255)
+  role                           BotAdminRole
+  status                         BotAdminUserStatus                          @default(ACTIVE)
+  lastLoginAt                    DateTime?                                   @map("last_login_at") @db.DateTime(3)
+  createdAt                      DateTime                                    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                      DateTime                                    @updatedAt @map("updated_at") @db.DateTime(3)
+  sessions                       BotAdminSession[]
+  auditEvents                    BotAdminAuditEvent[]
   reminderRuntimeSettingsUpdated BotAppointmentReminderRuntimeSettings[]
   reminderRuntimeSettingEvents   BotAppointmentReminderRuntimeSettingEvent[]
 
@@ -512,35 +512,39 @@ model BotContactSuppression {
 }
 
 model BotAppointmentReminderDispatch {
-  id                       Int                                  @id @default(autoincrement())
-  legacyAgendaId           Int                                  @map("legacy_agenda_id")
-  patientLegacyUserId      Int                                  @map("patient_legacy_user_id")
-  conversationKey          String?                              @map("conversation_key") @db.VarChar(191)
-  recipientPhoneRaw        String                               @map("recipient_phone_raw") @db.VarChar(32)
-  recipientPhoneE164       String?                              @map("recipient_phone_e164") @db.VarChar(32)
-  appointmentStartsAt      DateTime                             @map("appointment_starts_at") @db.DateTime(3)
-  scheduledFor             DateTime                             @map("scheduled_for") @db.DateTime(3)
-  reminderType             String                               @map("reminder_type") @db.VarChar(32)
-  status                   BotAppointmentReminderDispatchStatus @default(PENDING)
-  templateName             String                               @map("template_name") @db.VarChar(128)
-  verificationTemplateName String                               @map("verification_template_name") @db.VarChar(128)
-  metaMessageId            String?                              @map("meta_message_id") @db.VarChar(191)
-  verificationMessageId    String?                              @map("verification_message_id") @db.VarChar(191)
-  attempts                 Int                                  @default(0)
-  nextAttemptAt            DateTime?                            @map("next_attempt_at") @db.DateTime(3)
-  lastError                String?                              @map("last_error") @db.Text
-  lockAcquiredAt           DateTime?                            @map("lock_acquired_at") @db.DateTime(3)
-  lockExpiresAt            DateTime?                            @map("lock_expires_at") @db.DateTime(3)
-  lockedBy                 String?                              @map("locked_by") @db.VarChar(64)
-  lockVersion              Int                                  @default(0) @map("lock_version")
-  verificationTokenHash    String?                              @map("verification_token_hash") @db.VarChar(191)
-  verificationRequestedAt  DateTime?                            @map("verification_requested_at") @db.DateTime(3)
-  verificationExpiresAt    DateTime?                            @map("verification_expires_at") @db.DateTime(3)
-  sentAt                   DateTime?                            @map("sent_at") @db.DateTime(3)
-  createdAt                DateTime                             @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt                DateTime                             @updatedAt @map("updated_at") @db.DateTime(3)
+  id                           Int                                  @id @default(autoincrement())
+  legacyAgendaId               Int                                  @map("legacy_agenda_id")
+  patientLegacyUserId          Int                                  @map("patient_legacy_user_id")
+  conversationKey              String?                              @map("conversation_key") @db.VarChar(191)
+  recipientPhoneRaw            String                               @map("recipient_phone_raw") @db.VarChar(32)
+  recipientPhoneE164           String?                              @map("recipient_phone_e164") @db.VarChar(32)
+  appointmentStartsAt          DateTime                             @map("appointment_starts_at") @db.DateTime(3)
+  scheduledFor                 DateTime                             @map("scheduled_for") @db.DateTime(3)
+  reminderType                 String                               @map("reminder_type") @db.VarChar(32)
+  status                       BotAppointmentReminderDispatchStatus @default(PENDING)
+  templateName                 String                               @map("template_name") @db.VarChar(128)
+  verificationTemplateName     String                               @map("verification_template_name") @db.VarChar(128)
+  metaMessageId                String?                              @map("meta_message_id") @db.VarChar(191)
+  verificationMessageId        String?                              @map("verification_message_id") @db.VarChar(191)
+  attempts                     Int                                  @default(0)
+  nextAttemptAt                DateTime?                            @map("next_attempt_at") @db.DateTime(3)
+  lastError                    String?                              @map("last_error") @db.Text
+  lockAcquiredAt               DateTime?                            @map("lock_acquired_at") @db.DateTime(3)
+  lockExpiresAt                DateTime?                            @map("lock_expires_at") @db.DateTime(3)
+  lockedBy                     String?                              @map("locked_by") @db.VarChar(64)
+  lockVersion                  Int                                  @default(0) @map("lock_version")
+  verificationTokenHash        String?                              @map("verification_token_hash") @db.VarChar(191)
+  verificationConfirmActionKey String?                              @map("verification_confirm_action_key") @db.VarChar(64)
+  verificationRejectActionKey  String?                              @map("verification_reject_action_key") @db.VarChar(64)
+  verificationRequestedAt      DateTime?                            @map("verification_requested_at") @db.DateTime(3)
+  verificationExpiresAt        DateTime?                            @map("verification_expires_at") @db.DateTime(3)
+  sentAt                       DateTime?                            @map("sent_at") @db.DateTime(3)
+  createdAt                    DateTime                             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                    DateTime                             @updatedAt @map("updated_at") @db.DateTime(3)
 
   @@unique([legacyAgendaId, reminderType, appointmentStartsAt], map: "uq_bot_appt_reminder_dispatch_business")
+  @@unique([verificationConfirmActionKey], map: "uq_bot_appt_reminder_verification_confirm_action_key")
+  @@unique([verificationRejectActionKey], map: "uq_bot_appt_reminder_verification_reject_action_key")
   @@index([status, scheduledFor], map: "idx_bot_appt_reminder_status_scheduled_for")
   @@index([status, nextAttemptAt], map: "idx_bot_appt_reminder_status_next_attempt_at")
   @@index([verificationExpiresAt, status], map: "idx_bot_appt_reminder_verification_expires_status")
@@ -578,18 +582,18 @@ model BotAppointmentReminderRuntimeSettings {
 }
 
 model BotAppointmentReminderRuntimeSettingEvent {
-  id                   Int      @id @default(autoincrement())
-  settingsVersion      Int      @map("settings_version")
-  adminUserId          Int?     @map("admin_user_id")
-  changeType           String   @map("change_type") @db.VarChar(32)
-  section              String   @db.VarChar(16)
-  reason               String?  @db.VarChar(500)
-  previousSnapshotJson Json     @map("previous_snapshot_json") @db.Json
-  newSnapshotJson      Json     @map("new_snapshot_json") @db.Json
-  effectiveSnapshotJson Json    @map("effective_snapshot_json") @db.Json
-  occurredAt           DateTime @map("occurred_at") @db.DateTime(3)
-  createdAt            DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  adminUser            BotAdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id                    Int           @id @default(autoincrement())
+  settingsVersion       Int           @map("settings_version")
+  adminUserId           Int?          @map("admin_user_id")
+  changeType            String        @map("change_type") @db.VarChar(32)
+  section               String        @db.VarChar(16)
+  reason                String?       @db.VarChar(500)
+  previousSnapshotJson  Json          @map("previous_snapshot_json") @db.Json
+  newSnapshotJson       Json          @map("new_snapshot_json") @db.Json
+  effectiveSnapshotJson Json          @map("effective_snapshot_json") @db.Json
+  occurredAt            DateTime      @map("occurred_at") @db.DateTime(3)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  adminUser             BotAdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([settingsVersion], map: "idx_bot_appt_reminder_runtime_events_version")
   @@index([adminUserId, occurredAt], map: "idx_bot_appt_reminder_runtime_events_admin_occurred")

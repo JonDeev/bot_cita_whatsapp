@@ -16,6 +16,10 @@ export interface SendWhatsappTemplateMessageInput {
   trigger: string;
 }
 
+const WHATSAPP_TEMPLATE_LIMITS = {
+  QUICK_REPLY_BUTTON_PAYLOAD_MAX_LENGTH: 128,
+} as const;
+
 @Injectable()
 export class SendWhatsappTemplateMessageUseCase {
   constructor(
@@ -99,6 +103,15 @@ export class SendWhatsappTemplateMessageUseCase {
         if (!button.payload.trim()) {
           throw new BadRequestException(
             'Template quick reply button payload is required.',
+          );
+        }
+
+        if (
+          Array.from(button.payload).length >
+          WHATSAPP_TEMPLATE_LIMITS.QUICK_REPLY_BUTTON_PAYLOAD_MAX_LENGTH
+        ) {
+          throw new BadRequestException(
+            `Template quick reply button payload exceeds ${WHATSAPP_TEMPLATE_LIMITS.QUICK_REPLY_BUTTON_PAYLOAD_MAX_LENGTH} characters.`,
           );
         }
       }

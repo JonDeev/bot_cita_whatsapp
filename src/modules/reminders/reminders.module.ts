@@ -16,6 +16,7 @@ import { GetAppointmentReminderMetricsUseCase } from './application/use-cases/ge
 import { AppointmentReminderAppointmentTimeService } from './application/services/appointment-reminder-appointment-time.service';
 import { AppointmentReminderBootstrapConfigService } from './application/services/appointment-reminder-bootstrap-config.service';
 import { AppointmentReminderButtonTokenService } from './application/services/appointment-reminder-button-token.service';
+import { AppointmentReminderDispatchFailurePolicyService } from './application/services/appointment-reminder-dispatch-failure-policy.service';
 import { AppointmentReminderDispatchContactDecisionService } from './application/services/appointment-reminder-dispatch-contact-decision.service';
 import { AppointmentReminderDispatchConfigService } from './application/services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderMetricsAccessConfigService } from './application/services/appointment-reminder-metrics-access-config.service';
@@ -26,6 +27,7 @@ import { AppointmentReminderRuntimeSettingsInitializerService } from './applicat
 import { AppointmentReminderRuntimeSettingsResolverService } from './application/services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from './application/services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from './application/services/appointment-reminder-template-delivery.service';
+import { AppointmentReminderVerificationActionKeyService } from './application/services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderWindowService } from './application/services/appointment-reminder-window.service';
 import { GetAppointmentReminderRuntimeOptionsUseCase } from './application/use-cases/get-appointment-reminder-runtime-options.use-case';
 import { GetAppointmentReminderRuntimeSettingsUseCase } from './application/use-cases/get-appointment-reminder-runtime-settings.use-case';
@@ -68,6 +70,7 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     AppointmentReminderAppointmentTimeService,
     AppointmentReminderBootstrapConfigService,
     AppointmentReminderButtonTokenService,
+    AppointmentReminderDispatchFailurePolicyService,
     AppointmentReminderDispatchContactDecisionService,
     AppointmentReminderDispatchConfigService,
     AppointmentReminderMetricsAccessConfigService,
@@ -78,6 +81,7 @@ import { InternalAppointmentReminderMetricsController } from './presentation/htt
     AppointmentReminderRuntimeSettingsResolverService,
     AppointmentReminderTemplateConfigService,
     AppointmentReminderTemplateDeliveryService,
+    AppointmentReminderVerificationActionKeyService,
     AppointmentReminderWindowService,
     PrismaBotAppointmentReminderOutboxRepository,
     CreateOrRefreshAppointmentReminderDispatchesUseCase,

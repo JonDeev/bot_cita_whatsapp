@@ -2,6 +2,13 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AppointmentReminderTemplateConfigService {
+  private static readonly PRIMARY_CONFIRM_BUTTON_PAYLOAD_PREFIX = 'arc:';
+  private static readonly PRIMARY_REJECT_BUTTON_PAYLOAD_PREFIX = 'arr:';
+  private static readonly LEGACY_CONFIRM_BUTTON_PAYLOAD_PREFIX =
+    'appt_reminder_confirm:';
+  private static readonly LEGACY_REJECT_BUTTON_PAYLOAD_PREFIX =
+    'appt_reminder_reject:';
+
   getReminderTemplateName(): string {
     return this.readRequiredEnv(
       'WHATSAPP_APPOINTMENT_REMINDER_TEMPLATE_NAME',
@@ -28,11 +35,31 @@ export class AppointmentReminderTemplateConfigService {
   }
 
   getConfirmButtonPayloadPrefix(): string {
-    return 'appt_reminder_confirm:';
+    return AppointmentReminderTemplateConfigService
+      .PRIMARY_CONFIRM_BUTTON_PAYLOAD_PREFIX;
   }
 
   getRejectButtonPayloadPrefix(): string {
-    return 'appt_reminder_reject:';
+    return AppointmentReminderTemplateConfigService
+      .PRIMARY_REJECT_BUTTON_PAYLOAD_PREFIX;
+  }
+
+  getConfirmButtonPayloadPrefixes(): readonly string[] {
+    return [
+      AppointmentReminderTemplateConfigService
+        .PRIMARY_CONFIRM_BUTTON_PAYLOAD_PREFIX,
+      AppointmentReminderTemplateConfigService
+        .LEGACY_CONFIRM_BUTTON_PAYLOAD_PREFIX,
+    ];
+  }
+
+  getRejectButtonPayloadPrefixes(): readonly string[] {
+    return [
+      AppointmentReminderTemplateConfigService
+        .PRIMARY_REJECT_BUTTON_PAYLOAD_PREFIX,
+      AppointmentReminderTemplateConfigService
+        .LEGACY_REJECT_BUTTON_PAYLOAD_PREFIX,
+    ];
   }
 
   private readRequiredEnv(key: string, fallback: string): string {

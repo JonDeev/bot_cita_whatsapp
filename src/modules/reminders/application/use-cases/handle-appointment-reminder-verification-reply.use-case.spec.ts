@@ -12,6 +12,7 @@ import { AppointmentReminderDispatchConfigService } from '../services/appointmen
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import type { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
+import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 import { HandleAppointmentReminderVerificationReplyUseCase } from './handle-appointment-reminder-verification-reply.use-case';
@@ -88,6 +89,7 @@ function createUseCase(input: {
   registerWhatsappPostBookingConsent?: RegisterWhatsappPostBookingConsentUseCaseMock;
   auditService: AuditService;
   tokenService: AppointmentReminderButtonTokenService;
+  verificationActionKeyService?: AppointmentReminderVerificationActionKeyService;
   templateConfig: AppointmentReminderTemplateConfigService;
   runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService;
 }): HandleAppointmentReminderVerificationReplyUseCase {
@@ -144,6 +146,8 @@ function createUseCase(input: {
     } as AppointmentReminderRecipientPolicyRepository,
     input.templateConfig,
     input.tokenService,
+    input.verificationActionKeyService ??
+      new AppointmentReminderVerificationActionKeyService(),
     new AppointmentReminderWindowService(),
     configService,
     new AppointmentReminderPhoneNormalizerService(),

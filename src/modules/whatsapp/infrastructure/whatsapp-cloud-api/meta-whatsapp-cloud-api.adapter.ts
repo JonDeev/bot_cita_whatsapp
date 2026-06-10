@@ -1,4 +1,8 @@
 import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -238,6 +242,18 @@ export class MetaWhatsappCloudApiAdapter implements WhatsappMessageSenderPort {
       const details = this.buildApiErrorDetails(response.status, json.error);
       if (response.status === 401) {
         throw new UnauthorizedException(details);
+      }
+
+      if (response.status === 403) {
+        throw new ForbiddenException(details);
+      }
+
+      if (response.status === 429) {
+        throw new HttpException(details, HttpStatus.TOO_MANY_REQUESTS);
+      }
+
+      if (response.status >= 400 && response.status < 500) {
+        throw new BadRequestException(details);
       }
 
       throw new InternalServerErrorException(details);

@@ -14,12 +14,13 @@ import type {
 import type { AppointmentReminderEligibilityRepository } from '../../domain/ports/appointment-reminder-eligibility.repository';
 import type { AppointmentReminderRecipientPolicyRepository } from '../../domain/ports/appointment-reminder-recipient-policy.repository';
 import { AppointmentReminderDispatchContactDecisionService } from '../services/appointment-reminder-dispatch-contact-decision.service';
-import { AppointmentReminderButtonTokenService } from '../services/appointment-reminder-button-token.service';
+import { AppointmentReminderDispatchFailurePolicyService } from '../services/appointment-reminder-dispatch-failure-policy.service';
 import { AppointmentReminderDispatchConfigService } from '../services/appointment-reminder-dispatch-config.service';
 import { AppointmentReminderPhoneNormalizerService } from '../services/appointment-reminder-phone-normalizer.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderTemplateConfigService } from '../services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
+import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
 
 export interface DispatchDueAppointmentRemindersResult {
@@ -55,7 +56,8 @@ export class DispatchDueAppointmentRemindersUseCase {
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly templateConfig: AppointmentReminderTemplateConfigService,
     private readonly windowService: AppointmentReminderWindowService,
-    private readonly buttonTokenService: AppointmentReminderButtonTokenService,
+    private readonly verificationActionKeyService: AppointmentReminderVerificationActionKeyService,
+    private readonly failurePolicy: AppointmentReminderDispatchFailurePolicyService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
     private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
     private readonly auditService: AuditService,
@@ -292,12 +294,10 @@ export class DispatchDueAppointmentRemindersUseCase {
           this.windowService.resolveVerificationExpiresAtIso(
             dispatch.appointmentStartsAtIso,
           );
-        const verificationToken = this.buttonTokenService.createToken({
-          dispatchId: dispatch.id,
-          expiresAtIso: verificationExpiresAtIso,
-        });
-        const verificationTokenHash =
-          this.buttonTokenService.hashToken(verificationToken);
+        const verificationConfirmActionKey =
+          this.verificationActionKeyService.create();
+        const verificationRejectActionKey =
+          this.verificationActionKeyService.create();
 
         const sendResult = await this.sendWithLeaseHeartbeat({
           dispatch,
@@ -319,11 +319,11 @@ export class DispatchDueAppointmentRemindersUseCase {
               quickReplyButtons: [
                 {
                   index: '0',
-                  payload: `${this.templateConfig.getConfirmButtonPayloadPrefix()}${verificationToken}`,
+                  payload: `${this.templateConfig.getConfirmButtonPayloadPrefix()}${verificationConfirmActionKey}`,
                 },
                 {
                   index: '1',
-                  payload: `${this.templateConfig.getRejectButtonPayloadPrefix()}${verificationToken}`,
+                  payload: `${this.templateConfig.getRejectButtonPayloadPrefix()}${verificationRejectActionKey}`,
                 },
               ],
               trigger: 'appointment_reminder.phone_verification',
@@ -339,7 +339,9 @@ export class DispatchDueAppointmentRemindersUseCase {
             dispatchId: dispatch.id,
             expectedLockVersion: dispatch.lockVersion,
             workerId,
-            verificationTokenHash,
+            verificationTokenHash: null,
+            verificationConfirmActionKey,
+            verificationRejectActionKey,
             verificationMessageId: sendResult.messageId,
             verificationRequestedAtIso: runAtIso,
             verificationExpiresAtIso,
@@ -349,7 +351,9 @@ export class DispatchDueAppointmentRemindersUseCase {
             await this.dispatchRepository.markVerificationPendingAfterUncertainOwnership(
               {
                 dispatchId: dispatch.id,
-                verificationTokenHash,
+                verificationTokenHash: null,
+                verificationConfirmActionKey,
+                verificationRejectActionKey,
                 verificationMessageId: sendResult.messageId,
                 verificationRequestedAtIso: runAtIso,
                 verificationExpiresAtIso,
@@ -394,10 +398,11 @@ export class DispatchDueAppointmentRemindersUseCase {
 
         verificationSent += 1;
       } catch (error) {
-        const nextAttempt = this.resolveRetryWindow(
-          dispatch.attempts + 1,
+        const failureDecision = this.failurePolicy.resolve({
+          attempts: dispatch.attempts + 1,
           runAtIso,
-        );
+          error,
+        });
 
         const wasMarked = await this.dispatchRepository.markFailed({
           dispatchId: dispatch.id,
@@ -405,7 +410,7 @@ export class DispatchDueAppointmentRemindersUseCase {
           workerId,
           reason: error instanceof Error ? error.message : 'Unknown error',
           attempts: dispatch.attempts + 1,
-          nextAttemptAtIso: nextAttempt,
+          nextAttemptAtIso: failureDecision.nextAttemptAtIso,
         });
 
         if (!wasMarked) {
@@ -414,11 +419,15 @@ export class DispatchDueAppointmentRemindersUseCase {
           );
         }
 
-        if (wasMarked && nextAttempt && this.configService.isQueueEnabled()) {
+        if (
+          wasMarked &&
+          failureDecision.nextAttemptAtIso &&
+          this.configService.isQueueEnabled()
+        ) {
           try {
             await this.dispatchQueue.scheduleDispatchJob({
               dispatchId: dispatch.id,
-              scheduledForIso: nextAttempt,
+              scheduledForIso: failureDecision.nextAttemptAtIso,
             });
           } catch (enqueueError) {
             this.logger.error(
@@ -493,22 +502,6 @@ export class DispatchDueAppointmentRemindersUseCase {
       status,
       reason,
     });
-  }
-
-  private resolveRetryWindow(
-    attempts: number,
-    runAtIso: string,
-  ): string | null {
-    const runAt = new Date(runAtIso).getTime();
-    if (attempts === 1) {
-      return new Date(runAt + 5 * 60 * 1000).toISOString();
-    }
-
-    if (attempts === 2) {
-      return new Date(runAt + 15 * 60 * 1000).toISOString();
-    }
-
-    return null;
   }
 
   private buildReminderBodyParameters(input: {
