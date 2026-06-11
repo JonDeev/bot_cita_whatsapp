@@ -6,12 +6,14 @@ import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationOutboundMessage } from '../../domain/value-objects/conversation-outbound-message';
 import { AppointmentNotificationOptInMessageFactory } from './appointment-notification-opt-in-message.factory';
+import { PrimaryFlowContinuationResolverService } from './primary-flow-continuation-resolver.service';
 
 @Injectable()
 export class ContactUpdateCompletionService {
   constructor(
     private readonly resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
+    private readonly primaryFlowContinuationResolver: PrimaryFlowContinuationResolverService,
   ) {}
 
   async buildResult(input: {
@@ -87,6 +89,9 @@ export class ContactUpdateCompletionService {
           : undefined,
       },
       outboundMessages: [input.successMessage],
+      continueFlow: this.primaryFlowContinuationResolver.shouldContinue(
+        input.session,
+      ),
     };
   }
 }

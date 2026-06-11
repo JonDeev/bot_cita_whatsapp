@@ -2,6 +2,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import { RegisterWhatsappPostBookingConsentUseCase } from '../../../patients/application/use-cases/register-whatsapp-post-booking-consent.use-case';
 import { ConsentPhoneResolverService } from '../services/consent-phone-resolver.service';
 import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
+import { PrimaryFlowContinuationResolverService } from '../services/primary-flow-continuation-resolver.service';
 import { RequestingWhatsappAppointmentNotificationsOptInHandler } from './requesting-whatsapp-appointment-notifications-opt-in.handler';
 
 describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
@@ -18,6 +19,7 @@ describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
             phone: '3014445566',
           }),
         } as unknown as ConsentPhoneResolverService),
+      new PrimaryFlowContinuationResolverService(),
       registerConsent,
       {
         record: jest.fn().mockResolvedValue(undefined),
@@ -264,5 +266,6 @@ describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
     );
     expect(result.nextContext?.contactVerification?.pendingPhone).toBeUndefined();
     expect(result.nextContext?.contactVerification?.verifiedPhone).toBeUndefined();
+    expect(result.continueFlow).toBe(true);
   });
 });

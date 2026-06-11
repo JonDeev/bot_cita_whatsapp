@@ -13,6 +13,7 @@ import {
   APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
   AppointmentNotificationOptInMessageFactory,
 } from '../services/appointment-notification-opt-in-message.factory';
+import { PrimaryFlowContinuationResolverService } from '../services/primary-flow-continuation-resolver.service';
 import {
   APPOINTMENT_NOTIFICATION_OPT_IN_OPTION_IDS,
   isAppointmentNotificationOptInOptionId,
@@ -34,6 +35,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
   constructor(
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
     private readonly consentPhoneResolver: ConsentPhoneResolverService,
+    private readonly primaryFlowContinuationResolver: PrimaryFlowContinuationResolverService,
     private readonly registerWhatsappPostBookingConsent: RegisterWhatsappPostBookingConsentUseCase,
     private readonly auditService: AuditService,
   ) {}
@@ -85,24 +87,41 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
       persistenceStatus: consentResult.status,
     });
 
-    if (session.context?.flowIntent && session.context.flowIntent !== 'UPDATE_CONTACT') {
+    const shouldContinuePrimaryFlow =
+      this.primaryFlowContinuationResolver.shouldContinue(session);
+
+    if (shouldContinuePrimaryFlow) {
+      const sessionContext = session.context;
+      if (!sessionContext) {
+        return {
+          nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
+          outboundMessages: [
+            {
+              type: 'text',
+              body: responseMessage,
+            },
+          ],
+          continueFlow: true,
+        };
+      }
+
       await this.auditService.record(
         'conversation.continued.after_opt_in_response',
         {
           conversationKey: session.conversationKey,
           patientId: patientId ?? null,
-          flowIntent: session.context.flowIntent,
+          flowIntent: sessionContext.flowIntent,
         },
       );
 
       return {
         nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
         nextContext: {
-          ...session.context,
+          ...sessionContext,
           appointmentNotificationsConsentPhone: undefined,
-          contactVerification: session.context.contactVerification
+          contactVerification: sessionContext.contactVerification
             ? {
-                ...session.context.contactVerification,
+                ...sessionContext.contactVerification,
                 completedForCurrentFlow: true,
                 pendingPhone: undefined,
                 verifiedPhone: undefined,
@@ -118,6 +137,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
             body: responseMessage,
           },
         ],
+        continueFlow: true,
       };
     }
 

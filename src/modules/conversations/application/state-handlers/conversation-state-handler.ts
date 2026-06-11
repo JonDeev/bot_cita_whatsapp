@@ -10,6 +10,11 @@ export interface ConversationStateHandlerResult {
   nextStatus?: ConversationStatus;
   nextContext?: ConversationSessionContext;
   outboundMessages: ConversationOutboundMessage[];
+  /**
+   * When true, the orchestrator keeps auto-transitioning after sending the
+   * current outbound messages. Use this for controlled continuation flows.
+   */
+  continueFlow?: boolean;
 }
 
 export interface ConversationStateHandler {

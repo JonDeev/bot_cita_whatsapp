@@ -117,6 +117,124 @@ describe('HandleIncomingConversationMessageUseCase', () => {
     });
   });
 
+  it('continues the primary flow after a contact update confirmation message', async () => {
+    const repository = {
+      findByKey: jest.fn().mockResolvedValue({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'UPDATING_CONTACT_PHONE',
+        status: 'BOT_ACTIVE',
+        context: {
+          flowIntent: 'REQUEST_APPOINTMENT',
+          patientValidation: {
+            failedAttempts: 0,
+            patientId: 10,
+          },
+          contactVerification: {
+            fullName: 'DANIEL CASTANO',
+            primaryPhone: '3001234567',
+            primaryEmail: 'daniel@example.com',
+            requiresPhoneUpdate: false,
+            requiresEmailUpdate: false,
+            selectedUpdateMode: 'PHONE',
+            completedForCurrentFlow: false,
+            invalidPhoneAttempts: 0,
+            invalidEmailAttempts: 0,
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationMessageRepository = {
+      saveInbound: jest.fn().mockResolvedValue(undefined),
+      saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
+    };
+    const updateContactHandler = {
+      handle: jest.fn().mockResolvedValue({
+        nextState: 'PATIENT_VALIDATED',
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'Tus datos de contacto quedaron confirmados y actualizados correctamente.',
+          },
+        ],
+        continueFlow: true,
+      }),
+    };
+    const patientValidatedHandler = {
+      handle: jest.fn().mockResolvedValue({
+        nextState: 'SELECTING_SPECIALTY',
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'Seleccione la especialidad que desea agendar.',
+          },
+        ],
+      }),
+    };
+    const conversationStateHandlerResolver = {
+      resolve: jest
+        .fn()
+        .mockImplementation((state: string) =>
+          state === 'UPDATING_CONTACT_PHONE'
+            ? updateContactHandler
+            : patientValidatedHandler,
+        ),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const useCase = buildUseCase(
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
+      conversationStateHandlerResolver,
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-continuation',
+      from: '573001112233',
+      timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
+      messageType: 'text',
+      textBody: '3014445566',
+      phoneNumberId: '123',
+    });
+
+    expect(conversationStateHandlerResolver.resolve).toHaveBeenCalledTimes(2);
+    expect(result.session.state).toBe('SELECTING_SPECIALTY');
+    expect(result.outboundMessages).toEqual([
+      {
+        type: 'text',
+        body: 'Tus datos de contacto quedaron confirmados y actualizados correctamente.',
+      },
+      {
+        type: 'text',
+        body: 'Seleccione la especialidad que desea agendar.',
+      },
+      {
+        type: 'interactive_buttons',
+        body: '\u200B',
+        buttons: [
+          { id: 'nav_main_menu', title: 'Menu principal' },
+          { id: 'nav_finish', title: 'Finalizar' },
+        ],
+      },
+    ]);
+  });
+
   it('does not append navigation buttons for birth date prompt step', async () => {
     const repository = {
       findByKey: jest.fn().mockResolvedValue({

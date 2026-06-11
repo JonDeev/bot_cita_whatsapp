@@ -9,6 +9,7 @@ import type { ConversationSession } from '../../domain/entities/conversation-ses
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
 import { ContactUpdateCompletionService } from '../services/contact-update-completion.service';
+import { PrimaryFlowContinuationResolverService } from '../services/primary-flow-continuation-resolver.service';
 import type {
   ConversationStateHandler,
   ConversationStateHandlerResult,
@@ -26,6 +27,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
     private readonly patientContactUpdateSuccessMessageFactory: PatientContactUpdateSuccessMessageFactory,
     private readonly contactUpdateCompletionService: ContactUpdateCompletionService,
+    private readonly primaryFlowContinuationResolver: PrimaryFlowContinuationResolverService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -190,6 +192,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     }
 
     return {
+      continueFlow: this.primaryFlowContinuationResolver.shouldContinue(session),
       nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
       nextContext: {
         ...session.context,

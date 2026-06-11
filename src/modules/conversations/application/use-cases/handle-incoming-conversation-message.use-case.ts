@@ -375,6 +375,7 @@ export class HandleIncomingConversationMessageUseCase {
   }> {
     let currentSession = session;
     let currentResult: ConversationStateHandlerResult | null = null;
+    const accumulatedOutboundMessages: ConversationOutboundMessage[] = [];
 
     for (
       let index = 0;
@@ -396,7 +397,19 @@ export class HandleIncomingConversationMessageUseCase {
       );
 
       if (currentResult.outboundMessages.length > 0) {
-        return { finalSession: currentSession, finalResult: currentResult };
+        accumulatedOutboundMessages.push(...currentResult.outboundMessages);
+      }
+
+      // Some handlers emit a confirmation message and still need the state
+      // machine to keep advancing toward the primary flow.
+      if (!currentResult.continueFlow) {
+        return {
+          finalSession: currentSession,
+          finalResult: {
+            ...currentResult,
+            outboundMessages: accumulatedOutboundMessages,
+          },
+        };
       }
     }
 
@@ -404,7 +417,13 @@ export class HandleIncomingConversationMessageUseCase {
       throw new Error('Conversation state handler did not return a result.');
     }
 
-    return { finalSession: currentSession, finalResult: currentResult };
+    return {
+      finalSession: currentSession,
+      finalResult: {
+        ...currentResult,
+        outboundMessages: accumulatedOutboundMessages,
+      },
+    };
   }
 
   private async reopenIfNeeded(

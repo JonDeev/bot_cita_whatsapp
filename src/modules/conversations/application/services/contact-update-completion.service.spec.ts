@@ -1,5 +1,6 @@
 import { AppointmentNotificationOptInMessageFactory } from './appointment-notification-opt-in-message.factory';
 import { ContactUpdateCompletionService } from './contact-update-completion.service';
+import { PrimaryFlowContinuationResolverService } from './primary-flow-continuation-resolver.service';
 import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 
 describe('ContactUpdateCompletionService', () => {
@@ -13,6 +14,7 @@ describe('ContactUpdateCompletionService', () => {
         execute: jest.fn().mockResolvedValue(gateResult),
       } as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
       new AppointmentNotificationOptInMessageFactory(),
+      new PrimaryFlowContinuationResolverService(),
     );
   }
 
@@ -67,6 +69,7 @@ describe('ContactUpdateCompletionService', () => {
     expect(result.nextContext?.contactVerification?.verifiedPhone).toBe(
       '3014445566',
     );
+    expect(result.continueFlow).toBeUndefined();
   });
 
   it('closes the conversation for UPDATE_CONTACT when opt-in is not required', async () => {
@@ -94,6 +97,7 @@ describe('ContactUpdateCompletionService', () => {
     expect(result.nextState).toBe('MAIN_MENU');
     expect(result.nextStatus).toBe('CLOSED');
     expect(result.outboundMessages).toHaveLength(1);
+    expect(result.continueFlow).toBeUndefined();
   });
 
   it('returns to PATIENT_VALIDATED when opt-in is not required in a live flow', async () => {
@@ -117,5 +121,6 @@ describe('ContactUpdateCompletionService', () => {
     expect(result.nextContext?.contactVerification?.completedForCurrentFlow).toBe(
       true,
     );
+    expect(result.continueFlow).toBe(true);
   });
 });

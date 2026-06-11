@@ -4,6 +4,7 @@ import { UpdatePatientContactDetailsUseCase } from '../../../patients/applicatio
 import { ContactUpdateCompletionService } from '../services/contact-update-completion.service';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
+import { PrimaryFlowContinuationResolverService } from '../services/primary-flow-continuation-resolver.service';
 import { UpdatingContactEmailHandler } from './updating-contact-email.handler';
 
 describe('UpdatingContactEmailHandler', () => {
@@ -46,6 +47,7 @@ describe('UpdatingContactEmailHandler', () => {
       new PatientContactUpdateOptionsListFactory(),
       new PatientContactUpdateSuccessMessageFactory(),
       contactUpdateCompletionService,
+      new PrimaryFlowContinuationResolverService(),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -82,6 +84,47 @@ describe('UpdatingContactEmailHandler', () => {
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'text',
     });
+  });
+
+  it('returns to PATIENT_VALIDATED and continues the primary flow in live mode', async () => {
+    const contactUpdateCompletionService = {
+      buildResult: jest.fn(),
+    } as unknown as ContactUpdateCompletionService;
+
+    const handler = buildHandler({
+      execute: jest.fn().mockResolvedValue({
+        status: 'UPDATED',
+        mode: 'EMAIL',
+        phoneMasked: null,
+        emailMasked: 'n***@example.com',
+      }),
+    } as unknown as UpdatePatientContactDetailsUseCase, contactUpdateCompletionService);
+
+    const result = await handler.handle(
+      {
+        ...baseSession,
+        context: {
+          ...baseSession.context,
+          flowIntent: 'REQUEST_APPOINTMENT',
+          contactVerification: {
+            ...baseSession.context.contactVerification,
+            selectedUpdateMode: 'EMAIL',
+          },
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-3',
+        from: '573001112233',
+        timestamp: '1711111113',
+        messageType: 'text',
+        textBody: 'nuevo@example.com',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('PATIENT_VALIDATED');
+    expect(result.continueFlow).toBe(true);
   });
 
   it('delegates to the completion service when finishing BOTH mode', async () => {
