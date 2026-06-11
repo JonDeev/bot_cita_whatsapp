@@ -239,7 +239,10 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       return {
         nextState:
           CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
-        nextContext: this.buildPostBookingNextContext(session),
+        nextContext: this.buildPostBookingNextContext(session, {
+          appointmentNotificationsConsentPhone:
+            this.resolveConsentPhoneForPostBooking(session),
+        }),
         outboundMessages: [
           confirmationMessage,
           this.appointmentNotificationOptInMessageFactory.build(),
@@ -423,17 +426,31 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     }
   }
 
-  private buildPostBookingNextContext(session: ConversationSession) {
+  private buildPostBookingNextContext(
+    session: ConversationSession,
+    input?: {
+      appointmentNotificationsConsentPhone?: string | undefined;
+    },
+  ) {
     return {
       ...session.context,
       flowIntent: undefined,
       contactVerification: undefined,
+      appointmentNotificationsConsentPhone:
+        input?.appointmentNotificationsConsentPhone,
       appointmentReschedule: undefined,
       specialtySelection: undefined,
       appointmentDoctorSelection: undefined,
       appointmentDateSelection: undefined,
       appointmentTimeSelection: undefined,
     };
+  }
+
+  private resolveConsentPhoneForPostBooking(session: ConversationSession) {
+    return (
+      session.context?.contactVerification?.verifiedPhone ??
+      session.participantPhone
+    );
   }
 
   private async rebuildTimeSelectionAfterSlotExhausted(

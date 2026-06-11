@@ -47,6 +47,10 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
     if (!contactVerification || !selectedMode) {
       return {
         nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+        nextContext: {
+          ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
+        },
         outboundMessages: [this.patientContactUpdateOptionsListFactory.build()],
       };
     }
@@ -64,6 +68,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: {
             ...contactVerification,
             pendingPhone: undefined,
@@ -151,6 +156,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
           nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
           nextContext: {
             ...session.context,
+            appointmentNotificationsConsentPhone: undefined,
             contactVerification: {
               ...contactVerification,
               pendingPhone: undefined,
@@ -171,6 +177,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: {
             ...contactVerification,
             pendingPhone: undefined,
@@ -308,6 +315,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
       nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
       nextContext: {
         ...session.context,
+        appointmentNotificationsConsentPhone: undefined,
         contactVerification: contactVerification
           ? {
               ...contactVerification,
@@ -358,6 +366,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
         nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: session.context?.contactVerification
             ? {
                 ...session.context.contactVerification,
@@ -379,6 +388,7 @@ export class UpdatingContactPhoneHandler implements ConversationStateHandler {
       nextState: this.state,
       nextContext: {
         ...session.context,
+        appointmentNotificationsConsentPhone: undefined,
         contactVerification: session.context?.contactVerification
           ? {
               ...session.context.contactVerification,

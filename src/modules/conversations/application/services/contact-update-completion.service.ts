@@ -35,6 +35,7 @@ export class ContactUpdateCompletionService {
           CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
         nextContext: {
           ...input.session.context,
+          appointmentNotificationsConsentPhone: verifiedPhone,
           contactVerification: contactVerification
             ? {
                 ...contactVerification,
@@ -58,6 +59,7 @@ export class ContactUpdateCompletionService {
         nextContext: {
           ...input.session.context,
           flowIntent: undefined,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: undefined,
           assignedAppointmentSelection: undefined,
           appointmentReschedule: undefined,
@@ -74,6 +76,7 @@ export class ContactUpdateCompletionService {
       nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
       nextContext: {
         ...input.session.context,
+        appointmentNotificationsConsentPhone: undefined,
         contactVerification: contactVerification
           ? {
               ...contactVerification,

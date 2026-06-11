@@ -138,6 +138,7 @@ export interface ConversationSessionContext {
   flowIntent?: ConversationFlowIntent;
   patientValidation?: PatientValidationSessionContext;
   contactVerification?: ContactVerificationSessionContext;
+  appointmentNotificationsConsentPhone?: string;
   assignedAppointmentSelection?: AssignedAppointmentSelectionSessionContext;
   appointmentReschedule?: AppointmentRescheduleSessionContext;
   specialtySelection?: SpecialtySelectionSessionContext;

@@ -6,6 +6,10 @@ import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
 import {
+  ConsentPhoneResolverService,
+  type ConsentPhoneResolutionResult,
+} from '../services/consent-phone-resolver.service';
+import {
   APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
   AppointmentNotificationOptInMessageFactory,
 } from '../services/appointment-notification-opt-in-message.factory';
@@ -29,6 +33,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
 
   constructor(
     private readonly appointmentNotificationOptInMessageFactory: AppointmentNotificationOptInMessageFactory,
+    private readonly consentPhoneResolver: ConsentPhoneResolverService,
     private readonly registerWhatsappPostBookingConsent: RegisterWhatsappPostBookingConsentUseCase,
     private readonly auditService: AuditService,
   ) {}
@@ -55,22 +60,22 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
     }
 
     const patientId = session.context?.patientValidation?.patientId;
-    const consentPhone = session.context?.contactVerification?.verifiedPhone;
-    const consentResult = await this.registerWhatsappPostBookingConsent.execute(
-      {
-        patientId,
-        phone: consentPhone,
-        granted: decision.granted,
-        consentTextSnapshot: APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
-        respondedAtIso: event.receivedAt,
-      },
-    );
+    const consentPhoneResolution = this.consentPhoneResolver.resolve(session);
+    const consentResult = await this.persistConsent({
+      consentPhoneResolution,
+      conversationKey: session.conversationKey,
+      patientId,
+      granted: decision.granted,
+      respondedAtIso: event.receivedAt,
+    });
 
     await this.auditService.record('conversation.whatsapp_opt_in.responded', {
       conversationKey: session.conversationKey,
       patientId: patientId ?? null,
       granted: decision.granted,
       persistenceStatus: consentResult.status,
+      consentPhoneSource:
+        consentPhoneResolution.status === 'FOUND' ? 'SNAPSHOT' : 'MISSING',
       persistenceReason:
         consentResult.status === 'SKIPPED' ? consentResult.reason : null,
     });
@@ -94,6 +99,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
         nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: session.context.contactVerification
             ? {
                 ...session.context.contactVerification,
@@ -126,6 +132,7 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
       nextContext: {
         ...session.context,
         flowIntent: undefined,
+        appointmentNotificationsConsentPhone: undefined,
         contactVerification: undefined,
         assignedAppointmentSelection: undefined,
         appointmentReschedule: undefined,
@@ -141,6 +148,37 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
         },
       ],
     };
+  }
+
+  private async persistConsent(input: {
+    consentPhoneResolution: ConsentPhoneResolutionResult;
+    conversationKey: string;
+    patientId: number | null | undefined;
+    granted: boolean;
+    respondedAtIso: string | undefined;
+  }) {
+    if (input.consentPhoneResolution.status === 'NONE') {
+      await this.auditService.record(
+        'conversation.whatsapp_opt_in.phone_missing',
+        {
+          conversationKey: input.conversationKey,
+          patientId: input.patientId ?? null,
+        },
+      );
+
+      return {
+        status: 'SKIPPED' as const,
+        reason: 'MISSING_CONSENT_PHONE' as const,
+      };
+    }
+
+    return this.registerWhatsappPostBookingConsent.execute({
+      patientId: input.patientId,
+      phone: input.consentPhoneResolution.phone,
+      granted: input.granted,
+      consentTextSnapshot: APPOINTMENT_NOTIFICATION_OPT_IN_TEXT,
+      respondedAtIso: input.respondedAtIso,
+    });
   }
 
   private resolveConsentDecision(

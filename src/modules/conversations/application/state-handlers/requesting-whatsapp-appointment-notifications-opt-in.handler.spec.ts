@@ -1,14 +1,23 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { RegisterWhatsappPostBookingConsentUseCase } from '../../../patients/application/use-cases/register-whatsapp-post-booking-consent.use-case';
+import { ConsentPhoneResolverService } from '../services/consent-phone-resolver.service';
 import { AppointmentNotificationOptInMessageFactory } from '../services/appointment-notification-opt-in-message.factory';
 import { RequestingWhatsappAppointmentNotificationsOptInHandler } from './requesting-whatsapp-appointment-notifications-opt-in.handler';
 
 describe('RequestingWhatsappAppointmentNotificationsOptInHandler', () => {
   function buildHandler(
     registerConsent: RegisterWhatsappPostBookingConsentUseCase,
+    consentPhoneResolver?: ConsentPhoneResolverService,
   ): RequestingWhatsappAppointmentNotificationsOptInHandler {
     return new RequestingWhatsappAppointmentNotificationsOptInHandler(
       new AppointmentNotificationOptInMessageFactory(),
+      consentPhoneResolver ??
+        ({
+          resolve: jest.fn().mockReturnValue({
+            status: 'FOUND',
+            phone: '3014445566',
+          }),
+        } as unknown as ConsentPhoneResolverService),
       registerConsent,
       {
         record: jest.fn().mockResolvedValue(undefined),

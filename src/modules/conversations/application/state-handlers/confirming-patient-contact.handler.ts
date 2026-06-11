@@ -39,6 +39,10 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
     if (!contactVerification) {
       return {
         nextState: CONVERSATION_STATES.WAITING_DOCUMENT,
+        nextContext: {
+          ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
+        },
         outboundMessages: [
           {
             type: 'text',
@@ -62,6 +66,10 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
 
       return {
         nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+        nextContext: {
+          ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
+        },
         outboundMessages: [this.patientContactUpdateOptionsListFactory.build()],
       };
     }
@@ -91,6 +99,10 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
 
         return {
           nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+          nextContext: {
+            ...session.context,
+            appointmentNotificationsConsentPhone: undefined,
+          },
           outboundMessages: [
             {
               type: 'text',
@@ -119,6 +131,7 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
             ...session.context,
             flowIntent: undefined,
             contactVerification: undefined,
+            appointmentNotificationsConsentPhone: undefined,
             assignedAppointmentSelection: undefined,
             appointmentReschedule: undefined,
             specialtySelection: undefined,
@@ -136,6 +149,7 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
         nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: {
             ...contactVerification,
             completedForCurrentFlow: true,

@@ -45,6 +45,7 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
         nextState: CONVERSATION_STATES.UPDATING_CONTACT_PHONE,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: session.context?.contactVerification
             ? {
                 ...session.context.contactVerification,
@@ -80,6 +81,7 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
         nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: session.context?.contactVerification
             ? {
                 ...session.context.contactVerification,
@@ -115,6 +117,7 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
         nextState: CONVERSATION_STATES.UPDATING_CONTACT_PHONE,
         nextContext: {
           ...session.context,
+          appointmentNotificationsConsentPhone: undefined,
           contactVerification: session.context?.contactVerification
             ? {
                 ...session.context.contactVerification,

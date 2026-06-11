@@ -98,6 +98,7 @@ export class MainMenuHandler implements ConversationStateHandler {
           failedAttempts: 0,
         },
         contactVerification: undefined,
+        appointmentNotificationsConsentPhone: undefined,
         assignedAppointmentSelection: undefined,
         appointmentReschedule: undefined,
         specialtySelection: undefined,

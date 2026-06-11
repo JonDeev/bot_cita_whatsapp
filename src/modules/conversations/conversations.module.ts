@@ -29,6 +29,7 @@ import { PatientContactConfirmationMessageFactory } from './application/services
 import { PatientContactUpdateOptionsListFactory } from './application/services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from './application/services/patient-contact-update-success-message.factory';
 import { ConversationStatePromptService } from './application/services/conversation-state-prompt.service';
+import { ConsentPhoneResolverService } from './application/services/consent-phone-resolver.service';
 import { InteractivePromptWindowService } from './application/services/interactive-prompt-window.service';
 import { SpecialtyListFactory } from './application/services/specialty-list.factory';
 import { ConversationNavigationService } from './application/services/conversation-navigation.service';
@@ -88,6 +89,7 @@ import { PatientsModule } from '../patients/patients.module';
     PatientContactUpdateOptionsListFactory,
     PatientContactUpdateSuccessMessageFactory,
     ConversationStatePromptService,
+    ConsentPhoneResolverService,
     InteractivePromptWindowService,
     SpecialtyListFactory,
     ConversationNavigationService,
