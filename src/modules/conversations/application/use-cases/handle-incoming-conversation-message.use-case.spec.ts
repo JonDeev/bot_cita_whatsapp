@@ -235,6 +235,103 @@ describe('HandleIncomingConversationMessageUseCase', () => {
     ]);
   });
 
+  it('continues automatically when the next handler does not emit an intermediate message', async () => {
+    const repository = {
+      findByKey: jest.fn().mockResolvedValue({
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: 'WAITING_BIRTH_DATE',
+        status: 'BOT_ACTIVE',
+        context: {
+          patientValidation: {
+            failedAttempts: 0,
+            documentNumber: '1221968097',
+            documentNumberMasked: '***8097',
+          },
+        },
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      }),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationPersistenceRepository = {
+      findByKey: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue(undefined),
+    };
+    const conversationMessageRepository = {
+      saveInbound: jest.fn().mockResolvedValue(undefined),
+      saveOutbound: jest.fn().mockResolvedValue(undefined),
+      hasKnownOutboundMessage: jest.fn().mockResolvedValue(true),
+    };
+    const waitingBirthDateHandler = {
+      handle: jest.fn().mockResolvedValue({
+        nextState: 'PATIENT_VALIDATED',
+        outboundMessages: [],
+      }),
+    };
+    const patientValidatedHandler = {
+      handle: jest.fn().mockResolvedValue({
+        nextState: 'SELECTING_SPECIALTY',
+        outboundMessages: [
+          {
+            type: 'text',
+            body: 'Seleccione la especialidad que desea agendar.',
+          },
+        ],
+      }),
+    };
+    const conversationStateHandlerResolver = {
+      resolve: jest
+        .fn()
+        .mockImplementation((state: string) =>
+          state === 'WAITING_BIRTH_DATE'
+            ? waitingBirthDateHandler
+            : patientValidatedHandler,
+        ),
+    };
+    const auditService = {
+      record: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AuditService;
+
+    const useCase = buildUseCase(
+      repository,
+      conversationPersistenceRepository,
+      conversationMessageRepository,
+      conversationStateHandlerResolver,
+      auditService,
+    );
+
+    const result = await useCase.execute({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-birth-date',
+      from: '573001112233',
+      timestamp: '1711111111',
+      receivedAt: '2026-05-07T12:44:15.000Z',
+      messageType: 'text',
+      textBody: '27-09-1995',
+      phoneNumberId: '123',
+    });
+
+    expect(conversationStateHandlerResolver.resolve).toHaveBeenCalledTimes(2);
+    expect(result.session.state).toBe('SELECTING_SPECIALTY');
+    expect(result.outboundMessages).toEqual([
+      {
+        type: 'text',
+        body: 'Seleccione la especialidad que desea agendar.',
+      },
+      {
+        type: 'interactive_buttons',
+        body: '\u200B',
+        buttons: [
+          { id: 'nav_main_menu', title: 'Menu principal' },
+          { id: 'nav_finish', title: 'Finalizar' },
+        ],
+      },
+    ]);
+  });
+
   it('does not append navigation buttons for birth date prompt step', async () => {
     const repository = {
       findByKey: jest.fn().mockResolvedValue({

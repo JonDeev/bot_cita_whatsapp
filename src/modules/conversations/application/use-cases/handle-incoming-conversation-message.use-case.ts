@@ -402,7 +402,11 @@ export class HandleIncomingConversationMessageUseCase {
 
       // Some handlers emit a confirmation message and still need the state
       // machine to keep advancing toward the primary flow.
-      if (!currentResult.continueFlow) {
+      const shouldContinueAutomatically =
+        currentResult.continueFlow === true ||
+        currentResult.outboundMessages.length === 0;
+
+      if (!shouldContinueAutomatically) {
         return {
           finalSession: currentSession,
           finalResult: {
