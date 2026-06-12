@@ -27,6 +27,24 @@ export class PatientContactInputValidatorService {
     return COLOMBIAN_MOBILE_PHONE_PATTERN.test(normalizedPhone);
   }
 
+  isSamePhoneNumber(
+    first: string | null | undefined,
+    second: string | null | undefined,
+  ): boolean {
+    const normalizedFirst = this.normalizePhone(first);
+    const normalizedSecond = this.normalizePhone(second);
+
+    if (!normalizedFirst || !normalizedSecond) {
+      return false;
+    }
+
+    return (
+      normalizedFirst === normalizedSecond ||
+      normalizedFirst === `57${normalizedSecond}` ||
+      `57${normalizedFirst}` === normalizedSecond
+    );
+  }
+
   normalizeEmail(input: string | null | undefined): string | null {
     const normalized = (input ?? '').trim().toLowerCase();
     if (!normalized) {

@@ -97,6 +97,39 @@ describe('ConfirmingPatientContactHandler', () => {
     });
   });
 
+  it('redirects to update options when revalidation reasons exist even if phone update is not required', async () => {
+    const handler = buildHandler();
+
+    const result = await handler.handle(
+      {
+        ...baseSession,
+        context: {
+          ...baseSession.context,
+          contactVerification: {
+            ...baseSession.context.contactVerification,
+            requiresPhoneRevalidation: true,
+            phoneRevalidationReasons: ['PHONE_NOT_VERIFIED'],
+          },
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-2b',
+        from: '573001112233',
+        timestamp: '1711111112',
+        messageType: 'interactive',
+        interactiveReplyId: PATIENT_CONTACT_CONFIRMATION_OPTION_IDS.CONTINUE,
+        interactiveReplyTitle: 'Continuar',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('SELECTING_CONTACT_UPDATE_FIELD');
+    expect(result.outboundMessages[1]).toMatchObject({
+      type: 'interactive_list',
+    });
+  });
+
   it('continues when only email needs update and phone is already valid', async () => {
     const handler = buildHandler();
 

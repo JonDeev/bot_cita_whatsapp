@@ -18,6 +18,20 @@ Asegurar que, antes de continuar con flujos conversacionales que dependen de Wha
 
 El objetivo es evitar consentimientos asociados a numeros antiguos, numeros historicos o numeros de sesion por fallback, manteniendo una sola verdad operativa para WhatsApp.
 
+## Ajuste Del Gate Actual
+
+La confirmacion de contacto sigue mostrandose primero. La redireccion al subflujo de actualizacion no ocurre de forma inmediata al entrar a `PATIENT_VALIDATED`; ocurre cuando el paciente pulsa `Continuar` en `CONFIRMING_PATIENT_CONTACT`.
+
+La regla operativa actual queda asi:
+
+- `usuarios.Telefono` nulo o vacio redirige a actualizacion.
+- `usuarios.Telefono` invalido redirige a actualizacion.
+- `usuarios.telefono_verificado_en` nulo, vacio o inutilizable redirige a actualizacion.
+- `participantPhone` diferente al telefono oficial del paciente redirige a actualizacion.
+- `Actualizar y seguir` y `Terminar` no cambian.
+
+La evaluacion tecnica se prepara en `PatientValidatedHandler` y la decision efectiva se aplica en `ConfirmingPatientContactHandler` cuando el usuario elige `Continuar`.
+
 ## Alcance
 
 Incluye:
@@ -53,6 +67,9 @@ No incluye:
 10. Si el numero cambia, el consentimiento previo deja de ser valido para WhatsApp.
 11. La politica aplica solo al chatbot interactivo y a flujos que dependen de la conversacion con el paciente.
 12. Los flujos de recordatorios y encuestas permanecen sin cambios en esta fase.
+13. La pantalla de confirmacion de contacto siempre se muestra antes de decidir si se redirige.
+14. La redireccion al subflujo de actualizacion ocurre en `Continuar` si existe alguna razon de revalidacion activa.
+15. `Actualizar y seguir` y `Terminar` se conservan sin cambios funcionales.
 
 ## Principios De Diseno
 

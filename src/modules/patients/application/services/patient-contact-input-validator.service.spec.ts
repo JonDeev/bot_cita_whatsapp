@@ -14,4 +14,15 @@ describe('PatientContactInputValidatorService', () => {
     expect(service.isValidEmail('paciente@gmail.com')).toBe(true);
     expect(service.isValidEmail('correo-invalido')).toBe(false);
   });
+
+  it('compares Colombian mobile numbers consistently', () => {
+    expect(service.isSamePhoneNumber('3001234567', '3001234567')).toBe(true);
+    expect(service.isSamePhoneNumber('573001234567', '3001234567')).toBe(
+      true,
+    );
+    expect(service.isSamePhoneNumber('3001234567', '573001234567')).toBe(
+      true,
+    );
+    expect(service.isSamePhoneNumber('3001234567', '3011234567')).toBe(false);
+  });
 });

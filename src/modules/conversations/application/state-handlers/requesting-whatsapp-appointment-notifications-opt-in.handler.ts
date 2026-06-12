@@ -128,6 +128,8 @@ export class RequestingWhatsappAppointmentNotificationsOptInHandler implements C
                 selectedUpdateMode: undefined,
                 invalidPhoneAttempts: 0,
                 invalidEmailAttempts: 0,
+                requiresPhoneRevalidation: false,
+                phoneRevalidationReasons: [],
               }
             : undefined,
         },

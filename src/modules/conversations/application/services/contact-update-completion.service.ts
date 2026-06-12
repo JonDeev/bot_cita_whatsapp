@@ -44,6 +44,8 @@ export class ContactUpdateCompletionService {
                 completedForCurrentFlow: true,
                 pendingPhone: undefined,
                 verifiedPhone,
+                requiresPhoneRevalidation: false,
+                phoneRevalidationReasons: [],
               }
             : undefined,
         },
@@ -85,6 +87,8 @@ export class ContactUpdateCompletionService {
               completedForCurrentFlow: true,
               pendingPhone: undefined,
               verifiedPhone: undefined,
+              requiresPhoneRevalidation: false,
+              phoneRevalidationReasons: [],
             }
           : undefined,
       },

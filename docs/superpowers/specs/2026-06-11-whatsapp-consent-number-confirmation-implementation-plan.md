@@ -25,6 +25,19 @@ Entregar una implementacion segura y mantenible que cumpla estas reglas:
 4. si ese snapshot no existe, la persistencia del consentimiento debe detenerse de forma controlada
 5. recordatorios y encuestas no cambian en esta fase
 
+## Gate De Revalidacion De Contacto
+
+La pantalla de confirmacion de contacto se conserva como paso visible de la experiencia. La redireccion al subflujo de actualizacion solo se ejecuta cuando el paciente pulsa `Continuar` y la sesion tiene alguna razon de revalidacion activa.
+
+La validacion de telefono queda centralizada en una politica pequena y testeable:
+
+- `usuarios.Telefono` nulo o vacio.
+- `usuarios.Telefono` invalido.
+- `usuarios.telefono_verificado_en` nulo, vacio o inutilizable.
+- `participantPhone` distinto al telefono oficial del paciente.
+
+La preparacion del estado ocurre en `PatientValidatedHandler`. La decision efectiva ocurre en `ConfirmingPatientContactHandler`. `Actualizar y seguir` y `Terminar` no cambian.
+
 ## No objetivos
 
 1. No modificar la logica de recordatorios.

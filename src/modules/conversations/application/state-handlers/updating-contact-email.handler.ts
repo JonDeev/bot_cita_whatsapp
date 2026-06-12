@@ -203,6 +203,8 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
               completedForCurrentFlow: true,
               pendingPhone: undefined,
               verifiedPhone: undefined,
+              requiresPhoneRevalidation: false,
+              phoneRevalidationReasons: [],
             }
           : undefined,
       },

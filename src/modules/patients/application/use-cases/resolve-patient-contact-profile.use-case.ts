@@ -14,6 +14,7 @@ export type ResolvePatientContactProfileResult =
       fullName: string;
       primaryPhone: string | null;
       primaryEmail: string | null;
+      phoneVerifiedAtIso: string | null;
       isPrimaryPhoneValid: boolean;
       isPrimaryEmailValid: boolean;
     }
@@ -79,6 +80,7 @@ export class ResolvePatientContactProfileUseCase {
         fullName: fullName || 'PACIENTE',
         primaryPhone,
         primaryEmail,
+        phoneVerifiedAtIso: profile.phoneVerifiedAtIso,
         isPrimaryPhoneValid:
           this.patientContactInputValidator.isValidColombianMobilePhone(
             primaryPhone,

@@ -19,12 +19,20 @@ export type ConversationFlowIntent =
 
 export type ContactUpdateMode = 'PHONE' | 'EMAIL' | 'BOTH';
 
+export type ContactPhoneRevalidationReason =
+  | 'MISSING_PHONE'
+  | 'INVALID_PHONE'
+  | 'PHONE_NOT_VERIFIED'
+  | 'SESSION_PHONE_MISMATCH';
+
 export interface ContactVerificationSessionContext {
   fullName: string;
   primaryPhone: string | null;
   primaryEmail: string | null;
   requiresPhoneUpdate: boolean;
   requiresEmailUpdate: boolean;
+  requiresPhoneRevalidation?: boolean;
+  phoneRevalidationReasons?: ContactPhoneRevalidationReason[];
   selectedUpdateMode?: ContactUpdateMode;
   pendingPhone?: string;
   verifiedPhone?: string;

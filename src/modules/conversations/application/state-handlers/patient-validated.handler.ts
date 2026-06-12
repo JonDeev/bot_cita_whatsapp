@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ListFutureAssignedAppointmentsByPatientUseCase } from '../../../appointments/application/use-cases/list-future-assigned-appointments-by-patient.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
+import { PatientContactInputValidatorService } from '../../../patients/application/services/patient-contact-input-validator.service';
 import { ResolveAssignedDispensaryByPatientUseCase } from '../../../patients/application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from '../../../patients/application/use-cases/resolve-eligible-specialties-by-patient.use-case';
 import { ResolvePatientContactProfileUseCase } from '../../../patients/application/use-cases/resolve-patient-contact-profile.use-case';
@@ -11,6 +12,7 @@ import { AssignedDispensaryMessageFactory } from '../services/assigned-dispensar
 import { AssignedAppointmentListFactory } from '../services/assigned-appointment-list.factory';
 import { NAVIGATION_OPTION_IDS } from '../services/conversation-navigation.service';
 import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
+import { PatientContactRevalidationPolicyService } from '../services/patient-contact-revalidation-policy.service';
 import { SpecialtyListFactory } from '../services/specialty-list.factory';
 import type {
   ConversationStateHandler,
@@ -31,6 +33,9 @@ export class PatientValidatedHandler implements ConversationStateHandler {
     private readonly patientContactConfirmationMessageFactory: PatientContactConfirmationMessageFactory,
     private readonly specialtyListFactory: SpecialtyListFactory,
     private readonly auditService: AuditService,
+    private readonly patientContactRevalidationPolicy: PatientContactRevalidationPolicyService = new PatientContactRevalidationPolicyService(
+      new PatientContactInputValidatorService(),
+    ),
   ) {}
 
   async handle(
@@ -188,11 +193,22 @@ export class PatientValidatedHandler implements ConversationStateHandler {
       };
     }
 
+    const phoneRevalidation =
+      this.patientContactRevalidationPolicy.evaluate({
+        primaryPhone: contactProfileResult.primaryPhone,
+        phoneVerifiedAtIso: contactProfileResult.phoneVerifiedAtIso,
+        participantPhone: session.participantPhone,
+      });
+
     await this.auditService.record('patient.contact_confirmation.prompted', {
       conversationKey: session.conversationKey,
       patientId: contactProfileResult.patientId,
       flowIntent: flowIntent ?? null,
       requiresPhoneUpdate: !contactProfileResult.isPrimaryPhoneValid,
+      requiresPhoneRevalidation:
+        phoneRevalidation.requiresPhoneRevalidation,
+      phoneRevalidationReasons:
+        phoneRevalidation.reasons.join(',') || null,
       requiresEmailUpdate: !contactProfileResult.isPrimaryEmailValid,
     });
 
@@ -206,6 +222,9 @@ export class PatientValidatedHandler implements ConversationStateHandler {
           primaryEmail: contactProfileResult.primaryEmail,
           requiresPhoneUpdate: !contactProfileResult.isPrimaryPhoneValid,
           requiresEmailUpdate: !contactProfileResult.isPrimaryEmailValid,
+          requiresPhoneRevalidation:
+            phoneRevalidation.requiresPhoneRevalidation,
+          phoneRevalidationReasons: phoneRevalidation.reasons,
           selectedUpdateMode: undefined,
           pendingPhone: undefined,
           verifiedPhone: undefined,

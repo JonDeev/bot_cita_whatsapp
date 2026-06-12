@@ -34,6 +34,7 @@ import { InteractivePromptWindowService } from './application/services/interacti
 import { SpecialtyListFactory } from './application/services/specialty-list.factory';
 import { ConversationNavigationService } from './application/services/conversation-navigation.service';
 import { ContactUpdateCompletionService } from './application/services/contact-update-completion.service';
+import { PatientContactRevalidationPolicyService } from './application/services/patient-contact-revalidation-policy.service';
 import { PrimaryFlowContinuationResolverService } from './application/services/primary-flow-continuation-resolver.service';
 import { PendingAppointmentBlockMessageFactory } from './application/services/pending-appointment-block-message.factory';
 import { ConfirmingPatientContactHandler } from './application/state-handlers/confirming-patient-contact.handler';
@@ -95,6 +96,7 @@ import { PatientsModule } from '../patients/patients.module';
     SpecialtyListFactory,
     ConversationNavigationService,
     ContactUpdateCompletionService,
+    PatientContactRevalidationPolicyService,
     PrimaryFlowContinuationResolverService,
     PendingAppointmentBlockMessageFactory,
     MainMenuHandler,

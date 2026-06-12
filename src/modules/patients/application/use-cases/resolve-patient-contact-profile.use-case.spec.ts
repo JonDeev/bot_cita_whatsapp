@@ -30,6 +30,7 @@ describe('ResolvePatientContactProfileUseCase', () => {
       fullName: 'DANIEL CASTANO',
       primaryPhone: '3001234567',
       primaryEmail: 'daniel@example.com',
+      phoneVerifiedAtIso: null,
       isPrimaryPhoneValid: true,
       isPrimaryEmailValid: true,
     });

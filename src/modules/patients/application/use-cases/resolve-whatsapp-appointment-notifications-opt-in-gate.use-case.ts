@@ -79,10 +79,10 @@ export class ResolveWhatsappAppointmentNotificationsOptInGateUseCase {
     if (!profile.phoneVerifiedAtIso) {
       if (
         consent?.granted &&
-        this.isSamePhoneNumber({
-          first: consent.phone,
-          second: whatsappPhone,
-        }) &&
+        this.patientContactInputValidator.isSamePhoneNumber(
+          consent.phone,
+          whatsappPhone,
+        ) &&
         consent.grantedAtIso
       ) {
         return {
@@ -96,10 +96,10 @@ export class ResolveWhatsappAppointmentNotificationsOptInGateUseCase {
     }
 
     if (
-      !this.isSamePhoneNumber({
-        first: profile.primaryPhone,
-        second: whatsappPhone,
-      })
+      !this.patientContactInputValidator.isSamePhoneNumber(
+        profile.primaryPhone,
+        whatsappPhone,
+      )
     ) {
       return { status: 'PROMPT_REQUIRED', reason: 'PHONE_MISMATCH' };
     }
@@ -109,10 +109,10 @@ export class ResolveWhatsappAppointmentNotificationsOptInGateUseCase {
     }
 
     if (
-      !this.isSamePhoneNumber({
-        first: consent.phone,
-        second: whatsappPhone,
-      })
+      !this.patientContactInputValidator.isSamePhoneNumber(
+        consent.phone,
+        whatsappPhone,
+      )
     ) {
       return {
         status: 'PROMPT_REQUIRED',
@@ -163,23 +163,5 @@ export class ResolveWhatsappAppointmentNotificationsOptInGateUseCase {
     }
 
     return value;
-  }
-
-  private isSamePhoneNumber(input: {
-    first: string | null | undefined;
-    second: string | null | undefined;
-  }): boolean {
-    const first = this.patientContactInputValidator.normalizePhone(input.first);
-    const second = this.patientContactInputValidator.normalizePhone(
-      input.second,
-    );
-
-    if (!first || !second) {
-      return false;
-    }
-
-    return (
-      first === second || first === `57${second}` || `57${first}` === second
-    );
   }
 }

@@ -3,6 +3,7 @@ import { AuditService } from '../../../audit/application/services/audit.service'
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import type { ConversationSession } from '../../domain/entities/conversation-session.entity';
+import type { ContactPhoneRevalidationReason } from '../../domain/entities/conversation-session-context.entity';
 import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
 import { PATIENT_CONTACT_CONFIRMATION_OPTION_IDS } from '../services/patient-contact-confirmation-option-id';
 import { PatientContactConfirmationMessageFactory } from '../services/patient-contact-confirmation-message.factory';
@@ -12,6 +13,10 @@ import type {
   ConversationStateHandler,
   ConversationStateHandlerResult,
 } from './conversation-state-handler';
+
+type ContactVerificationContext = NonNullable<
+  NonNullable<ConversationSession['context']>['contactVerification']
+>;
 
 @Injectable()
 export class ConfirmingPatientContactHandler implements ConversationStateHandler {
@@ -86,14 +91,18 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
         selectedOption: 'CONTINUE',
       });
 
-      if (contactVerification.requiresPhoneUpdate) {
+      if (this.shouldRedirectToContactUpdate(contactVerification)) {
         await this.auditService.record(
           'patient.contact_update.validation_failed',
           {
             conversationKey: session.conversationKey,
             patientId: session.context?.patientValidation?.patientId ?? null,
             flowIntent: session.context?.flowIntent ?? null,
-            reason: 'REQUIRES_PHONE_UPDATE',
+            reason: 'REQUIRES_PHONE_REVALIDATION',
+            phoneRevalidationReasons:
+              this.resolvePhoneRevalidationReasons(contactVerification).join(
+                ',',
+              ) || null,
           },
         );
 
@@ -106,7 +115,7 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
           outboundMessages: [
             {
               type: 'text',
-              body: 'Para continuar debes actualizar un telefono celular y un correo electronico validos.',
+              body: 'Para continuar debes actualizar o verificar tu numero de telefono.',
             },
             this.patientContactUpdateOptionsListFactory.build(),
           ],
@@ -153,6 +162,8 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
           contactVerification: {
             ...contactVerification,
             completedForCurrentFlow: true,
+            requiresPhoneRevalidation: false,
+            phoneRevalidationReasons: [],
           },
         },
         outboundMessages: [],
@@ -177,5 +188,37 @@ export class ConfirmingPatientContactHandler implements ConversationStateHandler
         }),
       ],
     };
+  }
+
+  private shouldRedirectToContactUpdate(
+    contactVerification: ContactVerificationContext,
+  ): boolean {
+    if (contactVerification.requiresPhoneRevalidation === true) {
+      return true;
+    }
+
+    if ((contactVerification.phoneRevalidationReasons?.length ?? 0) > 0) {
+      return true;
+    }
+
+    return contactVerification.requiresPhoneUpdate;
+  }
+
+  private resolvePhoneRevalidationReasons(
+    contactVerification: ContactVerificationContext,
+  ): ContactPhoneRevalidationReason[] {
+    if (contactVerification.phoneRevalidationReasons) {
+      return contactVerification.phoneRevalidationReasons;
+    }
+
+    if (contactVerification.requiresPhoneRevalidation) {
+      return ['INVALID_PHONE'];
+    }
+
+    if (contactVerification.requiresPhoneUpdate) {
+      return ['INVALID_PHONE'];
+    }
+
+    return [];
   }
 }
