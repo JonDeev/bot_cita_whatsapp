@@ -5,6 +5,7 @@ import { PatientIdentityInputNormalizerService } from './application/services/pa
 import { PatientContactInputValidatorService } from './application/services/patient-contact-input-validator.service';
 import { ResolveAssignedDispensaryByPatientUseCase } from './application/use-cases/resolve-assigned-dispensary-by-patient.use-case';
 import { ResolveEligibleSpecialtiesByPatientUseCase } from './application/use-cases/resolve-eligible-specialties-by-patient.use-case';
+import { ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase } from './application/use-cases/resolve-post-booking-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { ResolvePatientContactProfileUseCase } from './application/use-cases/resolve-patient-contact-profile.use-case';
 import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from './application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { RegisterWhatsappPostBookingConsentUseCase } from './application/use-cases/register-whatsapp-post-booking-consent.use-case';
@@ -38,6 +39,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     ValidatePatientByDocumentAndBirthDateUseCase,
     ResolveAssignedDispensaryByPatientUseCase,
     ResolveEligibleSpecialtiesByPatientUseCase,
+    ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase,
     ResolvePatientContactProfileUseCase,
     ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
@@ -88,6 +90,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     ValidatePatientByDocumentAndBirthDateUseCase,
     ResolveAssignedDispensaryByPatientUseCase,
     ResolveEligibleSpecialtiesByPatientUseCase,
+    ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase,
     ResolvePatientContactProfileUseCase,
     ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     RegisterWhatsappPostBookingConsentUseCase,

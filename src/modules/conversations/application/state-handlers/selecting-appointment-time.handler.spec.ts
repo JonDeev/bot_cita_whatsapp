@@ -1,7 +1,7 @@
 import { AssignAppointmentSlotAfterTimeSelectionUseCase } from '../../../appointments/application/use-cases/assign-appointment-slot-after-time-selection.use-case';
 import { ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase } from '../../../appointments/application/use-cases/resolve-available-appointment-times-by-specialty-and-date.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
-import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
+import { ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-post-booking-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { AppointmentAssignmentConfirmationMessageFactory } from '../services/appointment-assignment-confirmation-message.factory';
 import { AppointmentAvailabilityMessageFactory } from '../services/appointment-availability-message.factory';
 import { AppointmentDateListFactory } from '../services/appointment-date-list.factory';
@@ -16,7 +16,7 @@ describe('SelectingAppointmentTimeHandler', () => {
     resolveTimes: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     assignAppointment: AssignAppointmentSlotAfterTimeSelectionUseCase,
     reschedulingTimeSelectionService?: AppointmentReschedulingTimeSelectionService,
-    resolveWhatsappAppointmentNotificationsOptInGate?: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
+    resolvePostBookingWhatsappAppointmentNotificationsOptInGate?: ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase,
   ): SelectingAppointmentTimeHandler {
     return new SelectingAppointmentTimeHandler(
       new AppointmentTimeListFactory(),
@@ -31,13 +31,14 @@ describe('SelectingAppointmentTimeHandler', () => {
         } as unknown as AppointmentReschedulingTimeSelectionService),
       resolveTimes,
       assignAppointment,
-      resolveWhatsappAppointmentNotificationsOptInGate ??
+      resolvePostBookingWhatsappAppointmentNotificationsOptInGate ??
         ({
           execute: jest.fn().mockResolvedValue({
             status: 'PROMPT_REQUIRED',
             reason: 'CONSENT_NOT_GRANTED',
+            officialPhone: '573001112233',
           }),
-        } as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase),
+        } as unknown as ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase),
       {
         record: jest.fn().mockResolvedValue(undefined),
       } as unknown as AuditService,
@@ -71,9 +72,9 @@ describe('SelectingAppointmentTimeHandler', () => {
         execute: jest.fn().mockResolvedValue({
           status: 'PROMPT_NOT_REQUIRED',
           consentGrantedAtIso: '2026-05-02T10:00:00.000Z',
-          phoneVerifiedAtIso: '2026-05-01T10:00:00.000Z',
+          officialPhone: '573001112233',
         }),
-      } as unknown as ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
+      } as unknown as ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase,
     );
 
     const result = await handler.handle(
@@ -169,7 +170,7 @@ describe('SelectingAppointmentTimeHandler', () => {
       {
         conversationKey: 'whatsapp:123:573001112233',
         channel: 'whatsapp',
-        participantPhone: '573001112233',
+        participantPhone: '573009998888',
         phoneNumberId: '123',
         state: 'SELECTING_APPOINTMENT_TIME',
         status: 'BOT_ACTIVE',
@@ -211,7 +212,7 @@ describe('SelectingAppointmentTimeHandler', () => {
       {
         kind: 'incoming_message_received',
         messageId: 'wamid-99',
-        from: '573001112233',
+        from: '573009998888',
         timestamp: '1711111129',
         messageType: 'interactive',
         interactiveReplyId: 'appointment_time:102',
@@ -222,6 +223,9 @@ describe('SelectingAppointmentTimeHandler', () => {
 
     expect(result.nextState).toBe(
       'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+    );
+    expect(result.nextContext?.appointmentNotificationsConsentPhone).toBe(
+      '573001112233',
     );
     expect(result.outboundMessages[1]).toMatchObject({
       type: 'interactive_buttons',

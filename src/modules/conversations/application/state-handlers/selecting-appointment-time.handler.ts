@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AssignAppointmentSlotAfterTimeSelectionUseCase } from '../../../appointments/application/use-cases/assign-appointment-slot-after-time-selection.use-case';
 import { ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase } from '../../../appointments/application/use-cases/resolve-available-appointment-times-by-specialty-and-date.use-case';
 import { AuditService } from '../../../audit/application/services/audit.service';
-import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
+import { ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase } from '../../../patients/application/use-cases/resolve-post-booking-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
 import { CONVERSATION_STATUSES } from '../../domain/conversation-status';
@@ -35,7 +35,7 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
     private readonly appointmentReschedulingTimeSelectionService: AppointmentReschedulingTimeSelectionService,
     private readonly resolveAvailableAppointmentTimesBySpecialtyAndDate: ResolveAvailableAppointmentTimesBySpecialtyAndDateUseCase,
     private readonly assignAppointmentSlotAfterTimeSelection: AssignAppointmentSlotAfterTimeSelectionUseCase,
-    private readonly resolveWhatsappAppointmentNotificationsOptInGate: ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
+    private readonly resolvePostBookingWhatsappAppointmentNotificationsOptInGate: ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase,
     private readonly auditService: AuditService,
   ) {}
 
@@ -193,10 +193,11 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       });
 
       const shouldPromptOptInResult =
-        await this.resolveWhatsappAppointmentNotificationsOptInGate.execute({
-          patientId: session.context?.patientValidation?.patientId,
-          whatsappPhone: session.participantPhone,
-        });
+        await this.resolvePostBookingWhatsappAppointmentNotificationsOptInGate.execute(
+          {
+            patientId: session.context?.patientValidation?.patientId,
+          },
+        );
 
       await this.auditService.record('conversation.whatsapp_opt_in.gate', {
         conversationKey: session.conversationKey,
@@ -241,7 +242,7 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
           CONVERSATION_STATES.REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN,
         nextContext: this.buildPostBookingNextContext(session, {
           appointmentNotificationsConsentPhone:
-            this.resolveConsentPhoneForPostBooking(session),
+            shouldPromptOptInResult.officialPhone ?? undefined,
         }),
         outboundMessages: [
           confirmationMessage,
@@ -444,13 +445,6 @@ export class SelectingAppointmentTimeHandler implements ConversationStateHandler
       appointmentDateSelection: undefined,
       appointmentTimeSelection: undefined,
     };
-  }
-
-  private resolveConsentPhoneForPostBooking(session: ConversationSession) {
-    return (
-      session.context?.contactVerification?.verifiedPhone ??
-      session.participantPhone
-    );
   }
 
   private async rebuildTimeSelectionAfterSlotExhausted(
