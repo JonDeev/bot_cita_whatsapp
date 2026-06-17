@@ -17,6 +17,7 @@ import {
 import type { SurveyRecipientPolicyRepository } from '../../domain/ports/survey-recipient-policy.repository';
 import { CreateSatisfactionSurveyDispatchUseCase } from './create-satisfaction-survey-dispatch.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './send-satisfaction-survey-flow-invitation.use-case';
+import { SatisfactionSurveyRuntimeSettingsResolverService } from '../services/satisfaction-survey-runtime-settings-resolver.service';
 import { SatisfactionSurveyDispatchWindowService } from '../services/satisfaction-survey-dispatch-window.service';
 import { SurveyWhatsappPhoneNormalizerService } from '../services/survey-whatsapp-phone-normalizer.service';
 
@@ -61,6 +62,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
     @Inject(SURVEY_RECIPIENT_POLICY_REPOSITORY)
     private readonly recipientPolicyRepository: SurveyRecipientPolicyRepository,
     private readonly dispatchWindowService: SatisfactionSurveyDispatchWindowService,
+    private readonly runtimeSettingsResolver: SatisfactionSurveyRuntimeSettingsResolverService,
     private readonly createSurveyDispatch: CreateSatisfactionSurveyDispatchUseCase,
     private readonly sendSurveyFlowInvitation: SendSatisfactionSurveyFlowInvitationUseCase,
     private readonly phoneNormalizer: SurveyWhatsappPhoneNormalizerService,
@@ -72,8 +74,34 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
   ): Promise<DispatchHalfHourlySatisfactionSurveysResult> {
     const runAt = this.resolveRunAt(input.runAtIso);
     const runAtIso = runAt.toISOString();
+    const runtimeSettings =
+      await this.runtimeSettingsResolver.resolveStoredSnapshot();
 
-    const windowResult = this.dispatchWindowService.resolveForRunAt(runAt);
+    if (!runtimeSettings.dispatchEnabled) {
+      await this.auditService.record('survey.dispatch.batch.skipped_disabled', {
+        runAtIso,
+        reason: 'Dispatching is disabled in runtime settings.',
+      });
+
+      return {
+        skipped: true,
+        skipReason: 'Dispatching is disabled in runtime settings.',
+        runAtIso,
+        eligibleAppointments: 0,
+        createdDispatches: 0,
+        sentDispatches: 0,
+        reusedDispatches: 0,
+        markedAsNotApplicable: 0,
+        markedAsSent: 0,
+        failedDispatches: 0,
+      };
+    }
+
+    const windowResult = this.dispatchWindowService.resolveForRunAt(
+      runAt,
+      runtimeSettings.scheduleProfile,
+      runtimeSettings.expirationHours,
+    );
     if (!windowResult.shouldRun || !windowResult.window) {
       const reason = windowResult.reason ?? 'Unknown schedule reason.';
       await this.auditService.record('survey.dispatch.batch.skipped_window', {
@@ -101,6 +129,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
         surveyDateIso: window.surveyDateIso,
         windowStartHHmm: window.windowStartHHmm,
         windowEndHHmm: window.windowEndHHmm,
+        limit: runtimeSettings.eligibilityLimit,
       });
 
     await this.auditService.record('survey.eligibility.found', {
@@ -129,7 +158,23 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
     let markedAsSent = 0;
     let failedDispatches = 0;
 
-    for (const candidate of classification.dispatchCandidates) {
+    const dispatchCandidates = classification.dispatchCandidates.slice(
+      0,
+      runtimeSettings.maxDispatchesPerRun,
+    );
+
+    if (dispatchCandidates.length < classification.dispatchCandidates.length) {
+      await this.auditService.record('survey.dispatch.batch.truncated', {
+        runAtIso,
+        scheduleProfile: runtimeSettings.scheduleProfile,
+        eligibilityLimit: runtimeSettings.eligibilityLimit,
+        maxDispatchesPerRun: runtimeSettings.maxDispatchesPerRun,
+        truncatedCandidates:
+          classification.dispatchCandidates.length - dispatchCandidates.length,
+      });
+    }
+
+    for (const candidate of dispatchCandidates) {
       try {
         const dispatchResult = await this.createSurveyDispatch.execute({
           patientLegacyUserId: candidate.patientLegacyUserId,

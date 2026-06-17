@@ -241,6 +241,8 @@ model BotAdminUser {
   auditEvents                    BotAdminAuditEvent[]
   reminderRuntimeSettingsUpdated BotAppointmentReminderRuntimeSettings[]
   reminderRuntimeSettingEvents   BotAppointmentReminderRuntimeSettingEvent[]
+  surveyRuntimeSettingsUpdated   BotSatisfactionSurveyRuntimeSettings[]
+  surveyRuntimeSettingEvents     BotSatisfactionSurveyRuntimeSettingEvent[]
 
   @@index([role, status], map: "idx_bot_admin_users_role_status")
   @@map("bot_admin_users")
@@ -599,6 +601,51 @@ model BotAppointmentReminderRuntimeSettingEvent {
   @@index([adminUserId, occurredAt], map: "idx_bot_appt_reminder_runtime_events_admin_occurred")
   @@index([section, occurredAt], map: "idx_bot_appt_reminder_runtime_events_section_occurred")
   @@map("bot_appointment_reminder_runtime_setting_events")
+}
+
+model BotSatisfactionSurveyRuntimeSettings {
+  id                   Int              @id @default(autoincrement())
+  scopeKey             String           @unique(map: "uq_bot_satisfaction_survey_runtime_settings_scope_key") @map("scope_key") @db.VarChar(32)
+  sendMode             String           @map("send_mode") @db.VarChar(16)
+  sendRolloutPercent   Int              @map("send_rollout_percent")
+  emergencyPauseEnabled Boolean          @map("emergency_pause_enabled")
+  dispatchEnabled      Boolean          @map("dispatch_enabled")
+  eligibilityLimit     Int              @map("eligibility_limit")
+  expirationHours      Int              @map("expiration_hours")
+  scheduleProfile      String           @map("schedule_profile") @db.VarChar(32)
+  schedulerLoopEnabled Boolean          @map("scheduler_loop_enabled")
+  tickIntervalMs       Int              @map("tick_interval_ms")
+  slotLockTtlSeconds   Int              @map("slot_lock_ttl_seconds")
+  maxDispatchesPerRun  Int              @map("max_dispatches_per_run")
+  version              Int              @default(1)
+  updatedByAdminUserId  Int?             @map("updated_by_admin_user_id")
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt            DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedByAdminUser    BotAdminUser?    @relation(fields: [updatedByAdminUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([updatedAt], map: "idx_bot_satisfaction_survey_runtime_settings_updated_at")
+  @@index([updatedByAdminUserId], map: "idx_bot_satisfaction_survey_runtime_settings_updated_by")
+  @@map("bot_satisfaction_survey_runtime_settings")
+}
+
+model BotSatisfactionSurveyRuntimeSettingEvent {
+  id                    Int           @id @default(autoincrement())
+  settingsVersion       Int           @map("settings_version")
+  adminUserId           Int?          @map("admin_user_id")
+  changeType            String        @map("change_type") @db.VarChar(32)
+  section               String        @db.VarChar(16)
+  reason                String?       @db.VarChar(500)
+  previousSnapshotJson  Json          @map("previous_snapshot_json") @db.Json
+  newSnapshotJson       Json          @map("new_snapshot_json") @db.Json
+  effectiveSnapshotJson Json          @map("effective_snapshot_json") @db.Json
+  occurredAt            DateTime      @map("occurred_at") @db.DateTime(3)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  adminUser             BotAdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([settingsVersion], map: "idx_bot_satisfaction_survey_runtime_events_version")
+  @@index([adminUserId, occurredAt], map: "idx_bot_satisfaction_survey_runtime_events_admin_occurred")
+  @@index([section, occurredAt], map: "idx_bot_satisfaction_survey_runtime_events_section_occurred")
+  @@map("bot_satisfaction_survey_runtime_setting_events")
 }
 
 model BotWebhookInboundDedup {

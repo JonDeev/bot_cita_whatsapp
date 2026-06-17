@@ -12,6 +12,7 @@ import { ProfilePage } from '../pages/profile-page';
 import { ReminderSettingsGuidePage } from '../pages/reminder-settings-guide-page';
 import { ReminderSettingsPage } from '../pages/reminder-settings-page';
 import { RemindersPage } from '../pages/reminders-page';
+import { SurveySettingsPage } from '../pages/survey-settings-page';
 import { SurveysPage } from '../pages/surveys-page';
 import { UnauthorizedPage } from '../pages/unauthorized-page';
 
@@ -44,6 +45,7 @@ export function AppRouter() {
           <Route path="reminders/settings" element={<ReminderSettingsPage />} />
           <Route path="reminders/settings/guide" element={<ReminderSettingsGuidePage />} />
           <Route path="surveys" element={<SurveysPage />} />
+          <Route path="surveys/settings" element={<SurveySettingsPage />} />
           <Route path="logs" element={<LogsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

@@ -14,6 +14,7 @@ export interface FindEligibleAppointmentsByWindowFilters {
   surveyDateIso: string;
   windowStartHHmm: string;
   windowEndHHmm: string;
+  limit?: number;
 }
 
 export interface SatisfactionSurveyEligibilityRepository {

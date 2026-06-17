@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { SurveyRuntimeScheduleProfile } from '@whatsapp-bot/shared';
 
 export interface SatisfactionSurveyDispatchWindow {
   surveyDateIso: string;
@@ -18,11 +19,31 @@ export interface ResolveSatisfactionSurveyDispatchWindowResult {
 const EXECUTION_MINUTES = new Set([0, 30]);
 const MINUTES_PER_HALF_HOUR = 30;
 const MIN_WINDOW_END_TOTAL_MINUTES = 7 * 60 + 30;
-const MAX_WINDOW_END_TOTAL_MINUTES = 17 * 60;
+const PROFILE_RULES: Record<
+  SurveyRuntimeScheduleProfile,
+  { lastWeekday: number; maxEndTotalMinutes: number }
+> = {
+  business_hours_mon_fri: {
+    lastWeekday: 5,
+    maxEndTotalMinutes: 17 * 60,
+  },
+  extended_hours_mon_fri: {
+    lastWeekday: 5,
+    maxEndTotalMinutes: 19 * 60,
+  },
+  business_hours_mon_sat: {
+    lastWeekday: 6,
+    maxEndTotalMinutes: 17 * 60,
+  },
+};
 
 @Injectable()
 export class SatisfactionSurveyDispatchWindowService {
-  resolveForRunAt(runAt: Date): ResolveSatisfactionSurveyDispatchWindowResult {
+  resolveForRunAt(
+    runAt: Date,
+    scheduleProfile: SurveyRuntimeScheduleProfile,
+    expirationHours: number,
+  ): ResolveSatisfactionSurveyDispatchWindowResult {
     if (Number.isNaN(runAt.getTime())) {
       return {
         shouldRun: false,
@@ -30,12 +51,20 @@ export class SatisfactionSurveyDispatchWindowService {
       };
     }
 
-    const parts = this.toBogotaParts(runAt);
-
-    if (!this.isBusinessWeekday(parts.weekday)) {
+    const scheduleRule = PROFILE_RULES[scheduleProfile];
+    if (!scheduleRule) {
       return {
         shouldRun: false,
-        reason: `Weekday ${parts.weekday} is outside Monday-Friday survey schedule.`,
+        reason: `Unsupported survey schedule profile ${scheduleProfile}.`,
+      };
+    }
+
+    const parts = this.toBogotaParts(runAt);
+
+    if (!this.isAllowedWeekday(parts.weekday, scheduleRule.lastWeekday)) {
+      return {
+        shouldRun: false,
+        reason: `Weekday ${parts.weekday} is outside the configured survey schedule.`,
       };
     }
 
@@ -49,11 +78,11 @@ export class SatisfactionSurveyDispatchWindowService {
     const windowEndTotalMinutes = parts.hour * 60 + parts.minute;
     if (
       windowEndTotalMinutes < MIN_WINDOW_END_TOTAL_MINUTES ||
-      windowEndTotalMinutes > MAX_WINDOW_END_TOTAL_MINUTES
+      windowEndTotalMinutes > scheduleRule.maxEndTotalMinutes
     ) {
       return {
         shouldRun: false,
-        reason: `Time ${this.toHHmm(parts.hour, parts.minute)} is outside 07:30-17:00 dispatch window.`,
+        reason: `Time ${this.toHHmm(parts.hour, parts.minute)} is outside the configured survey dispatch window.`,
       };
     }
 
@@ -68,7 +97,7 @@ export class SatisfactionSurveyDispatchWindowService {
     const windowStartIso = this.toBogotaIso(surveyDateIso, windowStartHHmm);
     const windowEndIso = this.toBogotaIso(surveyDateIso, windowEndHHmm);
     const expiresAtIso = new Date(
-      new Date(windowEndIso).getTime() + 24 * 60 * 60 * 1000,
+      new Date(windowEndIso).getTime() + this.toExpirationMilliseconds(expirationHours),
     ).toISOString();
 
     return {
@@ -132,8 +161,8 @@ export class SatisfactionSurveyDispatchWindowService {
     return byLabel[weekdayLabel ?? ''] ?? 0;
   }
 
-  private isBusinessWeekday(weekday: number): boolean {
-    return weekday >= 1 && weekday <= 5;
+  private isAllowedWeekday(weekday: number, lastWeekday: number): boolean {
+    return weekday >= 1 && weekday <= lastWeekday;
   }
 
   private toHHmmFromTotalMinutes(value: number): string {
@@ -148,6 +177,14 @@ export class SatisfactionSurveyDispatchWindowService {
 
   private toBogotaIso(dateIso: string, hhmm: string): string {
     return new Date(`${dateIso}T${hhmm}:00-05:00`).toISOString();
+  }
+
+  private toExpirationMilliseconds(expirationHours: number): number {
+    if (!Number.isFinite(expirationHours) || expirationHours <= 0) {
+      return 24 * 60 * 60 * 1000;
+    }
+
+    return expirationHours * 60 * 60 * 1000;
   }
 
   private pad(value: number): string {

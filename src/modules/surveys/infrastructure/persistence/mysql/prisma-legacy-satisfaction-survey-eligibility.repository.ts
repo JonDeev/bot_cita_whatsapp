@@ -14,6 +14,11 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
   async findEligibleAppointmentsByWindow(
     filters: FindEligibleAppointmentsByWindowFilters,
   ): Promise<SatisfactionSurveyEligibleAppointment[]> {
+    const limitClause =
+      typeof filters.limit === 'number'
+        ? Prisma.sql`LIMIT ${filters.limit}`
+        : Prisma.empty;
+
     const rows = await this.prisma.$queryRaw<
       Array<{
         legacyAgendaId: number | null;
@@ -76,6 +81,7 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
         a.fecha_cita ASC,
         STR_TO_DATE(TRIM(a.idhora), '%H:%i') ASC,
         a.idagenda ASC
+      ${limitClause}
     `);
 
     return rows

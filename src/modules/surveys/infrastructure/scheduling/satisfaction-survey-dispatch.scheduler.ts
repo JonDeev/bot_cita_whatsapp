@@ -7,7 +7,7 @@ import {
 import { RedisService } from '../../../../shared/infrastructure/redis/redis.service';
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from '../../application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
 import { SatisfactionSurveyDispatchWindowService } from '../../application/services/satisfaction-survey-dispatch-window.service';
-import { SatisfactionSurveyDispatchSchedulerConfigService } from './satisfaction-survey-dispatch-scheduler-config.service';
+import { SatisfactionSurveyRuntimeSettingsResolverService } from '../../application/services/satisfaction-survey-runtime-settings-resolver.service';
 
 @Injectable()
 export class SatisfactionSurveyDispatchScheduler
@@ -22,18 +22,21 @@ export class SatisfactionSurveyDispatchScheduler
     private readonly dispatchUseCase: DispatchHalfHourlySatisfactionSurveysUseCase,
     private readonly dispatchWindowService: SatisfactionSurveyDispatchWindowService,
     private readonly redisService: RedisService,
-    private readonly configService: SatisfactionSurveyDispatchSchedulerConfigService,
+    private readonly runtimeSettingsResolver: SatisfactionSurveyRuntimeSettingsResolverService,
   ) {}
 
-  onModuleInit(): void {
-    if (!this.configService.isEnabled()) {
+  async onModuleInit(): Promise<void> {
+    const runtimeSettings =
+      await this.runtimeSettingsResolver.resolveStoredSnapshot();
+
+    if (!runtimeSettings.schedulerLoopEnabled) {
       this.logger.log(
         'Half-hourly satisfaction survey dispatcher is disabled by configuration.',
       );
       return;
     }
 
-    const intervalMs = this.configService.getTickIntervalMs();
+    const intervalMs = runtimeSettings.tickIntervalMs;
     this.timer = setInterval(() => {
       void this.tick();
     }, intervalMs);
@@ -56,8 +59,14 @@ export class SatisfactionSurveyDispatchScheduler
 
   private async tick(): Promise<void> {
     const now = new Date();
-    const windowResult = this.dispatchWindowService.resolveForRunAt(now);
+    const runtimeSettings =
+      await this.runtimeSettingsResolver.resolveStoredSnapshot();
 
+    const windowResult = this.dispatchWindowService.resolveForRunAt(
+      now,
+      runtimeSettings.scheduleProfile,
+      runtimeSettings.expirationHours,
+    );
     if (!windowResult.shouldRun || !windowResult.window) {
       return;
     }
@@ -68,7 +77,7 @@ export class SatisfactionSurveyDispatchScheduler
     const lockAcquired = await this.redisService.setIfAbsent(
       lockKey,
       now.toISOString(),
-      this.configService.getSlotLockTtlSeconds(),
+      runtimeSettings.slotLockTtlSeconds,
     );
 
     if (!lockAcquired) {

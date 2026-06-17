@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import {
   useSurveyDispatchesQuery,
   useSurveyMetricsQuery,
@@ -16,6 +17,11 @@ import { DataTable, type DataTableColumn } from '../shared/ui/data-table';
 import { MetricCard } from '../shared/ui/metric-card';
 import { PaginationControls } from '../shared/ui/pagination-controls';
 import { StateMessage } from '../shared/ui/state-messages';
+
+const surveysAreaNavItems = [
+  { to: '/admin/surveys', label: 'Operacion', end: true },
+  { to: '/admin/surveys/settings', label: 'Configuracion', end: false },
+] as const;
 
 const PAGE_SIZE = 20;
 
@@ -206,6 +212,25 @@ export function SurveysPage() {
             className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm"
           />
         </div>
+
+        <nav className="mt-4 flex flex-wrap gap-2" aria-label="Navegacion de encuestas">
+          {surveysAreaNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `rounded-full border px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? 'border-teal-200 bg-teal-50 text-teal-900'
+                    : 'border-[var(--border)] bg-white text-[var(--muted)] hover:bg-slate-50'
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
       </header>
 
       {metrics.data ? (

@@ -7,11 +7,19 @@ import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
 import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
 import { CreateSatisfactionSurveyDispatchUseCase } from './application/use-cases/create-satisfaction-survey-dispatch.use-case';
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from './application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
+import { ListSatisfactionSurveyRuntimeSettingEventsUseCase } from './application/use-cases/list-satisfaction-survey-runtime-setting-events.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './application/use-cases/send-satisfaction-survey-flow-invitation.use-case';
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from './application/use-cases/record-satisfaction-survey-flow-submission.use-case';
 import { RecordSatisfactionSurveyTemplateReplyUseCase } from './application/use-cases/record-satisfaction-survey-template-reply.use-case';
 import { GetSatisfactionSurveyMetricsUseCase } from './application/use-cases/get-satisfaction-survey-metrics.use-case';
+import { GetSatisfactionSurveyRuntimeOptionsUseCase } from './application/use-cases/get-satisfaction-survey-runtime-options.use-case';
+import { GetSatisfactionSurveyRuntimeSettingsUseCase } from './application/use-cases/get-satisfaction-survey-runtime-settings.use-case';
+import { ToggleSatisfactionSurveyEmergencyPauseUseCase } from './application/use-cases/toggle-satisfaction-survey-emergency-pause.use-case';
+import { UpdateSatisfactionSurveyRuntimeSettingsUseCase } from './application/use-cases/update-satisfaction-survey-runtime-settings.use-case';
 import { SatisfactionSurveyDispatchWindowService } from './application/services/satisfaction-survey-dispatch-window.service';
+import { SatisfactionSurveyRuntimeSettingsCatalogService } from './application/services/satisfaction-survey-runtime-settings-catalog.service';
+import { SatisfactionSurveyRuntimeSettingsInitializerService } from './application/services/satisfaction-survey-runtime-settings-initializer.service';
+import { SatisfactionSurveyRuntimeSettingsResolverService } from './application/services/satisfaction-survey-runtime-settings-resolver.service';
 import {
   SatisfactionSurveyEligibilitySourceConfigService,
   SURVEY_ELIGIBILITY_SOURCES,
@@ -25,11 +33,13 @@ import {
   SATISFACTION_SURVEY_ELIGIBILITY_REPOSITORY,
   SATISFACTION_SURVEY_LEGACY_STATUS_REPOSITORY,
   SATISFACTION_SURVEY_METRICS_REPOSITORY,
+  SATISFACTION_SURVEY_RUNTIME_SETTINGS_REPOSITORY,
   SURVEY_DISPATCH_REPOSITORY,
   SURVEY_RECIPIENT_POLICY_REPOSITORY,
 } from './domain/surveys.tokens';
 import { InternalSatisfactionSurveyMetricsController } from './presentation/http/internal-satisfaction-survey-metrics.controller';
 import { PrismaBotSatisfactionSurveyMetricsRepository } from './infrastructure/persistence/mysql/prisma-bot-satisfaction-survey-metrics.repository';
+import { PrismaBotSatisfactionSurveyRuntimeSettingsRepository } from './infrastructure/persistence/mysql/prisma-bot-satisfaction-survey-runtime-settings.repository';
 import { PrismaBotSurveyRecipientPolicyRepository } from './infrastructure/persistence/mysql/prisma-bot-survey-recipient-policy.repository';
 import { PrismaLegacySatisfactionSurveyEligibilityRepository } from './infrastructure/persistence/mysql/prisma-legacy-satisfaction-survey-eligibility.repository';
 import { PrismaLegacySatisfactionSurveyLegacyStatusRepository } from './infrastructure/persistence/mysql/prisma-legacy-satisfaction-survey-legacy-status.repository';
@@ -55,6 +65,9 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     SatisfactionSurveyMetricsAccessConfigService,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,
+    SatisfactionSurveyRuntimeSettingsCatalogService,
+    SatisfactionSurveyRuntimeSettingsResolverService,
+    SatisfactionSurveyRuntimeSettingsInitializerService,
     PrismaLegacySatisfactionSurveyEligibilityRepository,
     JsonFileSatisfactionSurveyEligibilityRepository,
     SatisfactionSurveyDispatchSchedulerConfigService,
@@ -65,9 +78,18 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     RecordSatisfactionSurveyFlowSubmissionUseCase,
     RecordSatisfactionSurveyTemplateReplyUseCase,
     GetSatisfactionSurveyMetricsUseCase,
+    ListSatisfactionSurveyRuntimeSettingEventsUseCase,
+    GetSatisfactionSurveyRuntimeSettingsUseCase,
+    GetSatisfactionSurveyRuntimeOptionsUseCase,
+    UpdateSatisfactionSurveyRuntimeSettingsUseCase,
+    ToggleSatisfactionSurveyEmergencyPauseUseCase,
     {
       provide: SURVEY_DISPATCH_REPOSITORY,
       useClass: PrismaBotSurveyDispatchRepository,
+    },
+    {
+      provide: SATISFACTION_SURVEY_RUNTIME_SETTINGS_REPOSITORY,
+      useClass: PrismaBotSatisfactionSurveyRuntimeSettingsRepository,
     },
     {
       provide: SATISFACTION_SURVEY_ELIGIBILITY_REPOSITORY,
@@ -109,6 +131,11 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     RecordSatisfactionSurveyFlowSubmissionUseCase,
     RecordSatisfactionSurveyTemplateReplyUseCase,
     GetSatisfactionSurveyMetricsUseCase,
+    ListSatisfactionSurveyRuntimeSettingEventsUseCase,
+    GetSatisfactionSurveyRuntimeSettingsUseCase,
+    GetSatisfactionSurveyRuntimeOptionsUseCase,
+    UpdateSatisfactionSurveyRuntimeSettingsUseCase,
+    ToggleSatisfactionSurveyEmergencyPauseUseCase,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,
   ],

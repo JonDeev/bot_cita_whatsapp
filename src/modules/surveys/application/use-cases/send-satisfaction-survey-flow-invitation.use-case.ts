@@ -22,6 +22,7 @@ import {
 } from '../../domain/ports/survey-dispatch.repository';
 import { SURVEY_DISPATCH_REPOSITORY } from '../../domain/surveys.tokens';
 import { SurveyFlowTemplateConfigService } from '../services/survey-flow-template-config.service';
+import { SatisfactionSurveyRuntimeSettingsResolverService } from '../services/satisfaction-survey-runtime-settings-resolver.service';
 import { SurveyFlowTokenFactory } from '../services/survey-flow-token.factory';
 
 export interface SendSatisfactionSurveyFlowInvitationInput {
@@ -42,6 +43,7 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
     private readonly whatsappConfigService: WhatsappConfigService,
     private readonly surveyFlowTemplateConfig: SurveyFlowTemplateConfigService,
     private readonly surveyFlowTokenFactory: SurveyFlowTokenFactory,
+    private readonly runtimeSettingsResolver: SatisfactionSurveyRuntimeSettingsResolverService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -80,6 +82,14 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
     const templateLanguageCode =
       this.surveyFlowTemplateConfig.getTemplateLanguageCode();
     const buttonIndex = this.surveyFlowTemplateConfig.getTemplateButtonIndex();
+    const runtimeSettings =
+      await this.runtimeSettingsResolver.resolveStoredSnapshot();
+    const deliveryMode = this.resolveDeliveryMode(
+      dispatch.patientLegacyUserId,
+      runtimeSettings.sendMode,
+      runtimeSettings.sendRolloutPercent,
+      runtimeSettings.emergencyPauseEnabled,
+    );
     const flowToken =
       dispatch.flowToken ??
       this.surveyFlowTokenFactory.create({
@@ -126,23 +136,38 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
     });
 
     try {
-      const result = await this.sendWhatsappFlowTemplateMessage.execute({
-        to: recipientPhone,
-        templateName,
-        languageCode: templateLanguageCode,
-        bodyTextParameters: [
-          dispatch.patientName,
-          specialtyName,
-          appointmentHour,
-        ],
-        buttonIndex,
-        flowToken,
-        flowActionData: {
-          dispatch_id: String(dispatch.id),
-          survey_date: dispatch.surveyDateIso,
-        },
-        trigger: 'satisfaction_survey_dispatch',
-      });
+      const result =
+        deliveryMode === 'live'
+          ? await this.sendWhatsappFlowTemplateMessage.execute({
+              to: recipientPhone,
+              templateName,
+              languageCode: templateLanguageCode,
+              bodyTextParameters: [
+                dispatch.patientName,
+                specialtyName,
+                appointmentHour,
+              ],
+              buttonIndex,
+              flowToken,
+              flowActionData: {
+                dispatch_id: String(dispatch.id),
+                survey_date: dispatch.surveyDateIso,
+              },
+              trigger: 'satisfaction_survey_dispatch',
+            })
+          : { messageId: this.buildMockMessageId(dispatch.id, templateName) };
+
+      if (deliveryMode === 'mock') {
+        await this.auditService.record('survey.dispatch.flow_template.mocked', {
+          dispatchId: dispatch.id,
+          templateName,
+          templateLanguageCode,
+          conversationKey,
+          sendMode: runtimeSettings.sendMode,
+          rolloutPercent: runtimeSettings.sendRolloutPercent,
+          emergencyPauseEnabled: runtimeSettings.emergencyPauseEnabled,
+        });
+      }
 
       const sentAtIso = new Date().toISOString();
 
@@ -189,5 +214,38 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
 
       throw error;
     }
+  }
+
+  private resolveDeliveryMode(
+    patientLegacyUserId: number,
+    sendMode: 'live' | 'mock',
+    sendRolloutPercent: number,
+    emergencyPauseEnabled: boolean,
+  ): 'live' | 'mock' {
+    if (emergencyPauseEnabled) {
+      return 'mock';
+    }
+
+    if (sendMode === 'mock') {
+      return 'mock';
+    }
+
+    if (
+      !this.runtimeSettingsResolver.isWithinSendRollout(
+        patientLegacyUserId,
+        sendRolloutPercent,
+      )
+    ) {
+      return 'mock';
+    }
+
+    return 'live';
+  }
+
+  private buildMockMessageId(
+    dispatchId: number,
+    templateName: string,
+  ): string {
+    return `mock:${dispatchId}:${templateName}`;
   }
 }

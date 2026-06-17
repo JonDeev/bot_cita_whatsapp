@@ -6,7 +6,11 @@ describe('SatisfactionSurveyDispatchWindowService', () => {
   it('returns the 07:00-07:30 window for a valid weekday 07:30 run', () => {
     const runAt = new Date('2026-05-11T12:30:00.000Z');
 
-    const result = service.resolveForRunAt(runAt);
+    const result = service.resolveForRunAt(
+      runAt,
+      'business_hours_mon_fri',
+      24,
+    );
 
     expect(result.shouldRun).toBe(true);
     expect(result.window).toMatchObject({
@@ -19,9 +23,13 @@ describe('SatisfactionSurveyDispatchWindowService', () => {
   it('skips weekends', () => {
     const runAt = new Date('2026-05-10T12:30:00.000Z');
 
-    const result = service.resolveForRunAt(runAt);
+    const result = service.resolveForRunAt(
+      runAt,
+      'business_hours_mon_fri',
+      24,
+    );
 
     expect(result.shouldRun).toBe(false);
-    expect(result.reason).toContain('Monday-Friday');
+    expect(result.reason).toContain('configured survey schedule');
   });
 });

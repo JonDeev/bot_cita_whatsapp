@@ -5,3 +5,5 @@ export * from './admin/auth-dto.js';
 export * from './admin/chats-dto.js';
 export * from './admin/reminder-settings-dto.js';
 export * from './admin/reminder-settings-schemas.js';
+export * from './admin/survey-settings-dto.js';
+export * from './admin/survey-settings-schemas.js';

@@ -36,7 +36,7 @@ export class JsonFileSatisfactionSurveyEligibilityRepository implements Satisfac
     const windowStart = this.toTotalMinutes(filters.windowStartHHmm);
     const windowEnd = this.toTotalMinutes(filters.windowEndHHmm);
 
-    return rows
+    const filteredRows = rows
       .map((row) => this.toAppointment(row))
       .filter(
         (appointment): appointment is SatisfactionSurveyEligibleAppointment =>
@@ -67,6 +67,8 @@ export class JsonFileSatisfactionSurveyEligibilityRepository implements Satisfac
 
         return left.legacyAgendaId - right.legacyAgendaId;
       });
+
+    return filteredRows.slice(0, filters.limit ?? filteredRows.length);
   }
 
   private async readRows(): Promise<JsonEligibilityRow[]> {
