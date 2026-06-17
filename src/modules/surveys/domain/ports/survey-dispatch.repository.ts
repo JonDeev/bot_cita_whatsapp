@@ -133,6 +133,9 @@ export interface SurveyDispatchRepository {
   findByFlowToken(
     flowToken: string,
   ): Promise<SatisfactionSurveyDispatchRecord | null>;
+  findByInitialWhatsappMessageId(
+    initialWhatsappMessageId: string,
+  ): Promise<SatisfactionSurveyDispatchRecord | null>;
   markSent(command: MarkSurveyDispatchSentCommand): Promise<void>;
   markFailed(command: MarkSurveyDispatchFailedCommand): Promise<void>;
   markCancelledByHandoff(

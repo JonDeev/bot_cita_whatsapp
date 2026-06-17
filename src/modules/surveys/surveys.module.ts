@@ -9,6 +9,7 @@ import { CreateSatisfactionSurveyDispatchUseCase } from './application/use-cases
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from './application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './application/use-cases/send-satisfaction-survey-flow-invitation.use-case';
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from './application/use-cases/record-satisfaction-survey-flow-submission.use-case';
+import { RecordSatisfactionSurveyTemplateReplyUseCase } from './application/use-cases/record-satisfaction-survey-template-reply.use-case';
 import { GetSatisfactionSurveyMetricsUseCase } from './application/use-cases/get-satisfaction-survey-metrics.use-case';
 import { SatisfactionSurveyDispatchWindowService } from './application/services/satisfaction-survey-dispatch-window.service';
 import {
@@ -62,6 +63,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
     RecordSatisfactionSurveyFlowSubmissionUseCase,
+    RecordSatisfactionSurveyTemplateReplyUseCase,
     GetSatisfactionSurveyMetricsUseCase,
     {
       provide: SURVEY_DISPATCH_REPOSITORY,
@@ -105,6 +107,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
     RecordSatisfactionSurveyFlowSubmissionUseCase,
+    RecordSatisfactionSurveyTemplateReplyUseCase,
     GetSatisfactionSurveyMetricsUseCase,
     SurveyFlowTokenFactory,
     SurveyWhatsappPhoneNormalizerService,

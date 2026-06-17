@@ -184,26 +184,22 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
       return null;
     }
 
-    const dispatch = await this.prismaBot.botSurveyDispatch.findFirst({
-      where: {
-        flowToken: normalizedToken,
-      },
-      include: {
-        appointments: {
-          orderBy: [
-            { appointmentDate: 'asc' },
-            { appointmentTimeHhmm: 'asc' },
-            { legacyAgendaId: 'asc' },
-          ],
-        },
-      },
+    return this.findDispatchByWhere({
+      flowToken: normalizedToken,
     });
+  }
 
-    if (!dispatch) {
+  async findByInitialWhatsappMessageId(
+    initialWhatsappMessageId: string,
+  ): Promise<SatisfactionSurveyDispatchRecord | null> {
+    const normalizedMessageId = initialWhatsappMessageId.trim();
+    if (!normalizedMessageId) {
       return null;
     }
 
-    return this.mapDispatch(dispatch);
+    return this.findDispatchByWhere({
+      initialWhatsappMessageId: normalizedMessageId,
+    });
   }
 
   async markSent(command: MarkSurveyDispatchSentCommand): Promise<void> {
@@ -450,6 +446,29 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
         }),
       ),
     };
+  }
+
+  private async findDispatchByWhere(
+    where: Prisma.BotSurveyDispatchWhereInput,
+  ): Promise<SatisfactionSurveyDispatchRecord | null> {
+    const dispatch = await this.prismaBot.botSurveyDispatch.findFirst({
+      where,
+      include: {
+        appointments: {
+          orderBy: [
+            { appointmentDate: 'asc' },
+            { appointmentTimeHhmm: 'asc' },
+            { legacyAgendaId: 'asc' },
+          ],
+        },
+      },
+    });
+
+    if (!dispatch) {
+      return null;
+    }
+
+    return this.mapDispatch(dispatch);
   }
 
   private fromDispatchStatus(value: BotSurveyDispatchStatus) {

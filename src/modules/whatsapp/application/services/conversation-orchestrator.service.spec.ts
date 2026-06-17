@@ -69,6 +69,9 @@ describe('ConversationOrchestratorService', () => {
     const recordSatisfactionSurveyFlowSubmission = {
       execute: jest.fn().mockResolvedValue({ handled: false }),
     };
+    const recordSatisfactionSurveyTemplateReply = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
     const handleAppointmentReminderVerificationReply = {
       execute: jest.fn().mockResolvedValue({ handled: false }),
     };
@@ -80,6 +83,7 @@ describe('ConversationOrchestratorService', () => {
       sendWhatsappInteractiveButtonsMessage,
       sendWhatsappTextMessage,
       recordSatisfactionSurveyFlowSubmission as any,
+      recordSatisfactionSurveyTemplateReply as any,
       handleAppointmentReminderVerificationReply as any,
       whatsappConfig,
     );
@@ -153,6 +157,9 @@ describe('ConversationOrchestratorService', () => {
     const recordSatisfactionSurveyFlowSubmission = {
       execute: jest.fn().mockResolvedValue({ handled: false }),
     };
+    const recordSatisfactionSurveyTemplateReply = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
     const handleAppointmentReminderVerificationReply = {
       execute: jest.fn().mockResolvedValue({ handled: false }),
     };
@@ -164,6 +171,7 @@ describe('ConversationOrchestratorService', () => {
       sendWhatsappInteractiveButtonsMessage,
       sendWhatsappTextMessage,
       recordSatisfactionSurveyFlowSubmission as any,
+      recordSatisfactionSurveyTemplateReply as any,
       handleAppointmentReminderVerificationReply as any,
       whatsappConfig,
     );
@@ -230,6 +238,7 @@ describe('ConversationOrchestratorService', () => {
       { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
       { execute: jest.fn().mockResolvedValue({ handled: true }) } as any,
       { execute: jest.fn().mockResolvedValue({ handled: false }) } as any,
+      { execute: jest.fn().mockResolvedValue({ handled: false }) } as any,
       {
         isAutoReplyEnabled: jest.fn().mockReturnValue(true),
       } as unknown as WhatsappConfigService,
@@ -262,6 +271,9 @@ describe('ConversationOrchestratorService', () => {
     const handleAppointmentReminderVerificationReply = {
       execute: reminderReplyExecute,
     };
+    const recordSatisfactionSurveyTemplateReply = {
+      execute: jest.fn().mockResolvedValue({ handled: false }),
+    };
 
     const service = new ConversationOrchestratorService(
       handleIncomingConversationMessage,
@@ -278,6 +290,7 @@ describe('ConversationOrchestratorService', () => {
       } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
       { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
       { execute: jest.fn().mockResolvedValue({ handled: false }) } as any,
+      recordSatisfactionSurveyTemplateReply as any,
       handleAppointmentReminderVerificationReply as any,
       {
         isAutoReplyEnabled: jest.fn().mockReturnValue(true),
@@ -301,6 +314,57 @@ describe('ConversationOrchestratorService', () => {
         interactiveReplyId: 'appt_reminder_confirm:signed_payload',
       }),
     );
+    expect(handleIncomingConversationMessageExecute).not.toHaveBeenCalled();
+  });
+
+  it('skips reminder and conversation flow when survey template quick reply was handled', async () => {
+    const handleIncomingConversationMessageExecute = jest.fn();
+    const handleIncomingConversationMessage = {
+      execute: handleIncomingConversationMessageExecute,
+      registerDispatchedInteractivePrompts: jest.fn(),
+    } as unknown as HandleIncomingConversationMessageUseCase;
+
+    const surveyTemplateReplyExecute = jest
+      .fn()
+      .mockResolvedValue({ handled: true });
+    const reminderReplyExecute = jest.fn();
+
+    const service = new ConversationOrchestratorService(
+      handleIncomingConversationMessage,
+      {
+        saveInbound: jest.fn(),
+        saveOutbound: jest.fn(),
+        hasKnownOutboundMessage: jest.fn(),
+      },
+      {
+        execute: jest.fn(),
+      } as unknown as SendWhatsappInteractiveListMessageUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as SendWhatsappInteractiveButtonsMessageUseCase,
+      { execute: jest.fn() } as unknown as SendWhatsappTextMessageUseCase,
+      { execute: jest.fn().mockResolvedValue({ handled: false }) } as any,
+      { execute: surveyTemplateReplyExecute } as any,
+      { execute: reminderReplyExecute } as any,
+      {
+        isAutoReplyEnabled: jest.fn().mockReturnValue(true),
+      } as unknown as WhatsappConfigService,
+    );
+
+    await service.handleEvent({
+      kind: 'incoming_message_received',
+      messageId: 'wamid-survey-template-1',
+      from: '573001112233',
+      timestamp: '1711111111',
+      messageType: 'interactive',
+      interactiveReplyId: 'No deseo responder',
+      interactiveReplyTitle: 'No deseo responder',
+      contextMessageId: 'wamid-template-123',
+      phoneNumberId: '123',
+    });
+
+    expect(surveyTemplateReplyExecute).toHaveBeenCalledTimes(1);
+    expect(reminderReplyExecute).not.toHaveBeenCalled();
     expect(handleIncomingConversationMessageExecute).not.toHaveBeenCalled();
   });
 });
