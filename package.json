@@ -6,16 +6,23 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "prebuild": "pnpm build:shared",
     "build": "pnpm prisma:generate:all && nest build",
+    "build:shared": "pnpm --filter @whatsapp-bot/shared build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
+    "prestart:dev": "pnpm build:shared",
     "start:dev": "nest start --watch",
+    "prestart:debug": "pnpm build:shared",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main.js",
     "web:dev": "pnpm --filter @whatsapp-bot/web dev",
     "web:build": "pnpm --filter @whatsapp-bot/web build",
+    "pretest": "pnpm build:shared",
     "typecheck:api": "pnpm exec tsc --noEmit --project tsconfig.build.json",
+    "pretypecheck:api": "pnpm build:shared",
     "typecheck:web": "pnpm -C apps/web exec tsc --noEmit",
+    "pretypecheck:web": "pnpm build:shared",
     "typecheck": "pnpm run typecheck:api && pnpm run typecheck:web",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -94,7 +101,7 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "moduleNameMapper": {
-      "^@whatsapp-bot/shared$": "<rootDir>/../packages/shared/src/index.ts"
+      "^@whatsapp-bot/shared$": "<rootDir>/../packages/shared/dist/index.js"
     },
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

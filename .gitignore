@@ -7,3 +7,4 @@ coverage
 .DS_Store
 pnpm-debug.log*
 apps/web/tsconfig.tsbuildinfo
+packages/shared/tsconfig.tsbuildinfo

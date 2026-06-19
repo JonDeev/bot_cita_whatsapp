@@ -58,6 +58,14 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
     const surveyFlowTokenFactory = {
       create: jest.fn(() => 'survey_dispatch:22:2026-05-10'),
     };
+    const runtimeSettingsResolver = {
+      resolveStoredSnapshot: jest.fn().mockResolvedValue({
+        sendMode: 'live',
+        sendRolloutPercent: 100,
+        emergencyPauseEnabled: false,
+      }),
+      isWithinSendRollout: jest.fn().mockReturnValue(true),
+    };
     const auditService = {
       record: jest.fn().mockResolvedValue(undefined),
     } as unknown as AuditService;
@@ -71,6 +79,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
       whatsappConfigService,
       surveyFlowTemplateConfig as any,
       surveyFlowTokenFactory,
+      runtimeSettingsResolver as any,
       auditService,
     );
 
@@ -139,6 +148,14 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
     const auditService = {
       record: jest.fn().mockResolvedValue(undefined),
     } as unknown as AuditService;
+    const runtimeSettingsResolver = {
+      resolveStoredSnapshot: jest.fn().mockResolvedValue({
+        sendMode: 'live',
+        sendRolloutPercent: 100,
+        emergencyPauseEnabled: false,
+      }),
+      isWithinSendRollout: jest.fn().mockReturnValue(true),
+    };
 
     const useCase = new SendSatisfactionSurveyFlowInvitationUseCase(
       repository as any,
@@ -155,6 +172,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
         getTemplateButtonIndex: jest.fn(() => '0'),
       } as any,
       { create: jest.fn(() => 'survey_dispatch:22:2026-05-10') },
+      runtimeSettingsResolver as any,
       auditService,
     );
 
