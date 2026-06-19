@@ -36,17 +36,11 @@ export class SatisfactionSurveyRuntimeSettingsResolverService {
     return record?.snapshot ?? this.bootstrap.getRuntimeSettingsSnapshot();
   }
 
-  async resolveEffectiveHotReloadableSettings(): Promise<SatisfactionSurveyRuntimeHotReloadableSettings> {
-    const stored = await this.resolveStoredSnapshot();
-    return this.pickHotReloadable(stored);
-  }
-
   async resolveRuntimeView(): Promise<Omit<SurveyRuntimeSettingsDto, 'permissions'>> {
     const record = await this.getStoredRecord();
     const storedSnapshot =
       record?.snapshot ?? this.bootstrap.getRuntimeSettingsSnapshot();
-    const effectiveHotReloadable =
-      await this.resolveEffectiveHotReloadableSettings();
+    const effectiveHotReloadable = this.pickHotReloadable(storedSnapshot);
     const emergencyPauseReason = storedSnapshot.emergencyPauseEnabled
       ? await this.resolveActiveEmergencyPauseReason()
       : null;
