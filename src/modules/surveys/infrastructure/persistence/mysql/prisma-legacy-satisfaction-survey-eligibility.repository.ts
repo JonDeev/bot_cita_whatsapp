@@ -21,8 +21,8 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
 
     const rows = await this.prisma.$queryRaw<
       Array<{
-        legacyAgendaId: number | null;
-        patientLegacyUserId: number | null;
+        legacyAgendaId: number | string | null;
+        patientLegacyUserId: number | string | null;
         patientName: string | null;
         patientPhone: string | null;
         appointmentDateIso: string | null;
@@ -43,7 +43,7 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
             IF(TRIM(COALESCE(u.Segundo_apellido, '')) = '', '', CONCAT(' ', u.Segundo_apellido))
           )
         ) AS patientName,
-        TRIM(COALESCE(u.Tel_fono, '')) AS patientPhone,
+        TRIM(COALESCE(u.\`Teléfono\`, '')) AS patientPhone,
         DATE_FORMAT(a.fecha_cita, '%Y-%m-%d') AS appointmentDateIso,
         DATE_FORMAT(STR_TO_DATE(TRIM(COALESCE(a.idhora, '')), '%H:%i'), '%H:%i') AS appointmentTimeHhmm,
         COALESCE(
@@ -71,7 +71,7 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
         ON TRIM(COALESCE(a.TipoCita, '')) <> ''
        AND TRIM(COALESCE(teByCups.CUPS, '')) = TRIM(COALESCE(a.TipoCita, ''))
       WHERE a.fecha_cita = STR_TO_DATE(${filters.surveyDateIso}, '%Y-%m-%d')
-        AND TRIM(COALESCE(a.Estado, '')) = 'Atendida'
+        AND TRIM(COALESCE(a.Estado, '')) = 'Atendido'
         AND TRIM(COALESCE(a.notificacion_encuesta, '')) = 'No enviado'
         AND STR_TO_DATE(TRIM(COALESCE(a.idhora, '')), '%H:%i') IS NOT NULL
         AND STR_TO_DATE(TRIM(a.idhora), '%H:%i') >= STR_TO_DATE(${filters.windowStartHHmm}, '%H:%i')
@@ -87,8 +87,9 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
     return rows
       .map(
         (row): SatisfactionSurveyEligibleAppointment => ({
-          legacyAgendaId: row.legacyAgendaId ?? 0,
-          patientLegacyUserId: row.patientLegacyUserId ?? 0,
+          legacyAgendaId: this.toPositiveInteger(row.legacyAgendaId) ?? 0,
+          patientLegacyUserId:
+            this.toPositiveInteger(row.patientLegacyUserId) ?? 0,
           patientName: row.patientName?.trim() ?? '',
           patientPhone: row.patientPhone?.trim() || null,
           appointmentDateIso: row.appointmentDateIso?.trim() ?? '',
@@ -106,5 +107,20 @@ export class PrismaLegacySatisfactionSurveyEligibilityRepository implements Sati
           row.appointmentDateIso.length > 0 &&
           row.appointmentTimeHhmm.length > 0,
       );
+  }
+
+  private toPositiveInteger(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+
+    return null;
   }
 }

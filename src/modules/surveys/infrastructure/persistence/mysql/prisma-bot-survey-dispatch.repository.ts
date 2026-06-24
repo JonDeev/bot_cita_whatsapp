@@ -15,6 +15,10 @@ import {
   type MarkSurveyDispatchDeclinedCommand,
   type MarkSurveyDispatchFailedCommand,
   type MarkSurveyDispatchBlockedContactCommand,
+  type MarkSurveyDispatchVerificationConfirmedCommand,
+  type MarkSurveyDispatchVerificationFailedCommand,
+  type MarkSurveyDispatchVerificationPendingCommand,
+  type MarkSurveyDispatchVerificationRejectedCommand,
   type MarkSurveyDispatchStartedCommand,
   type MarkSurveyDispatchSentCommand,
   type SaveSurveyAnswerByQuestionKeyCommand,
@@ -23,6 +27,9 @@ import {
   type SurveyDispatchRepository,
   type UpsertSurveyContactSuppressionCommand,
 } from '../../../domain/ports/survey-dispatch.repository';
+
+const BOT_SURVEY_DISPATCH_STATUS_PHONE_VERIFICATION_PENDING =
+  'PHONE_VERIFICATION_PENDING' as const;
 
 @Injectable()
 export class PrismaBotSurveyDispatchRepository implements SurveyDispatchRepository {
@@ -81,6 +88,16 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
               windowStartAt,
               windowEndAt,
               expiresAt,
+              verificationTemplateName: null,
+              verificationTemplateLanguage: null,
+              verificationConfirmActionKey: null,
+              verificationRejectActionKey: null,
+              verificationWhatsappMessageId: null,
+              verificationRequestedAt: null,
+              verificationConfirmedAt: null,
+              verificationRejectedAt: null,
+              verificationFailedAt: null,
+              verificationFailureReason: null,
               dedupeKey: command.dedupeKey,
             },
             select: { id: true },
@@ -202,6 +219,22 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     });
   }
 
+  async findByVerificationActionKey(
+    verificationActionKey: string,
+  ): Promise<SatisfactionSurveyDispatchRecord | null> {
+    const normalizedActionKey = verificationActionKey.trim();
+    if (!normalizedActionKey) {
+      return null;
+    }
+
+    return this.findDispatchByWhere({
+      OR: [
+        { verificationConfirmActionKey: normalizedActionKey },
+        { verificationRejectActionKey: normalizedActionKey },
+      ],
+    });
+  }
+
   async markSent(command: MarkSurveyDispatchSentCommand): Promise<void> {
     await this.prismaBot.botSurveyDispatch.update({
       where: { id: command.dispatchId },
@@ -214,6 +247,63 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
         flowToken: command.flowToken,
         failedAt: null,
         failureReason: null,
+      },
+    });
+  }
+
+  async markVerificationPending(
+    command: MarkSurveyDispatchVerificationPendingCommand,
+  ): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BOT_SURVEY_DISPATCH_STATUS_PHONE_VERIFICATION_PENDING as BotSurveyDispatchStatus,
+        verificationTemplateName: command.verificationTemplateName,
+        verificationTemplateLanguage: command.verificationTemplateLanguage,
+        verificationConfirmActionKey: command.verificationConfirmActionKey,
+        verificationRejectActionKey: command.verificationRejectActionKey,
+        verificationWhatsappMessageId: command.verificationWhatsappMessageId,
+        verificationRequestedAt: new Date(command.verificationRequestedAtIso),
+        verificationConfirmedAt: null,
+        verificationRejectedAt: null,
+        verificationFailedAt: null,
+        verificationFailureReason: null,
+      },
+    });
+  }
+
+  async markVerificationConfirmed(
+    command: MarkSurveyDispatchVerificationConfirmedCommand,
+  ): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        verificationConfirmedAt: new Date(command.verificationConfirmedAtIso),
+      },
+    });
+  }
+
+  async markVerificationRejected(
+    command: MarkSurveyDispatchVerificationRejectedCommand,
+  ): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BotSurveyDispatchStatus.DECLINED,
+        verificationRejectedAt: new Date(command.verificationRejectedAtIso),
+      },
+    });
+  }
+
+  async markVerificationFailed(
+    command: MarkSurveyDispatchVerificationFailedCommand,
+  ): Promise<void> {
+    await this.prismaBot.botSurveyDispatch.update({
+      where: { id: command.dispatchId },
+      data: {
+        status: BotSurveyDispatchStatus.FAILED,
+        verificationFailedAt: new Date(command.verificationFailedAtIso),
+        verificationFailureReason: command.verificationFailureReason,
       },
     });
   }
@@ -429,6 +519,20 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
       status: this.fromDispatchStatus(dispatch.status),
       dedupeKey: dispatch.dedupeKey,
       expiresAtIso: dispatch.expiresAt.toISOString(),
+      verificationTemplateName: dispatch.verificationTemplateName,
+      verificationTemplateLanguage: dispatch.verificationTemplateLanguage,
+      verificationConfirmActionKey: dispatch.verificationConfirmActionKey,
+      verificationRejectActionKey: dispatch.verificationRejectActionKey,
+      verificationWhatsappMessageId: dispatch.verificationWhatsappMessageId,
+      verificationRequestedAtIso:
+        dispatch.verificationRequestedAt?.toISOString() ?? null,
+      verificationConfirmedAtIso:
+        dispatch.verificationConfirmedAt?.toISOString() ?? null,
+      verificationRejectedAtIso:
+        dispatch.verificationRejectedAt?.toISOString() ?? null,
+      verificationFailedAtIso:
+        dispatch.verificationFailedAt?.toISOString() ?? null,
+      verificationFailureReason: dispatch.verificationFailureReason,
       conversationKey: dispatch.conversationKey,
       initialTemplateName: dispatch.initialTemplateName,
       initialTemplateLanguage: dispatch.initialTemplateLanguage,
@@ -471,10 +575,12 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
     return this.mapDispatch(dispatch);
   }
 
-  private fromDispatchStatus(value: BotSurveyDispatchStatus) {
+  private fromDispatchStatus(value: string) {
     const byValue = {
       [BotSurveyDispatchStatus.PENDING]:
         SATISFACTION_SURVEY_DISPATCH_STATUSES.PENDING,
+      [BOT_SURVEY_DISPATCH_STATUS_PHONE_VERIFICATION_PENDING]:
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.PHONE_VERIFICATION_PENDING,
       [BotSurveyDispatchStatus.SENT]:
         SATISFACTION_SURVEY_DISPATCH_STATUSES.SENT,
       [BotSurveyDispatchStatus.STARTED]:
@@ -493,7 +599,7 @@ export class PrismaBotSurveyDispatchRepository implements SurveyDispatchReposito
         SATISFACTION_SURVEY_DISPATCH_STATUSES.BLOCKED_CONTACT,
     } as const;
 
-    return byValue[value];
+    return byValue[value as keyof typeof byValue];
   }
 
   private toDateOnly(value: string): Date {

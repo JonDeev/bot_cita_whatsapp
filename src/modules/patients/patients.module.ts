@@ -96,6 +96,8 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     RegisterWhatsappPostBookingConsentUseCase,
     MarkPatientPhoneVerifiedUseCase,
     UpdatePatientContactDetailsUseCase,
+    WHATSAPP_CONTACT_CONSENT_REPOSITORY,
+    WHATSAPP_CONTACT_CONSENT_READER_REPOSITORY,
   ],
 })
 export class PatientsModule {}

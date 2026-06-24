@@ -3,7 +3,7 @@ import { SatisfactionSurveyDispatchWindowService } from './satisfaction-survey-d
 describe('SatisfactionSurveyDispatchWindowService', () => {
   const service = new SatisfactionSurveyDispatchWindowService();
 
-  it('returns the 07:00-07:30 window for a valid weekday 07:30 run', () => {
+  it('returns the cumulative day window from 07:00 for a valid weekday 07:30 run', () => {
     const runAt = new Date('2026-05-11T12:30:00.000Z');
 
     const result = service.resolveForRunAt(
@@ -17,6 +17,23 @@ describe('SatisfactionSurveyDispatchWindowService', () => {
       surveyDateIso: '2026-05-11',
       windowStartHHmm: '07:00',
       windowEndHHmm: '07:30',
+    });
+  });
+
+  it('returns the cumulative day window up to the current tick', () => {
+    const runAt = new Date('2026-05-11T13:00:00.000Z');
+
+    const result = service.resolveForRunAt(
+      runAt,
+      'business_hours_mon_fri',
+      24,
+    );
+
+    expect(result.shouldRun).toBe(true);
+    expect(result.window).toMatchObject({
+      surveyDateIso: '2026-05-11',
+      windowStartHHmm: '07:00',
+      windowEndHHmm: '08:00',
     });
   });
 

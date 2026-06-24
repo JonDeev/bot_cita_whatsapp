@@ -15,10 +15,17 @@ export class PrismaBotSurveyRecipientPolicyRepository implements SurveyRecipient
     patientLegacyUserId: number;
     phone: string;
   }): Promise<boolean> {
+    const patientLegacyUserId = this.normalizePositiveInteger(
+      input.patientLegacyUserId,
+    );
+    if (patientLegacyUserId === null) {
+      return false;
+    }
+
     const consent = await this.prismaBot.botPatientContactConsent.findUnique({
       where: {
         patientLegacyUserId_channel_purpose: {
-          patientLegacyUserId: input.patientLegacyUserId,
+          patientLegacyUserId,
           channel: BotContactChannel.WHATSAPP,
           purpose: BotContactConsentPurpose.SATISFACTION_SURVEYS,
         },
@@ -71,5 +78,20 @@ export class PrismaBotSurveyRecipientPolicyRepository implements SurveyRecipient
 
   private normalizePhone(value: string): string {
     return value.replace(/\D/g, '');
+  }
+
+  private normalizePositiveInteger(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+
+    return null;
   }
 }

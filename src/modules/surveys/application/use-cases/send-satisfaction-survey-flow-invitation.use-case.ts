@@ -65,7 +65,9 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
 
     if (
       dispatch.status !== SATISFACTION_SURVEY_DISPATCH_STATUSES.PENDING &&
-      dispatch.status !== SATISFACTION_SURVEY_DISPATCH_STATUSES.FAILED
+      dispatch.status !== SATISFACTION_SURVEY_DISPATCH_STATUSES.FAILED &&
+      dispatch.status !==
+        SATISFACTION_SURVEY_DISPATCH_STATUSES.PHONE_VERIFICATION_PENDING
     ) {
       throw new BadRequestException(
         `Survey dispatch ${dispatch.id} cannot be sent from status ${dispatch.status}.`,

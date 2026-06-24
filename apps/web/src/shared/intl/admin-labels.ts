@@ -68,6 +68,7 @@ const reminderTypeLabels: Record<string, string> = {
 
 const surveyDispatchStatusLabels: Record<string, string> = {
   PENDING: 'Pendiente',
+  PHONE_VERIFICATION_PENDING: 'Pendiente verificacion telefonica',
   SENT: 'Enviada',
   STARTED: 'Iniciada',
   COMPLETED: 'Completada',

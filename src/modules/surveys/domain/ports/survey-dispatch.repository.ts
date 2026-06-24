@@ -1,5 +1,6 @@
 export const SATISFACTION_SURVEY_DISPATCH_STATUSES = {
   PENDING: 'PENDING',
+  PHONE_VERIFICATION_PENDING: 'PHONE_VERIFICATION_PENDING',
   SENT: 'SENT',
   STARTED: 'STARTED',
   COMPLETED: 'COMPLETED',
@@ -33,6 +34,16 @@ export interface SatisfactionSurveyDispatchRecord {
   status: SatisfactionSurveyDispatchStatus;
   dedupeKey: string;
   expiresAtIso: string;
+  verificationTemplateName: string | null;
+  verificationTemplateLanguage: string | null;
+  verificationConfirmActionKey: string | null;
+  verificationRejectActionKey: string | null;
+  verificationWhatsappMessageId: string | null;
+  verificationRequestedAtIso: string | null;
+  verificationConfirmedAtIso: string | null;
+  verificationRejectedAtIso: string | null;
+  verificationFailedAtIso: string | null;
+  verificationFailureReason: string | null;
   conversationKey: string | null;
   initialTemplateName: string | null;
   initialTemplateLanguage: string | null;
@@ -68,6 +79,32 @@ export interface MarkSurveyDispatchSentCommand {
   initialTemplateLanguage: string;
   initialWhatsappMessageId: string;
   flowToken: string;
+}
+
+export interface MarkSurveyDispatchVerificationPendingCommand {
+  dispatchId: number;
+  verificationTemplateName: string;
+  verificationTemplateLanguage: string;
+  verificationConfirmActionKey: string;
+  verificationRejectActionKey: string;
+  verificationWhatsappMessageId: string;
+  verificationRequestedAtIso: string;
+}
+
+export interface MarkSurveyDispatchVerificationConfirmedCommand {
+  dispatchId: number;
+  verificationConfirmedAtIso: string;
+}
+
+export interface MarkSurveyDispatchVerificationRejectedCommand {
+  dispatchId: number;
+  verificationRejectedAtIso: string;
+}
+
+export interface MarkSurveyDispatchVerificationFailedCommand {
+  dispatchId: number;
+  verificationFailedAtIso: string;
+  verificationFailureReason: string;
 }
 
 export interface MarkSurveyDispatchFailedCommand {
@@ -136,7 +173,22 @@ export interface SurveyDispatchRepository {
   findByInitialWhatsappMessageId(
     initialWhatsappMessageId: string,
   ): Promise<SatisfactionSurveyDispatchRecord | null>;
+  findByVerificationActionKey(
+    verificationActionKey: string,
+  ): Promise<SatisfactionSurveyDispatchRecord | null>;
   markSent(command: MarkSurveyDispatchSentCommand): Promise<void>;
+  markVerificationPending(
+    command: MarkSurveyDispatchVerificationPendingCommand,
+  ): Promise<void>;
+  markVerificationConfirmed(
+    command: MarkSurveyDispatchVerificationConfirmedCommand,
+  ): Promise<void>;
+  markVerificationRejected(
+    command: MarkSurveyDispatchVerificationRejectedCommand,
+  ): Promise<void>;
+  markVerificationFailed(
+    command: MarkSurveyDispatchVerificationFailedCommand,
+  ): Promise<void>;
   markFailed(command: MarkSurveyDispatchFailedCommand): Promise<void>;
   markCancelledByHandoff(
     command: MarkSurveyDispatchCancelledByHandoffCommand,

@@ -13,6 +13,7 @@ import { WhatsappConfigService } from './whatsapp-config.service';
 import type { NormalizedWhatsappEvent } from '../../domain/events/normalized-whatsapp.event';
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from '../../../surveys/application/use-cases/record-satisfaction-survey-flow-submission.use-case';
 import { RecordSatisfactionSurveyTemplateReplyUseCase } from '../../../surveys/application/use-cases/record-satisfaction-survey-template-reply.use-case';
+import { HandleSatisfactionSurveyPhoneVerificationReplyUseCase } from '../../../surveys/application/use-cases/handle-satisfaction-survey-phone-verification-reply.use-case';
 import { HandleAppointmentReminderVerificationReplyUseCase } from '../../../reminders/application/use-cases/handle-appointment-reminder-verification-reply.use-case';
 import { WEBHOOK_PROCESSING_STATUSES } from '../../domain/ports/webhook-inbox.repository.port';
 
@@ -36,6 +37,7 @@ export class ConversationOrchestratorService {
     private readonly sendWhatsappTextMessage: SendWhatsappTextMessageUseCase,
     private readonly recordSatisfactionSurveyFlowSubmission: RecordSatisfactionSurveyFlowSubmissionUseCase,
     private readonly recordSatisfactionSurveyTemplateReply: RecordSatisfactionSurveyTemplateReplyUseCase,
+    private readonly handleSatisfactionSurveyPhoneVerificationReply: HandleSatisfactionSurveyPhoneVerificationReplyUseCase,
     private readonly handleAppointmentReminderVerificationReply: HandleAppointmentReminderVerificationReplyUseCase,
     private readonly whatsappConfig: WhatsappConfigService,
   ) {}
@@ -71,6 +73,14 @@ export class ConversationOrchestratorService {
       await this.recordSatisfactionSurveyTemplateReply.execute(event);
     if (surveyTemplateReplyResult.handled) {
       return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+    }
+
+    if (event.messageType === 'interactive' && event.interactiveReplyId) {
+      const surveyVerificationReplyResult =
+        await this.handleSatisfactionSurveyPhoneVerificationReply.execute(event);
+      if (surveyVerificationReplyResult.handled) {
+        return { processingStatus: WEBHOOK_PROCESSING_STATUSES.PROCESSED };
+      }
     }
 
     if (event.messageType === 'interactive' && event.interactiveReplyId) {

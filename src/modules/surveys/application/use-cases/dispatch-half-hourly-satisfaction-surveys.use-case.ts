@@ -16,6 +16,7 @@ import {
 } from '../../domain/ports/satisfaction-survey-legacy-status.repository';
 import type { SurveyRecipientPolicyRepository } from '../../domain/ports/survey-recipient-policy.repository';
 import { CreateSatisfactionSurveyDispatchUseCase } from './create-satisfaction-survey-dispatch.use-case';
+import { SendSatisfactionSurveyPhoneVerificationUseCase } from './send-satisfaction-survey-phone-verification.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './send-satisfaction-survey-flow-invitation.use-case';
 import { SatisfactionSurveyRuntimeSettingsResolverService } from '../services/satisfaction-survey-runtime-settings-resolver.service';
 import { SatisfactionSurveyDispatchWindowService } from '../services/satisfaction-survey-dispatch-window.service';
@@ -25,6 +26,7 @@ interface DispatchCandidate {
   patientLegacyUserId: number;
   patientName: string;
   patientPhone: string;
+  requiresPhoneVerification: boolean;
   appointments: SatisfactionSurveyEligibleAppointment[];
 }
 
@@ -42,6 +44,7 @@ export interface DispatchHalfHourlySatisfactionSurveysResult {
   eligibleAppointments: number;
   createdDispatches: number;
   sentDispatches: number;
+  verificationSentDispatches: number;
   reusedDispatches: number;
   markedAsNotApplicable: number;
   markedAsSent: number;
@@ -64,6 +67,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
     private readonly dispatchWindowService: SatisfactionSurveyDispatchWindowService,
     private readonly runtimeSettingsResolver: SatisfactionSurveyRuntimeSettingsResolverService,
     private readonly createSurveyDispatch: CreateSatisfactionSurveyDispatchUseCase,
+    private readonly sendSurveyPhoneVerification: SendSatisfactionSurveyPhoneVerificationUseCase,
     private readonly sendSurveyFlowInvitation: SendSatisfactionSurveyFlowInvitationUseCase,
     private readonly phoneNormalizer: SurveyWhatsappPhoneNormalizerService,
     private readonly auditService: AuditService,
@@ -90,6 +94,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
         eligibleAppointments: 0,
         createdDispatches: 0,
         sentDispatches: 0,
+        verificationSentDispatches: 0,
         reusedDispatches: 0,
         markedAsNotApplicable: 0,
         markedAsSent: 0,
@@ -116,6 +121,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
         eligibleAppointments: 0,
         createdDispatches: 0,
         sentDispatches: 0,
+        verificationSentDispatches: 0,
         reusedDispatches: 0,
         markedAsNotApplicable: 0,
         markedAsSent: 0,
@@ -155,6 +161,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
     let createdDispatches = 0;
     let reusedDispatches = 0;
     let sentDispatches = 0;
+    let verificationSentDispatches = 0;
     let markedAsSent = 0;
     let failedDispatches = 0;
 
@@ -229,6 +236,19 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
           continue;
         }
 
+        if (candidate.requiresPhoneVerification) {
+          const verificationResult =
+            await this.sendSurveyPhoneVerification.execute({
+              dispatchId: dispatchResult.dispatch.id,
+            });
+
+          if (verificationResult.wasSent) {
+            verificationSentDispatches += 1;
+          }
+
+          continue;
+        }
+
         await this.sendSurveyFlowInvitation.execute({
           dispatchId: dispatchResult.dispatch.id,
         });
@@ -267,6 +287,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
       eligibleAppointments: appointments.length,
       createdDispatches,
       sentDispatches,
+      verificationSentDispatches,
       reusedDispatches,
       markedAsNotApplicable,
       markedAsSent,
@@ -282,6 +303,7 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
       eligibleAppointments: result.eligibleAppointments,
       createdDispatches: result.createdDispatches,
       sentDispatches: result.sentDispatches,
+      verificationSentDispatches: result.verificationSentDispatches,
       reusedDispatches: result.reusedDispatches,
       markedAsNotApplicable: result.markedAsNotApplicable,
       markedAsSent: result.markedAsSent,
@@ -345,6 +367,13 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
 
       if (isSuppressed) {
         noApplicableAgendaIds.push(appointment.legacyAgendaId);
+        await this.auditService.record(
+          'survey.eligibility.skipped.suppressed_contact',
+          {
+            legacyAgendaId: appointment.legacyAgendaId,
+            patientLegacyUserId: appointment.patientLegacyUserId,
+          },
+        );
         continue;
       }
 
@@ -362,15 +391,13 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
       }
 
       if (!hasConsent) {
-        noApplicableAgendaIds.push(appointment.legacyAgendaId);
         await this.auditService.record(
-          'survey.eligibility.skipped.missing_opt_in',
+          'survey.eligibility.needs_phone_verification',
           {
             legacyAgendaId: appointment.legacyAgendaId,
             patientLegacyUserId: appointment.patientLegacyUserId,
           },
         );
-        continue;
       }
 
       const current = grouped.get(appointment.patientLegacyUserId);
@@ -379,12 +406,15 @@ export class DispatchHalfHourlySatisfactionSurveysUseCase {
           patientLegacyUserId: appointment.patientLegacyUserId,
           patientName: appointment.patientName,
           patientPhone: sanitizedPhone,
+          requiresPhoneVerification: !hasConsent,
           appointments: [appointment],
         });
         continue;
       }
 
       current.appointments.push(appointment);
+      current.requiresPhoneVerification =
+        current.requiresPhoneVerification || !hasConsent;
     }
 
     return {

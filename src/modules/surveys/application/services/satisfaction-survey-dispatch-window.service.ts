@@ -17,7 +17,7 @@ export interface ResolveSatisfactionSurveyDispatchWindowResult {
 }
 
 const EXECUTION_MINUTES = new Set([0, 30]);
-const MINUTES_PER_HALF_HOUR = 30;
+const EARLIEST_DISPATCH_START_TOTAL_MINUTES = 7 * 60;
 const MIN_WINDOW_END_TOTAL_MINUTES = 7 * 60 + 30;
 const PROFILE_RULES: Record<
   SurveyRuntimeScheduleProfile,
@@ -86,10 +86,10 @@ export class SatisfactionSurveyDispatchWindowService {
       };
     }
 
-    const windowStartTotalMinutes =
-      windowEndTotalMinutes - MINUTES_PER_HALF_HOUR;
+    // Surveys scan the day cumulatively from 07:00 so late-atended appointments
+    // still get picked up on subsequent ticks.
     const windowStartHHmm = this.toHHmmFromTotalMinutes(
-      windowStartTotalMinutes,
+      EARLIEST_DISPATCH_START_TOTAL_MINUTES,
     );
     const windowEndHHmm = this.toHHmm(parts.hour, parts.minute);
 

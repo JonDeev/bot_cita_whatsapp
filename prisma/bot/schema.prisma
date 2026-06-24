@@ -54,6 +54,7 @@ enum BotSurveyQuestionType {
 
 enum BotSurveyDispatchStatus {
   PENDING
+  PHONE_VERIFICATION_PENDING
   SENT
   STARTED
   COMPLETED
@@ -432,6 +433,16 @@ model BotSurveyDispatch {
   windowStartAt            DateTime                       @map("window_start_at") @db.DateTime(3)
   windowEndAt              DateTime                       @map("window_end_at") @db.DateTime(3)
   expiresAt                DateTime                       @map("expires_at") @db.DateTime(3)
+  verificationTemplateName String?                        @map("verification_template_name") @db.VarChar(128)
+  verificationTemplateLanguage String?                     @map("verification_template_language") @db.VarChar(16)
+  verificationConfirmActionKey String?                    @map("verification_confirm_action_key") @db.VarChar(64)
+  verificationRejectActionKey String?                     @map("verification_reject_action_key") @db.VarChar(64)
+  verificationWhatsappMessageId String?                   @map("verification_whatsapp_message_id") @db.VarChar(191)
+  verificationRequestedAt  DateTime?                       @map("verification_requested_at") @db.DateTime(3)
+  verificationConfirmedAt  DateTime?                       @map("verification_confirmed_at") @db.DateTime(3)
+  verificationRejectedAt   DateTime?                       @map("verification_rejected_at") @db.DateTime(3)
+  verificationFailedAt     DateTime?                       @map("verification_failed_at") @db.DateTime(3)
+  verificationFailureReason String?                        @map("verification_failure_reason") @db.Text
   conversationKey          String?                        @map("conversation_key") @db.VarChar(191)
   initialTemplateName      String?                        @map("initial_template_name") @db.VarChar(128)
   initialTemplateLanguage  String?                        @map("initial_template_language") @db.VarChar(16)
@@ -456,6 +467,9 @@ model BotSurveyDispatch {
   @@index([status, expiresAt], map: "idx_bot_survey_dispatches_status_expires_at")
   @@index([conversationKey], map: "idx_bot_survey_dispatches_conversation_key")
   @@index([flowToken], map: "idx_bot_survey_dispatches_flow_token")
+  @@index([verificationWhatsappMessageId], map: "idx_bot_survey_dispatches_verification_whatsapp_message_id")
+  @@index([verificationConfirmActionKey], map: "idx_bot_survey_dispatches_verification_confirm_action_key")
+  @@index([verificationRejectActionKey], map: "idx_bot_survey_dispatches_verification_reject_action_key")
   @@map("bot_survey_dispatches")
 }
 

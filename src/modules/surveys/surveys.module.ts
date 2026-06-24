@@ -1,14 +1,18 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ConversationsModule } from '../conversations/conversations.module';
+import { PatientsModule } from '../patients/patients.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { PrismaBotModule } from '../../shared/infrastructure/prisma-bot/prisma-bot.module';
 import { PrismaModule } from '../../shared/infrastructure/prisma/prisma.module';
 import { RedisModule } from '../../shared/infrastructure/redis/redis.module';
 import { CreateSatisfactionSurveyDispatchUseCase } from './application/use-cases/create-satisfaction-survey-dispatch.use-case';
 import { DispatchHalfHourlySatisfactionSurveysUseCase } from './application/use-cases/dispatch-half-hourly-satisfaction-surveys.use-case';
+import { HandleSatisfactionSurveyPhoneVerificationReplyUseCase } from './application/use-cases/handle-satisfaction-survey-phone-verification-reply.use-case';
 import { ListSatisfactionSurveyRuntimeSettingEventsUseCase } from './application/use-cases/list-satisfaction-survey-runtime-setting-events.use-case';
+import { RegisterWhatsappSurveyConsentUseCase } from './application/use-cases/register-whatsapp-survey-consent.use-case';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './application/use-cases/send-satisfaction-survey-flow-invitation.use-case';
+import { SendSatisfactionSurveyPhoneVerificationUseCase } from './application/use-cases/send-satisfaction-survey-phone-verification.use-case';
 import { RecordSatisfactionSurveyFlowSubmissionUseCase } from './application/use-cases/record-satisfaction-survey-flow-submission.use-case';
 import { RecordSatisfactionSurveyTemplateReplyUseCase } from './application/use-cases/record-satisfaction-survey-template-reply.use-case';
 import { GetSatisfactionSurveyMetricsUseCase } from './application/use-cases/get-satisfaction-survey-metrics.use-case';
@@ -17,6 +21,7 @@ import { GetSatisfactionSurveyRuntimeSettingsUseCase } from './application/use-c
 import { ToggleSatisfactionSurveyEmergencyPauseUseCase } from './application/use-cases/toggle-satisfaction-survey-emergency-pause.use-case';
 import { UpdateSatisfactionSurveyRuntimeSettingsUseCase } from './application/use-cases/update-satisfaction-survey-runtime-settings.use-case';
 import { SatisfactionSurveyDispatchWindowService } from './application/services/satisfaction-survey-dispatch-window.service';
+import { SatisfactionSurveyPhoneVerificationActionKeyService } from './application/services/satisfaction-survey-phone-verification-action-key.service';
 import { SatisfactionSurveyRuntimeSettingsCatalogService } from './application/services/satisfaction-survey-runtime-settings-catalog.service';
 import { SatisfactionSurveyRuntimeSettingsInitializerService } from './application/services/satisfaction-survey-runtime-settings-initializer.service';
 import { SatisfactionSurveyRuntimeSettingsResolverService } from './application/services/satisfaction-survey-runtime-settings-resolver.service';
@@ -26,6 +31,7 @@ import {
 } from './application/services/satisfaction-survey-eligibility-source-config.service';
 import { SatisfactionSurveyFlowSubmissionFieldMapService } from './application/services/satisfaction-survey-flow-submission-field-map.service';
 import { SatisfactionSurveyMetricsAccessConfigService } from './application/services/satisfaction-survey-metrics-access-config.service';
+import { SurveyPhoneVerificationTemplateConfigService } from './application/services/survey-phone-verification-template-config.service';
 import { SurveyFlowTemplateConfigService } from './application/services/survey-flow-template-config.service';
 import { SurveyFlowTokenFactory } from './application/services/survey-flow-token.factory';
 import { SurveyWhatsappPhoneNormalizerService } from './application/services/survey-whatsapp-phone-normalizer.service';
@@ -52,6 +58,7 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
   imports: [
     AuditModule,
     ConversationsModule,
+    PatientsModule,
     forwardRef(() => WhatsappModule),
     PrismaBotModule,
     PrismaModule,
@@ -60,10 +67,12 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
   providers: [
     SatisfactionSurveyDispatchWindowService,
     SurveyFlowTemplateConfigService,
+    SurveyPhoneVerificationTemplateConfigService,
     SatisfactionSurveyFlowSubmissionFieldMapService,
     SatisfactionSurveyEligibilitySourceConfigService,
     SatisfactionSurveyMetricsAccessConfigService,
     SurveyFlowTokenFactory,
+    SatisfactionSurveyPhoneVerificationActionKeyService,
     SurveyWhatsappPhoneNormalizerService,
     SatisfactionSurveyRuntimeSettingsCatalogService,
     SatisfactionSurveyRuntimeSettingsResolverService,
@@ -75,8 +84,11 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     DispatchHalfHourlySatisfactionSurveysUseCase,
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
+    SendSatisfactionSurveyPhoneVerificationUseCase,
     RecordSatisfactionSurveyFlowSubmissionUseCase,
     RecordSatisfactionSurveyTemplateReplyUseCase,
+    RegisterWhatsappSurveyConsentUseCase,
+    HandleSatisfactionSurveyPhoneVerificationReplyUseCase,
     GetSatisfactionSurveyMetricsUseCase,
     ListSatisfactionSurveyRuntimeSettingEventsUseCase,
     GetSatisfactionSurveyRuntimeSettingsUseCase,
@@ -128,8 +140,11 @@ import { SatisfactionSurveyDispatchScheduler } from './infrastructure/scheduling
     DispatchHalfHourlySatisfactionSurveysUseCase,
     CreateSatisfactionSurveyDispatchUseCase,
     SendSatisfactionSurveyFlowInvitationUseCase,
+    SendSatisfactionSurveyPhoneVerificationUseCase,
     RecordSatisfactionSurveyFlowSubmissionUseCase,
     RecordSatisfactionSurveyTemplateReplyUseCase,
+    RegisterWhatsappSurveyConsentUseCase,
+    HandleSatisfactionSurveyPhoneVerificationReplyUseCase,
     GetSatisfactionSurveyMetricsUseCase,
     ListSatisfactionSurveyRuntimeSettingEventsUseCase,
     GetSatisfactionSurveyRuntimeSettingsUseCase,
