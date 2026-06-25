@@ -9,7 +9,7 @@ export type AdminChatMessageDirectionDto = 'INBOUND' | 'OUTBOUND' | 'SYSTEM';
 
 export interface AdminChatListItemDto {
   id: number;
-  participantPhoneMasked: string;
+  participantPhone: string;
   state: string;
   status: string;
   updatedAtIso: string;
@@ -23,13 +23,13 @@ export interface AdminChatDetailDto {
   id: number;
   conversationKey: string;
   channel: string;
+  participantPhone: string;
   state: string;
   status: string;
   lastInboundAtIso: string | null;
   idleExpiresAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
-  participantPhoneMasked: string;
 }
 
 export interface AdminChatMessageItemDto {

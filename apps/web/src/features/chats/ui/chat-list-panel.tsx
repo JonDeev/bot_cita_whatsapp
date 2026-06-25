@@ -96,7 +96,7 @@ export function ChatListPanel({
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">{chat.participantPhoneMasked}</p>
+                    <p className="text-sm font-semibold">{chat.participantPhone}</p>
                     <span className="text-[11px] text-[var(--muted)]">
                       {chat.lastMessageOccurredAtIso
                         ? formatDateTime(chat.lastMessageOccurredAtIso)

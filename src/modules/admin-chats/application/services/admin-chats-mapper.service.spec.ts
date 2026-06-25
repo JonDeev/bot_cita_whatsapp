@@ -9,7 +9,7 @@ describe('AdminChatsMapperService', () => {
         {
           id: 10,
           conversationKey: 'whatsapp:123:573001112233',
-          participantPhoneMasked: '***2233',
+          participantPhone: '573001112233',
           state: 'MAIN_MENU',
           status: 'BOT_ACTIVE',
           lastInboundAtIso: null,
@@ -26,5 +26,6 @@ describe('AdminChatsMapperService', () => {
     });
 
     expect(result.items[0]?.lastMessagePreview).toBe('hola');
+    expect(result.items[0]?.participantPhone).toBe('573001112233');
   });
 });

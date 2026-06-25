@@ -3,25 +3,16 @@ import type { AdminChatsRepository } from '../../domain/ports/admin-chats.reposi
 
 describe('ListAdminChatsUseCase', () => {
   it('writes standardized audit event with list view type', async () => {
+    const repositoryResult = {
+      items: [],
+      page: 1,
+      pageSize: 20,
+      total: 0,
+    };
     const repository: jest.Mocked<AdminChatsRepository> = {
-      listConversations: jest.fn().mockResolvedValue({
-        items: [],
-        page: 1,
-        pageSize: 20,
-        total: 0,
-      }),
+      listConversations: jest.fn().mockResolvedValue(repositoryResult),
       findConversationById: jest.fn(),
       listConversationMessages: jest.fn(),
-    };
-    const masking = {
-      mapConversationList: jest.fn().mockReturnValue({
-        items: [],
-        page: 1,
-        pageSize: 20,
-        total: 0,
-      }),
-      mapConversationDetail: jest.fn(),
-      mapConversationMessages: jest.fn(),
     };
     const mapper = {
       mapChatList: jest.fn().mockReturnValue({
@@ -39,7 +30,6 @@ describe('ListAdminChatsUseCase', () => {
 
     const useCase = new ListAdminChatsUseCase(
       repository,
-      masking as never,
       mapper as never,
       audit as never,
     );
@@ -66,5 +56,6 @@ describe('ListAdminChatsUseCase', () => {
         },
       }),
     );
+    expect(mapper.mapChatList).toHaveBeenCalledWith(repositoryResult);
   });
 });

@@ -6,22 +6,22 @@ import type {
   AdminPaginatedResultDto,
 } from '@whatsapp-bot/shared';
 import type {
-  AdminConversationDetailResponse,
-  AdminConversationListResponseItem,
-  AdminConversationMessageResponseItem,
-} from '../../../admin-conversations/application/services/admin-conversations-masking.service';
-import type { PaginatedResult } from '../../../admin-conversations/domain/admin-conversations.types';
+  AdminChatDetailRecord,
+  AdminChatListItemRecord,
+  AdminChatMessageRecord,
+  PaginatedResult,
+} from '../../domain/admin-chats.types';
 
 @Injectable()
 export class AdminChatsMapperService {
   mapChatList(
-    result: PaginatedResult<AdminConversationListResponseItem>,
+    result: PaginatedResult<AdminChatListItemRecord>,
   ): AdminPaginatedResultDto<AdminChatListItemDto> {
     return {
       ...result,
       items: result.items.map((item) => ({
         id: item.id,
-        participantPhoneMasked: item.participantPhoneMasked,
+        participantPhone: item.participantPhone,
         state: item.state,
         status: item.status,
         updatedAtIso: item.updatedAtIso,
@@ -33,7 +33,7 @@ export class AdminChatsMapperService {
     };
   }
 
-  mapChatDetail(detail: AdminConversationDetailResponse): AdminChatDetailDto {
+  mapChatDetail(detail: AdminChatDetailRecord): AdminChatDetailDto {
     return {
       id: detail.id,
       conversationKey: detail.conversationKey,
@@ -44,12 +44,12 @@ export class AdminChatsMapperService {
       idleExpiresAtIso: detail.idleExpiresAtIso,
       createdAtIso: detail.createdAtIso,
       updatedAtIso: detail.updatedAtIso,
-      participantPhoneMasked: detail.participantPhoneMasked,
+      participantPhone: detail.participantPhone,
     };
   }
 
   mapChatMessages(
-    result: PaginatedResult<AdminConversationMessageResponseItem>,
+    result: PaginatedResult<AdminChatMessageRecord>,
   ): AdminPaginatedResultDto<AdminChatMessageItemDto> {
     return {
       ...result,

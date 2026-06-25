@@ -1,9 +1,9 @@
 import type {
-  AdminConversationDetail,
-  AdminConversationListItem,
-  AdminConversationMessageItem,
+  AdminChatDetailRecord,
+  AdminChatListItemRecord,
+  AdminChatMessageRecord,
   PaginatedResult,
-} from '../../../admin-conversations/domain/admin-conversations.types';
+} from '../admin-chats.types';
 
 export interface ListAdminChatsQuery {
   page: number;
@@ -23,9 +23,9 @@ export interface ListAdminChatMessagesQuery {
 export interface AdminChatsRepository {
   listConversations(
     query: ListAdminChatsQuery,
-  ): Promise<PaginatedResult<AdminConversationListItem>>;
-  findConversationById(conversationId: number): Promise<AdminConversationDetail | null>;
+  ): Promise<PaginatedResult<AdminChatListItemRecord>>;
+  findConversationById(conversationId: number): Promise<AdminChatDetailRecord | null>;
   listConversationMessages(
     query: ListAdminChatMessagesQuery,
-  ): Promise<PaginatedResult<AdminConversationMessageItem>>;
+  ): Promise<PaginatedResult<AdminChatMessageRecord>>;
 }

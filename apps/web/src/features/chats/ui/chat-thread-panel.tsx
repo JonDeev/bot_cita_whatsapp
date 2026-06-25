@@ -44,7 +44,7 @@ export function ChatThreadPanel({
     <section className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--panel)] shadow-sm">
       <header className="border-b border-[var(--border)] px-4 py-3">
         <h2 className="text-sm font-semibold">
-          {detail?.participantPhoneMasked ?? 'Cargando...'}
+          {detail?.participantPhone ?? 'Cargando...'}
         </h2>
         {detail ? (
           <p className="mt-1 text-xs text-[var(--muted)]">
