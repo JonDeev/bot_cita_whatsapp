@@ -225,21 +225,25 @@ describe('UpdatingContactEmailHandler', () => {
       }),
     } as unknown as ContactUpdateCompletionService;
 
+    const markPatientEmailVerified = {
+      execute: jest.fn().mockResolvedValue({
+        status: 'UPDATED',
+        emailMasked: 'd***@example.com',
+      }),
+    } as unknown as MarkPatientEmailVerifiedUseCase;
+
+    const updatePatientContactDetails = {
+      execute: jest.fn().mockResolvedValue({
+        status: 'UPDATED',
+        mode: 'PHONE',
+        phoneMasked: '******66',
+        emailMasked: null,
+      }),
+    } as unknown as UpdatePatientContactDetailsUseCase;
+
     const handler = buildHandler(
-      {
-        execute: jest.fn().mockResolvedValue({
-          status: 'UPDATED',
-          mode: 'PHONE',
-          phoneMasked: '******66',
-          emailMasked: null,
-        }),
-      } as unknown as UpdatePatientContactDetailsUseCase,
-      {
-        execute: jest.fn().mockResolvedValue({
-          status: 'UPDATED',
-          emailMasked: 'd***@example.com',
-        }),
-      } as unknown as MarkPatientEmailVerifiedUseCase,
+      updatePatientContactDetails,
+      markPatientEmailVerified,
       contactUpdateCompletionService,
     );
 
