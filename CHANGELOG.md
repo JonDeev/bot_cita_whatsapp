@@ -7,6 +7,8 @@
 - The contact update flow now treats a valid email that matches the one already stored in the database as a successful verification instead of an error.
 - When the email is unchanged, the bot does not try to write the same email again, but it does mark `correo_verificado_en`.
 - This behavior applies both to the standalone `Actualizar contacto` flow and to the shared contact update subflow.
+- The admin chat thread now keeps scroll behavior stable while messages load and the thread updates, which improves navigation in long conversations.
+- Admin chat views now show the full phone number so support staff can identify conversations without losing context.
 
 ### Notes
 
