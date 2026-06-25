@@ -120,6 +120,30 @@ describe('MariadbLegacyPatientContactDetailsRepository', () => {
     expect(emailParams[2]).toBe(10);
   });
 
+  it('marks email verification timestamp without changing the email value', async () => {
+    const { repository, query } = buildEnabledRepository([
+      'Teléfono',
+      'Telefono Secundario',
+      'email',
+      'CorreoElectrónico',
+      'telefono_verificado_en',
+      'correo_verificado_en',
+      'IdUsuario',
+    ]);
+
+    const result = await repository.markPatientEmailVerified({
+      patientId: 10,
+    });
+
+    expect(result).toBe('UPDATED');
+    const [emailSql, emailParams] = query.mock.calls[1];
+    expect(emailSql).toContain('correo_verificado_en');
+    expect(emailSql).not.toContain('email = ?');
+    expect(emailParams).toHaveLength(2);
+    expect(emailParams[0]).toBeInstanceOf(Date);
+    expect(emailParams[1]).toBe(10);
+  });
+
   it('updates both verification timestamps in one SQL statement', async () => {
     const { repository, query } = buildEnabledRepository([
       'Teléfono',

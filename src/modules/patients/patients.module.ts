@@ -9,6 +9,7 @@ import { ResolvePostBookingWhatsappAppointmentNotificationsOptInGateUseCase } fr
 import { ResolvePatientContactProfileUseCase } from './application/use-cases/resolve-patient-contact-profile.use-case';
 import { ResolveWhatsappAppointmentNotificationsOptInGateUseCase } from './application/use-cases/resolve-whatsapp-appointment-notifications-opt-in-gate.use-case';
 import { RegisterWhatsappPostBookingConsentUseCase } from './application/use-cases/register-whatsapp-post-booking-consent.use-case';
+import { MarkPatientEmailVerifiedUseCase } from './application/use-cases/mark-patient-email-verified.use-case';
 import { MarkPatientPhoneVerifiedUseCase } from './application/use-cases/mark-patient-phone-verified.use-case';
 import { UpdatePatientContactDetailsUseCase } from './application/use-cases/update-patient-contact-details.use-case';
 import { ValidatePatientByDocumentAndBirthDateUseCase } from './application/use-cases/validate-patient-by-document-and-birth-date.use-case';
@@ -17,6 +18,7 @@ import {
   MARK_PATIENT_PHONE_VERIFIED_REPOSITORY,
   PATIENT_CONTACT_PROFILE_REPOSITORY,
   PATIENT_ASSIGNED_DISPENSARY_REPOSITORY,
+  MARK_PATIENT_EMAIL_VERIFIED_REPOSITORY,
   PATIENT_SPECIALTY_ELIGIBILITY_REPOSITORY,
   PATIENT_VALIDATION_REPOSITORY,
   UPDATE_PATIENT_CONTACT_DETAILS_REPOSITORY,
@@ -43,6 +45,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     ResolvePatientContactProfileUseCase,
     ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
+    MarkPatientEmailVerifiedUseCase,
     MarkPatientPhoneVerifiedUseCase,
     UpdatePatientContactDetailsUseCase,
     MariadbLegacyPatientContactDetailsRepository,
@@ -80,6 +83,10 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
       useExisting: MariadbLegacyPatientContactDetailsRepository,
     },
     {
+      provide: MARK_PATIENT_EMAIL_VERIFIED_REPOSITORY,
+      useExisting: MariadbLegacyPatientContactDetailsRepository,
+    },
+    {
       provide: MARK_PATIENT_PHONE_VERIFIED_REPOSITORY,
       useExisting: MariadbLegacyPatientContactDetailsRepository,
     },
@@ -94,6 +101,7 @@ import { PrismaLegacyPatientValidationRepository } from './infrastructure/persis
     ResolvePatientContactProfileUseCase,
     ResolveWhatsappAppointmentNotificationsOptInGateUseCase,
     RegisterWhatsappPostBookingConsentUseCase,
+    MarkPatientEmailVerifiedUseCase,
     MarkPatientPhoneVerifiedUseCase,
     UpdatePatientContactDetailsUseCase,
     WHATSAPP_CONTACT_CONSENT_REPOSITORY,

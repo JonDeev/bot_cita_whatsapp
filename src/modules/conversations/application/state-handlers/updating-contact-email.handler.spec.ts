@@ -1,5 +1,6 @@
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { PatientContactInputValidatorService } from '../../../patients/application/services/patient-contact-input-validator.service';
+import { MarkPatientEmailVerifiedUseCase } from '../../../patients/application/use-cases/mark-patient-email-verified.use-case';
 import { UpdatePatientContactDetailsUseCase } from '../../../patients/application/use-cases/update-patient-contact-details.use-case';
 import { ContactUpdateCompletionService } from '../services/contact-update-completion.service';
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
@@ -39,10 +40,12 @@ describe('UpdatingContactEmailHandler', () => {
 
   function buildHandler(
     updatePatientContactDetails: UpdatePatientContactDetailsUseCase,
+    markPatientEmailVerified: MarkPatientEmailVerifiedUseCase,
     contactUpdateCompletionService: ContactUpdateCompletionService,
   ): UpdatingContactEmailHandler {
     return new UpdatingContactEmailHandler(
       new PatientContactInputValidatorService(),
+      markPatientEmailVerified,
       updatePatientContactDetails,
       new PatientContactUpdateOptionsListFactory(),
       new PatientContactUpdateSuccessMessageFactory(),
@@ -59,14 +62,20 @@ describe('UpdatingContactEmailHandler', () => {
       buildResult: jest.fn(),
     } as unknown as ContactUpdateCompletionService;
 
-    const handler = buildHandler({
-      execute: jest.fn().mockResolvedValue({
-        status: 'UPDATED',
-        mode: 'EMAIL',
-        phoneMasked: null,
-        emailMasked: 'n***@example.com',
-      }),
-    } as unknown as UpdatePatientContactDetailsUseCase, contactUpdateCompletionService);
+    const handler = buildHandler(
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'UPDATED',
+          mode: 'EMAIL',
+          phoneMasked: null,
+          emailMasked: 'n***@example.com',
+        }),
+      } as unknown as UpdatePatientContactDetailsUseCase,
+      {
+        execute: jest.fn(),
+      } as unknown as MarkPatientEmailVerifiedUseCase,
+      contactUpdateCompletionService,
+    );
 
     const result = await handler.handle(baseSession, {
       kind: 'incoming_message_received',
@@ -86,19 +95,69 @@ describe('UpdatingContactEmailHandler', () => {
     });
   });
 
-  it('returns to PATIENT_VALIDATED and continues the primary flow in live mode', async () => {
+  it('verifies the same email without blocking the UPDATE_CONTACT flow', async () => {
     const contactUpdateCompletionService = {
       buildResult: jest.fn(),
     } as unknown as ContactUpdateCompletionService;
 
-    const handler = buildHandler({
+    const markPatientEmailVerified = {
       execute: jest.fn().mockResolvedValue({
         status: 'UPDATED',
-        mode: 'EMAIL',
-        phoneMasked: null,
-        emailMasked: 'n***@example.com',
+        emailMasked: 'd***@example.com',
       }),
-    } as unknown as UpdatePatientContactDetailsUseCase, contactUpdateCompletionService);
+    } as unknown as MarkPatientEmailVerifiedUseCase;
+
+    const updatePatientContactDetails = {
+      execute: jest.fn(),
+    } as unknown as UpdatePatientContactDetailsUseCase;
+
+    const handler = buildHandler(
+      updatePatientContactDetails,
+      markPatientEmailVerified,
+      contactUpdateCompletionService,
+    );
+
+    const result = await handler.handle(baseSession, {
+      kind: 'incoming_message_received',
+      messageId: 'wamid-5',
+      from: '573001112233',
+      timestamp: '1711111115',
+      messageType: 'text',
+      textBody: 'daniel@example.com',
+      phoneNumberId: '123',
+    });
+
+    expect(markPatientEmailVerified.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'daniel@example.com',
+      }),
+    );
+    expect(updatePatientContactDetails.execute).not.toHaveBeenCalled();
+    expect(result.nextState).toBe('MAIN_MENU');
+    expect(result.nextStatus).toBe('CLOSED');
+  });
+
+  it('returns to PATIENT_VALIDATED and continues the primary flow in live mode with the same email', async () => {
+    const contactUpdateCompletionService = {
+      buildResult: jest.fn(),
+    } as unknown as ContactUpdateCompletionService;
+
+    const markPatientEmailVerified = {
+      execute: jest.fn().mockResolvedValue({
+        status: 'UPDATED',
+        emailMasked: 'd***@example.com',
+      }),
+    } as unknown as MarkPatientEmailVerifiedUseCase;
+
+    const updatePatientContactDetails = {
+      execute: jest.fn(),
+    } as unknown as UpdatePatientContactDetailsUseCase;
+
+    const handler = buildHandler(
+      updatePatientContactDetails,
+      markPatientEmailVerified,
+      contactUpdateCompletionService,
+    );
 
     const result = await handler.handle(
       {
@@ -118,16 +177,22 @@ describe('UpdatingContactEmailHandler', () => {
         from: '573001112233',
         timestamp: '1711111113',
         messageType: 'text',
-        textBody: 'nuevo@example.com',
+        textBody: 'daniel@example.com',
         phoneNumberId: '123',
       },
     );
 
+    expect(markPatientEmailVerified.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'daniel@example.com',
+      }),
+    );
+    expect(updatePatientContactDetails.execute).not.toHaveBeenCalled();
     expect(result.nextState).toBe('PATIENT_VALIDATED');
     expect(result.continueFlow).toBe(true);
   });
 
-  it('delegates to the completion service when finishing BOTH mode', async () => {
+  it('delegates to the completion service when finishing BOTH mode with the same email', async () => {
     const contactUpdateCompletionService = {
       buildResult: jest.fn().mockResolvedValue({
         nextState: 'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
@@ -151,20 +216,32 @@ describe('UpdatingContactEmailHandler', () => {
           },
         },
         outboundMessages: [
-          { type: 'text', body: 'Tus datos de contacto quedaron confirmados y actualizados correctamente.' },
+          {
+            type: 'text',
+            body: 'Tus datos de contacto quedaron confirmados y actualizados correctamente.',
+          },
           { type: 'interactive_buttons', body: 'Autorizas a IPS SISM...' },
         ],
       }),
     } as unknown as ContactUpdateCompletionService;
 
-    const handler = buildHandler({
-      execute: jest.fn().mockResolvedValue({
-        status: 'UPDATED',
-        mode: 'BOTH',
-        phoneMasked: '******66',
-        emailMasked: 'n***@example.com',
-      }),
-    } as unknown as UpdatePatientContactDetailsUseCase, contactUpdateCompletionService);
+    const handler = buildHandler(
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'UPDATED',
+          mode: 'PHONE',
+          phoneMasked: '******66',
+          emailMasked: null,
+        }),
+      } as unknown as UpdatePatientContactDetailsUseCase,
+      {
+        execute: jest.fn().mockResolvedValue({
+          status: 'UPDATED',
+          emailMasked: 'd***@example.com',
+        }),
+      } as unknown as MarkPatientEmailVerifiedUseCase,
+      contactUpdateCompletionService,
+    );
 
     const result = await handler.handle(
       {
@@ -184,13 +261,24 @@ describe('UpdatingContactEmailHandler', () => {
         from: '573001112233',
         timestamp: '1711111112',
         messageType: 'text',
-        textBody: 'nuevo@example.com',
+        textBody: 'daniel@example.com',
         phoneNumberId: '123',
       },
     );
 
     expect(result.nextState).toBe(
       'REQUESTING_WHATSAPP_APPOINTMENT_NOTIFICATIONS_OPT_IN',
+    );
+    expect(markPatientEmailVerified.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'daniel@example.com',
+      }),
+    );
+    expect(updatePatientContactDetails.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'PHONE',
+        newPhone: '3014445566',
+      }),
     );
     expect(contactUpdateCompletionService.buildResult).toHaveBeenCalledWith(
       expect.objectContaining({

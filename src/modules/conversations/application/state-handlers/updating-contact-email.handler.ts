@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { PatientContactInputValidatorService } from '../../../patients/application/services/patient-contact-input-validator.service';
+import { MarkPatientEmailVerifiedUseCase } from '../../../patients/application/use-cases/mark-patient-email-verified.use-case';
 import { UpdatePatientContactDetailsUseCase } from '../../../patients/application/use-cases/update-patient-contact-details.use-case';
 import type { NormalizedWhatsappEvent } from '../../../whatsapp/domain/events/normalized-whatsapp.event';
 import { CONVERSATION_STATES } from '../../domain/conversation-state';
@@ -16,6 +17,9 @@ import type {
 } from './conversation-state-handler';
 
 const MAX_INVALID_EMAIL_ATTEMPTS = 3;
+type ContactVerification = NonNullable<
+  NonNullable<ConversationSession['context']>['contactVerification']
+>;
 
 @Injectable()
 export class UpdatingContactEmailHandler implements ConversationStateHandler {
@@ -23,6 +27,7 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
 
   constructor(
     private readonly patientContactInputValidator: PatientContactInputValidatorService,
+    private readonly markPatientEmailVerified: MarkPatientEmailVerifiedUseCase,
     private readonly updatePatientContactDetails: UpdatePatientContactDetailsUseCase,
     private readonly patientContactUpdateOptionsListFactory: PatientContactUpdateOptionsListFactory,
     private readonly patientContactUpdateSuccessMessageFactory: PatientContactUpdateSuccessMessageFactory,
@@ -58,18 +63,18 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     const normalizedEmail = this.patientContactInputValidator.normalizeEmail(
       event.textBody,
     );
+    const currentEmail = this.patientContactInputValidator.normalizeEmail(
+      contactVerification.primaryEmail,
+    );
     const currentPhone = this.patientContactInputValidator.normalizePhone(
       contactVerification.primaryPhone,
     );
     const verifiedPhone = contactVerification.verifiedPhone ?? undefined;
-    const currentEmail = this.patientContactInputValidator.normalizeEmail(
-      contactVerification.primaryEmail,
-    );
-    const hasValidEmail =
-      normalizedEmail &&
-      this.patientContactInputValidator.isValidEmail(normalizedEmail) &&
-      normalizedEmail !== currentEmail;
-    if (!hasValidEmail) {
+
+    if (
+      !normalizedEmail ||
+      !this.patientContactInputValidator.isValidEmail(normalizedEmail)
+    ) {
       return this.handleInvalidEmailInput(
         session,
         contactVerification.invalidEmailAttempts + 1,
@@ -97,6 +102,17 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
           this.patientContactUpdateOptionsListFactory.build(),
         ],
       };
+    }
+
+    if (normalizedEmail === currentEmail) {
+      return this.handleSameEmailInput({
+        session,
+        contactVerification,
+        selectedMode,
+        verifiedPhone,
+        currentPhone,
+        email: normalizedEmail,
+      });
     }
 
     const resolvedVerifiedPhone = verifiedPhone!;
@@ -129,26 +145,11 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
             : null,
       });
 
-      return {
-        nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
-        nextContext: {
-          ...session.context,
-          appointmentNotificationsConsentPhone: undefined,
-          contactVerification: {
-            ...contactVerification,
-            pendingPhone: undefined,
-            verifiedPhone: undefined,
-            invalidEmailAttempts: 0,
-          },
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: userFacingMessage,
-          },
-          this.patientContactUpdateOptionsListFactory.build(),
-        ],
-      };
+      return this.buildContactUpdateSelectionResult({
+        session,
+        contactVerification,
+        message: userFacingMessage,
+      });
     }
 
     await this.auditService.record('patient.contact_update.persisted', {
@@ -212,6 +213,186 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     };
   }
 
+  private async handleSameEmailInput(input: {
+    session: ConversationSession;
+    contactVerification: ContactVerification;
+    selectedMode: NonNullable<ContactVerification['selectedUpdateMode']>;
+    verifiedPhone: string | undefined;
+    currentPhone: string | null;
+    email: string;
+  }): Promise<ConversationStateHandlerResult> {
+    const patientId = input.session.context?.patientValidation?.patientId;
+    const triggerFlowIntent = input.session.context?.flowIntent ?? 'UNKNOWN';
+
+    const emailVerificationResult =
+      await this.markPatientEmailVerified.execute({
+        patientId,
+        email: input.email,
+        updatedBy: 'AdrianaBot',
+        triggerFlowIntent,
+      });
+
+    if (emailVerificationResult.status !== 'UPDATED') {
+      const userFacingMessage = this.resolveEmailVerificationFailureMessage(
+        emailVerificationResult,
+      );
+      await this.auditService.record('patient.contact_update.failed', {
+        conversationKey: input.session.conversationKey,
+        patientId: input.session.context?.patientValidation?.patientId ?? null,
+        flowIntent: input.session.context?.flowIntent ?? null,
+        updateMode: input.selectedMode,
+        reason: emailVerificationResult.reason,
+        technicalDetail:
+          emailVerificationResult.status === 'TECHNICAL_FAILURE'
+            ? emailVerificationResult.technicalDetail ?? null
+            : null,
+      });
+
+      return this.buildContactUpdateSelectionResult({
+        session: input.session,
+        contactVerification: input.contactVerification,
+        message: userFacingMessage,
+      });
+    }
+
+    await this.auditService.record(
+      'patient.contact_update.email_verified_without_change',
+      {
+        conversationKey: input.session.conversationKey,
+        patientId: input.session.context?.patientValidation?.patientId ?? null,
+        flowIntent: input.session.context?.flowIntent ?? null,
+        updateMode: input.selectedMode,
+        emailMasked: emailVerificationResult.emailMasked,
+        result: emailVerificationResult.status,
+      },
+    );
+
+    if (
+      input.selectedMode === 'BOTH' &&
+      input.verifiedPhone !== input.currentPhone
+    ) {
+      const phoneUpdateResult = await this.updatePatientContactDetails.execute({
+        patientId,
+        mode: 'PHONE',
+        newPhone: input.verifiedPhone,
+        updatedBy: 'AdrianaBot',
+        triggerFlowIntent,
+      });
+
+      if (phoneUpdateResult.status !== 'UPDATED') {
+        const userFacingMessage = this.resolvePhoneUpdateFailureMessage(
+          phoneUpdateResult,
+        );
+        await this.auditService.record('patient.contact_update.failed', {
+          conversationKey: input.session.conversationKey,
+          patientId: input.session.context?.patientValidation?.patientId ?? null,
+          flowIntent: input.session.context?.flowIntent ?? null,
+          updateMode: 'PHONE',
+          reason: phoneUpdateResult.reason,
+          technicalDetail:
+            phoneUpdateResult.status === 'TECHNICAL_FAILURE'
+              ? phoneUpdateResult.technicalDetail ?? null
+              : null,
+        });
+
+        return this.buildContactUpdateSelectionResult({
+          session: input.session,
+          contactVerification: input.contactVerification,
+          message: userFacingMessage,
+        });
+      }
+
+      await this.auditService.record('patient.contact_update.persisted', {
+        conversationKey: input.session.conversationKey,
+        patientId: input.session.context?.patientValidation?.patientId ?? null,
+        flowIntent: input.session.context?.flowIntent ?? null,
+        updateMode: 'PHONE',
+        phoneMasked: phoneUpdateResult.phoneMasked,
+        emailMasked: phoneUpdateResult.emailMasked,
+        result: phoneUpdateResult.status,
+      });
+    }
+
+    if (input.selectedMode === 'BOTH') {
+      return this.contactUpdateCompletionService.buildResult({
+        session: input.session,
+        verifiedPhone: input.verifiedPhone!,
+        successMessage: this.patientContactUpdateSuccessMessageFactory.build(),
+      });
+    }
+
+    if (input.session.context?.flowIntent === 'UPDATE_CONTACT') {
+      return {
+        nextState: CONVERSATION_STATES.MAIN_MENU,
+        nextStatus: CONVERSATION_STATUSES.CLOSED,
+        nextContext: {
+          ...input.session.context,
+          flowIntent: undefined,
+          appointmentNotificationsConsentPhone: undefined,
+          contactVerification: undefined,
+          assignedAppointmentSelection: undefined,
+          appointmentReschedule: undefined,
+          specialtySelection: undefined,
+          appointmentDoctorSelection: undefined,
+          appointmentDateSelection: undefined,
+          appointmentTimeSelection: undefined,
+        },
+        outboundMessages: [
+          this.patientContactUpdateSuccessMessageFactory.build(),
+        ],
+      };
+    }
+
+    return {
+      continueFlow: this.primaryFlowContinuationResolver.shouldContinue(
+        input.session,
+      ),
+      nextState: CONVERSATION_STATES.PATIENT_VALIDATED,
+      nextContext: {
+        ...input.session.context,
+        appointmentNotificationsConsentPhone: undefined,
+        contactVerification: {
+          ...input.contactVerification,
+          completedForCurrentFlow: true,
+          pendingPhone: undefined,
+          verifiedPhone: undefined,
+          requiresPhoneRevalidation: false,
+          phoneRevalidationReasons: [],
+        },
+      },
+      outboundMessages: [this.patientContactUpdateSuccessMessageFactory.build()],
+    };
+  }
+
+  private buildContactUpdateSelectionResult(input: {
+    session: ConversationSession;
+    contactVerification: ContactVerification | undefined;
+    message: string;
+  }): ConversationStateHandlerResult {
+    return {
+      nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+      nextContext: {
+        ...input.session.context,
+        appointmentNotificationsConsentPhone: undefined,
+        contactVerification: input.contactVerification
+          ? {
+              ...input.contactVerification,
+              pendingPhone: undefined,
+              verifiedPhone: undefined,
+              invalidEmailAttempts: 0,
+            }
+          : undefined,
+      },
+      outboundMessages: [
+        {
+          type: 'text',
+          body: input.message,
+        },
+        this.patientContactUpdateOptionsListFactory.build(),
+      ],
+    };
+  }
+
   private async handleInvalidEmailInput(
     session: ConversationSession,
     attempts: number,
@@ -222,33 +403,17 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
       flowIntent: session.context?.flowIntent ?? null,
       updateMode:
         session.context?.contactVerification?.selectedUpdateMode ?? null,
-      reason: 'INVALID_OR_REPEATED_EMAIL',
+      reason: 'INVALID_EMAIL',
       attempts,
     });
 
     if (attempts >= MAX_INVALID_EMAIL_ATTEMPTS) {
-      return {
-        nextState: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
-        nextContext: {
-          ...session.context,
-          appointmentNotificationsConsentPhone: undefined,
-          contactVerification: session.context?.contactVerification
-            ? {
-                ...session.context.contactVerification,
-                pendingPhone: undefined,
-                verifiedPhone: undefined,
-                invalidEmailAttempts: 0,
-              }
-            : undefined,
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: 'Superaste el limite de intentos para correo. Selecciona una opcion para continuar.',
-          },
-          this.patientContactUpdateOptionsListFactory.build(),
-        ],
-      };
+      return this.buildContactUpdateSelectionResult({
+        session,
+        contactVerification: session.context?.contactVerification,
+        message:
+          'Superaste el limite de intentos para correo. Selecciona una opcion para continuar.',
+      });
     }
 
     return {
@@ -266,10 +431,45 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
       outboundMessages: [
         {
           type: 'text',
-          body: 'El correo debe ser valido y diferente al actual. Intenta nuevamente.',
+          body: 'El correo ingresado no es valido. Intenta nuevamente.',
         },
       ],
     };
+  }
+
+  private resolveEmailVerificationFailureMessage(
+    result: Exclude<
+      Awaited<ReturnType<MarkPatientEmailVerifiedUseCase['execute']>>,
+      { status: 'UPDATED' }
+    >,
+  ): string {
+    if (result.status === 'VALIDATION_ERROR') {
+      if (
+        result.reason === 'MISSING_EMAIL' ||
+        result.reason === 'INVALID_EMAIL'
+      ) {
+        return 'El correo ingresado no es valido. Verifica el formato e intentalo nuevamente.';
+      }
+
+      if (result.reason === 'EMAIL_MISMATCH') {
+        return 'No fue posible verificar tu correo con el registro actual. Vuelve a intentarlo.';
+      }
+    }
+
+    if (result.status === 'TECHNICAL_FAILURE') {
+      if (result.reason === 'PATIENT_NOT_FOUND') {
+        return 'No fue posible ubicar tu perfil para verificar el correo. Vuelve a validar tu documento e intentalo nuevamente.';
+      }
+
+      if (
+        result.reason === 'WRITE_DISABLED' ||
+        result.reason === 'MISSING_WRITE_CONFIGURATION'
+      ) {
+        return 'La verificacion de correo no esta habilitada en este momento. Intenta de nuevo en unos minutos.';
+      }
+    }
+
+    return 'No fue posible verificar el correo en este momento. Intenta nuevamente desde la lista de actualizacion.';
   }
 
   private resolveEmailUpdateFailureMessage(
@@ -279,10 +479,6 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     >,
   ): string {
     if (result.status === 'VALIDATION_ERROR') {
-      if (result.reason === 'SAME_EMAIL') {
-        return 'El correo que escribiste ya corresponde a tu correo actual. Ingresa un correo diferente.';
-      }
-
       if (
         result.reason === 'MISSING_EMAIL' ||
         result.reason === 'INVALID_EMAIL'
@@ -305,5 +501,36 @@ export class UpdatingContactEmailHandler implements ConversationStateHandler {
     }
 
     return 'No fue posible actualizar el correo en este momento. Intenta nuevamente desde la lista de actualizacion.';
+  }
+
+  private resolvePhoneUpdateFailureMessage(
+    result: Exclude<
+      Awaited<ReturnType<UpdatePatientContactDetailsUseCase['execute']>>,
+      { status: 'UPDATED' }
+    >,
+  ): string {
+    if (result.status === 'VALIDATION_ERROR') {
+      if (
+        result.reason === 'MISSING_PHONE' ||
+        result.reason === 'INVALID_PHONE'
+      ) {
+        return 'El numero debe tener 10 digitos e iniciar por 3.';
+      }
+    }
+
+    if (result.status === 'TECHNICAL_FAILURE') {
+      if (result.reason === 'PATIENT_NOT_FOUND') {
+        return 'No fue posible ubicar tu perfil para actualizar el telefono. Vuelve a validar tu documento e intentalo nuevamente.';
+      }
+
+      if (
+        result.reason === 'WRITE_DISABLED' ||
+        result.reason === 'MISSING_WRITE_CONFIGURATION'
+      ) {
+        return 'La actualizacion de telefono no esta habilitada en este momento. Intenta de nuevo en unos minutos.';
+      }
+    }
+
+    return 'No fue posible actualizar el telefono en este momento. Intenta nuevamente desde la lista de actualizacion.';
   }
 }

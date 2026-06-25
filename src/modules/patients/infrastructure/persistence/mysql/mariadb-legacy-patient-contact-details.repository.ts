@@ -1,6 +1,11 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import mariadb, { type Pool } from 'mariadb';
 import type {
+  MarkPatientEmailVerifiedCommand,
+  MarkPatientEmailVerifiedPersistenceResult,
+  MarkPatientEmailVerifiedRepository,
+} from '../../../domain/ports/mark-patient-email-verified.repository';
+import type {
   MarkPatientPhoneVerifiedCommand,
   MarkPatientPhoneVerifiedPersistenceResult,
   MarkPatientPhoneVerifiedRepository,
@@ -41,6 +46,7 @@ const COLUMN_CANDIDATES: Record<ContactColumnLogicalName, string[]> = {
 export class MariadbLegacyPatientContactDetailsRepository
   implements
     UpdatePatientContactDetailsRepository,
+    MarkPatientEmailVerifiedRepository,
     MarkPatientPhoneVerifiedRepository,
     OnModuleDestroy
 {
@@ -101,40 +107,25 @@ export class MariadbLegacyPatientContactDetailsRepository
   async markPatientPhoneVerified(
     command: MarkPatientPhoneVerifiedCommand,
   ): Promise<MarkPatientPhoneVerifiedPersistenceResult> {
-    if (!this.isLegacyContactWriteEnabled()) {
-      return 'WRITE_DISABLED';
-    }
+    return this.persistVerificationTimestamp({
+      patientId: command.patientId,
+      verifiedAtIso: command.verifiedAtIso,
+      verifiedAtColumnCandidates: COLUMN_CANDIDATES.PHONE_VERIFIED_AT,
+      missingColumnError:
+        '[CONTACT_SCHEMA_MISMATCH] Missing phone verification column in usuarios.',
+    });
+  }
 
-    const connection = await this.getPool().getConnection();
-    try {
-      const availableColumns = await this.resolveAvailableColumns(connection);
-      const phoneVerifiedAtColumn = this.findExistingColumn(
-        availableColumns,
-        COLUMN_CANDIDATES.PHONE_VERIFIED_AT,
-      );
-      if (!phoneVerifiedAtColumn) {
-        throw new Error(
-          '[CONTACT_SCHEMA_MISMATCH] Missing phone verification column in usuarios.',
-        );
-      }
-
-      const verifiedAt = new Date(
-        command.verifiedAtIso ?? new Date().toISOString(),
-      );
-      const sql = `UPDATE ${this.escapeIdentifier('usuarios')} SET ${this.escapeIdentifier(phoneVerifiedAtColumn)} = ? WHERE ${this.escapeIdentifier('IdUsuario')} = ? LIMIT 1`;
-      const result = await connection.query<{
-        affectedRows: number;
-      }>(sql, [verifiedAt, command.patientId]);
-      const affectedRows =
-        typeof result.affectedRows === 'number' ? result.affectedRows : 0;
-      if (affectedRows === 0) {
-        return 'PATIENT_NOT_FOUND';
-      }
-
-      return 'UPDATED';
-    } finally {
-      await connection.release();
-    }
+  async markPatientEmailVerified(
+    command: MarkPatientEmailVerifiedCommand,
+  ): Promise<MarkPatientEmailVerifiedPersistenceResult> {
+    return this.persistVerificationTimestamp({
+      patientId: command.patientId,
+      verifiedAtIso: command.verifiedAtIso,
+      verifiedAtColumnCandidates: COLUMN_CANDIDATES.EMAIL_VERIFIED_AT,
+      missingColumnError:
+        '[CONTACT_SCHEMA_MISMATCH] Missing email verification column in usuarios.',
+    });
   }
 
   private isLegacyContactWriteEnabled(): boolean {
@@ -250,6 +241,50 @@ export class MariadbLegacyPatientContactDetailsRepository
     }
 
     return assignments;
+  }
+
+  private async persistVerificationTimestamp(
+    input: {
+      patientId: number;
+      verifiedAtIso?: string;
+      verifiedAtColumnCandidates: string[];
+      missingColumnError: string;
+    },
+  ): Promise<
+    MarkPatientPhoneVerifiedPersistenceResult | MarkPatientEmailVerifiedPersistenceResult
+  > {
+    if (!this.isLegacyContactWriteEnabled()) {
+      return 'WRITE_DISABLED';
+    }
+
+    const connection = await this.getPool().getConnection();
+    try {
+      const availableColumns = await this.resolveAvailableColumns(connection);
+      const verifiedAtColumn = this.findExistingColumn(
+        availableColumns,
+        input.verifiedAtColumnCandidates,
+      );
+      if (!verifiedAtColumn) {
+        throw new Error(input.missingColumnError);
+      }
+
+      const verifiedAt = new Date(
+        input.verifiedAtIso ?? new Date().toISOString(),
+      );
+      const sql = `UPDATE ${this.escapeIdentifier('usuarios')} SET ${this.escapeIdentifier(verifiedAtColumn)} = ? WHERE ${this.escapeIdentifier('IdUsuario')} = ? LIMIT 1`;
+      const result = await connection.query<{
+        affectedRows: number;
+      }>(sql, [verifiedAt, input.patientId]);
+      const affectedRows =
+        typeof result.affectedRows === 'number' ? result.affectedRows : 0;
+      if (affectedRows === 0) {
+        return 'PATIENT_NOT_FOUND';
+      }
+
+      return 'UPDATED';
+    } finally {
+      await connection.release();
+    }
   }
 
   private async resolveAvailableColumns(
