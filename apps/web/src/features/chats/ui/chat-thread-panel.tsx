@@ -1,3 +1,4 @@
+import type { Ref, UIEventHandler } from 'react';
 import type { AdminChatDetail, AdminChatMessageItem } from '../chats.types';
 import {
   formatConversationStateLabel,
@@ -17,6 +18,10 @@ interface ChatThreadPanelProps {
   onLoadOlderMessages: () => void;
   isLoadingOlderMessages: boolean;
   canViewTechnicalDetails: boolean;
+  messageViewportRef: Ref<HTMLDivElement>;
+  onMessageViewportScroll: UIEventHandler<HTMLDivElement>;
+  onJumpToLatest: () => void;
+  showJumpToLatest: boolean;
 }
 
 export function ChatThreadPanel({
@@ -30,6 +35,10 @@ export function ChatThreadPanel({
   onLoadOlderMessages,
   isLoadingOlderMessages,
   canViewTechnicalDetails,
+  messageViewportRef,
+  onMessageViewportScroll,
+  onJumpToLatest,
+  showJumpToLatest,
 }: ChatThreadPanelProps) {
   if (!detail && !isLoadingDetail) {
     return (
@@ -41,7 +50,7 @@ export function ChatThreadPanel({
   }
 
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--panel)] shadow-sm">
+    <section className="relative flex h-full min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--panel)] shadow-sm">
       <header className="border-b border-[var(--border)] px-4 py-3">
         <h2 className="text-sm font-semibold">
           {detail?.participantPhone ?? 'Cargando...'}
@@ -54,7 +63,11 @@ export function ChatThreadPanel({
         ) : null}
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div
+        ref={messageViewportRef}
+        onScroll={onMessageViewportScroll}
+        className="flex-1 overflow-y-auto p-4"
+      >
         {isLoadingDetail || isLoadingMessages ? (
           <StateMessage title="Cargando mensajes..." />
         ) : null}
@@ -94,6 +107,18 @@ export function ChatThreadPanel({
           </ul>
         ) : null}
       </div>
+      {showJumpToLatest ? (
+        <div className="pointer-events-none absolute bottom-4 right-4">
+          <button
+            type="button"
+            onClick={onJumpToLatest}
+            aria-label="Ir al ultimo mensaje"
+            className="pointer-events-auto rounded-full border border-teal-200 bg-white px-4 py-2 text-xs font-semibold text-teal-800 shadow-sm transition hover:bg-teal-50"
+          >
+            Ir al ultimo mensaje
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
