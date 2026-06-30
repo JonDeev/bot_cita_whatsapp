@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-06-30
+
+### Improvements
+
+- Admin chats and conversation detail views now show the visible text that patients actually received for supported outbound WhatsApp templates instead of only showing `template:<name>`.
+- This applies to the current appointment reminder, phone verification, and satisfaction survey flow templates.
+- Template observability now keeps the visible message in `body` and preserves technical template metadata separately for internal inspection.
+- The template snapshot contract was tightened so observability stores only approved non-sensitive flow metadata.
+
+### Notes
+
+- Patient-facing WhatsApp flows and message delivery behavior were not changed.
+- Technical details remain available in the admin panel according to the user's role.
+
 ## 2026-06-25
 
 ### Improvements
