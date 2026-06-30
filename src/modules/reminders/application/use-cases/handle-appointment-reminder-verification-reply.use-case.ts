@@ -25,6 +25,7 @@ import { AppointmentReminderTemplateConfigService } from '../services/appointmen
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
 import {
   APPOINTMENT_REMINDER_VERIFICATION_CONSENT_SOURCE,
   buildAppointmentReminderVerificationConsentText,
@@ -82,6 +83,7 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
     private readonly configService: AppointmentReminderDispatchConfigService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
     private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
+    private readonly templateSnapshotService: TemplateMessageSnapshotService,
     private readonly registerWhatsappPostBookingConsent: RegisterWhatsappPostBookingConsentUseCase,
     private readonly auditService: AuditService,
     private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
@@ -531,6 +533,14 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
 
     const recipientPhone =
       dispatch.recipientPhoneE164 ?? dispatch.recipientPhoneRaw;
+    const bodyTextParameters =
+      this.buildReminderBodyParameters(confirmedAppointment);
+    const templateSnapshot =
+      this.templateSnapshotService.buildAppointmentReminderSnapshot({
+        templateName: dispatch.templateName,
+        languageCode: this.templateConfig.getTemplateLanguageCode(),
+        bodyTextParameters,
+      });
 
     const sendResult = await this.templateDeliveryService.send({
       conversationKey,
@@ -539,7 +549,8 @@ export class HandleAppointmentReminderVerificationReplyUseCase {
       to: recipientPhone,
       templateName: dispatch.templateName,
       languageCode: this.templateConfig.getTemplateLanguageCode(),
-      bodyTextParameters: this.buildReminderBodyParameters(confirmedAppointment),
+      bodyTextParameters,
+      templateSnapshot,
       trigger: 'appointment_reminder.phone_confirmed',
     });
 

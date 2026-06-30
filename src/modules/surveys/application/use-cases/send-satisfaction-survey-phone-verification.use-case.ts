@@ -5,6 +5,8 @@ import { CONVERSATION_MESSAGE_REPOSITORY } from '../../../conversations/domain/c
 import type { ConversationMessageRepository } from '../../../conversations/domain/ports/conversation-message.repository';
 import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
 import { WhatsappConfigService } from '../../../whatsapp/application/services/whatsapp-config.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
+import type { OutboundWhatsappTemplateQuickReplyButton } from '../../../whatsapp/domain/value-objects/outbound-whatsapp-message';
 import { SURVEY_DISPATCH_REPOSITORY } from '../../domain/surveys.tokens';
 import {
   SATISFACTION_SURVEY_DISPATCH_STATUSES,
@@ -41,6 +43,7 @@ export class SendSatisfactionSurveyPhoneVerificationUseCase {
     private readonly templateConfig: SurveyPhoneVerificationTemplateConfigService,
     private readonly actionKeyService: SatisfactionSurveyPhoneVerificationActionKeyService,
     private readonly runtimeSettingsResolver: SatisfactionSurveyRuntimeSettingsResolverService,
+    private readonly templateSnapshotService: TemplateMessageSnapshotService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -104,8 +107,29 @@ export class SendSatisfactionSurveyPhoneVerificationUseCase {
     const patientName = dispatch.patientName.trim() || 'Paciente';
     const confirmActionKey = this.actionKeyService.create();
     const rejectActionKey = this.actionKeyService.create();
+    const quickReplyButtons: OutboundWhatsappTemplateQuickReplyButton[] = [
+      {
+        index: '0',
+        payload: `${this.templateConfig.getConfirmButtonPayloadPrefix()}${confirmActionKey}`,
+      },
+      {
+        index: '1',
+        payload: `${this.templateConfig.getRejectButtonPayloadPrefix()}${rejectActionKey}`,
+      },
+    ];
     const sentAtIso = new Date().toISOString();
     const bodyTextParameters = [patientName];
+    const templateSnapshot =
+      this.templateSnapshotService.buildSurveyPhoneVerificationSnapshot({
+        templateName,
+        languageCode: templateLanguageCode,
+        bodyTextParameters,
+        visibleButtons: [
+          { index: '0', title: 'Confirmar' },
+          { index: '1', title: 'No lo reconozco' },
+        ],
+        buttonPayloads: quickReplyButtons,
+      });
 
     await this.auditService.record(
       'survey.phone_verification.template.attempted',
@@ -128,16 +152,7 @@ export class SendSatisfactionSurveyPhoneVerificationUseCase {
               templateName,
               languageCode: templateLanguageCode,
               bodyTextParameters,
-              quickReplyButtons: [
-                {
-                  index: '0',
-                  payload: `${this.templateConfig.getConfirmButtonPayloadPrefix()}${confirmActionKey}`,
-                },
-                {
-                  index: '1',
-                  payload: `${this.templateConfig.getRejectButtonPayloadPrefix()}${rejectActionKey}`,
-                },
-              ],
+              quickReplyButtons,
               trigger: 'satisfaction_survey_phone_verification',
             })
           : { messageId: this.buildMockMessageId(dispatch.id, templateName) };
@@ -162,8 +177,9 @@ export class SendSatisfactionSurveyPhoneVerificationUseCase {
         messageType: 'template',
         to: patientPhone,
         whatsappMessageId: result.messageId,
-        body: `template:${templateName}`,
+        body: templateSnapshot.visibleBody,
         sentAt: sentAtIso,
+        templateSnapshot,
       });
 
       await this.surveyDispatchRepository.markVerificationPending({

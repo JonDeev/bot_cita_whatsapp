@@ -4,10 +4,12 @@ import { ConversationKeyFactory } from '../../../conversations/application/servi
 import { CONVERSATION_STATUSES } from '../../../conversations/domain/conversation-status';
 import { SendWhatsappFlowTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-flow-template-message.use-case';
 import { WhatsappConfigService } from '../../../whatsapp/application/services/whatsapp-config.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
 import { SendSatisfactionSurveyFlowInvitationUseCase } from './send-satisfaction-survey-flow-invitation.use-case';
 
 describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
   it('sends the configured flow template and persists the outbound message', async () => {
+    const templateSnapshotService = new TemplateMessageSnapshotService();
     const repository = {
       findById: jest.fn().mockResolvedValue({
         id: 22,
@@ -69,6 +71,15 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
     const auditService = {
       record: jest.fn().mockResolvedValue(undefined),
     } as unknown as AuditService;
+    const expectedTemplateSnapshot =
+      templateSnapshotService.buildSurveyFlowInvitationSnapshot({
+        templateName: 'satisfaction_survey_flow',
+        languageCode: 'es_CO',
+        bodyTextParameters: ['Adriana', 'MEDICINA GENERAL', '07:30'],
+        buttonIndex: '0',
+        dispatchId: '22',
+        surveyDateIso: '2026-05-10',
+      });
 
     const useCase = new SendSatisfactionSurveyFlowInvitationUseCase(
       repository as any,
@@ -80,6 +91,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
       surveyFlowTemplateConfig as any,
       surveyFlowTokenFactory,
       runtimeSettingsResolver as any,
+      templateSnapshotService,
       auditService,
     );
 
@@ -106,7 +118,12 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
       initialWhatsappMessageId: 'wamid-flow-555',
       flowToken: 'survey_dispatch:22:2026-05-10',
     });
-    expect(conversationMessageRepository.saveOutbound).toHaveBeenCalled();
+    expect(conversationMessageRepository.saveOutbound).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expectedTemplateSnapshot.visibleBody,
+        templateSnapshot: expectedTemplateSnapshot,
+      }),
+    );
     expect(result).toEqual({ messageId: 'wamid-flow-555' });
   });
 
@@ -173,6 +190,7 @@ describe('SendSatisfactionSurveyFlowInvitationUseCase', () => {
       } as any,
       { create: jest.fn(() => 'survey_dispatch:22:2026-05-10') },
       runtimeSettingsResolver as any,
+      new TemplateMessageSnapshotService(),
       auditService,
     );
 

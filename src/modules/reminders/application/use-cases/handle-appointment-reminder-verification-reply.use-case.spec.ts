@@ -15,6 +15,7 @@ import type { AppointmentReminderTemplateDeliveryService } from '../services/app
 import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
 import { HandleAppointmentReminderVerificationReplyUseCase } from './handle-appointment-reminder-verification-reply.use-case';
 
 type DispatchRepositoryMock = Pick<
@@ -91,6 +92,7 @@ function createUseCase(input: {
   tokenService: AppointmentReminderButtonTokenService;
   verificationActionKeyService?: AppointmentReminderVerificationActionKeyService;
   templateConfig: AppointmentReminderTemplateConfigService;
+  templateSnapshotService?: TemplateMessageSnapshotService;
   runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService;
 }): HandleAppointmentReminderVerificationReplyUseCase {
   const configService: AppointmentReminderDispatchConfigService = {
@@ -152,6 +154,7 @@ function createUseCase(input: {
     configService,
     new AppointmentReminderPhoneNormalizerService(),
     input.templateDeliveryService as AppointmentReminderTemplateDeliveryService,
+    input.templateSnapshotService ?? new TemplateMessageSnapshotService(),
     input.registerWhatsappPostBookingConsent ??
       ({
         execute: jest.fn().mockResolvedValue({ status: 'RECORDED' }),
@@ -901,20 +904,29 @@ describe('HandleAppointmentReminderVerificationReplyUseCase', () => {
       receivedAtIso: '2026-05-25T17:00:00.000Z',
     });
 
+    const expectedBodyTextParameters = [
+      'MARIA PEREZ',
+      'MEDICINA GENERAL',
+      'PRESENCIAL',
+      '2099-04-01',
+      '13:00',
+      'SANTA MARTA',
+      'CALLE 15',
+      'DR. JUAN MARTINEZ',
+    ];
+    const expectedTemplateSnapshot =
+      new TemplateMessageSnapshotService().buildAppointmentReminderSnapshot({
+        templateName: 'recordatorio_cita_24h',
+        languageCode: templateConfig.getTemplateLanguageCode(),
+        bodyTextParameters: expectedBodyTextParameters,
+      });
+
     expect(templateDeliveryService.send).toHaveBeenCalledWith(
       expect.objectContaining({
         to: '573005556677',
         templateName: 'recordatorio_cita_24h',
-        bodyTextParameters: [
-          'MARIA PEREZ',
-          'MEDICINA GENERAL',
-          'PRESENCIAL',
-          '2099-04-01',
-          '13:00',
-          'SANTA MARTA',
-          'CALLE 15',
-          'DR. JUAN MARTINEZ',
-        ],
+        bodyTextParameters: expectedBodyTextParameters,
+        templateSnapshot: expectedTemplateSnapshot,
       }),
     );
     expect(dispatchRepository.markPostVerificationSent).toHaveBeenCalledWith({

@@ -12,6 +12,39 @@ export interface SaveInboundConversationMessageInput {
   receivedAt: string;
 }
 
+export interface TemplateMessageSnapshotButton {
+  index: string;
+  title: string;
+}
+
+export interface TemplateMessageSnapshotButtonPayload {
+  index: string;
+  payload: string;
+}
+
+export interface TemplateMessageSnapshotFlowMetadata {
+  buttonIndex?: string;
+  ctaLabel?: string;
+  dispatchId?: string;
+  surveyDateIso?: string;
+}
+
+export interface TemplateMessageSnapshot {
+  templateName: string;
+  templateLanguageCode: string;
+  templateVariant:
+    | 'APPOINTMENT_REMINDER'
+    | 'SURVEY_PHONE_VERIFICATION'
+    | 'SURVEY_FLOW_INVITATION';
+  visibleBody: string;
+  bodyTextParameters: readonly string[];
+  visibleButtons: readonly TemplateMessageSnapshotButton[];
+  buttonPayloads?: readonly TemplateMessageSnapshotButtonPayload[];
+  flowMetadata?: TemplateMessageSnapshotFlowMetadata;
+  snapshotVersion: string;
+  renderedHash: string;
+}
+
 export interface SaveOutboundConversationMessageInput {
   conversationKey: string;
   messageType: string;
@@ -19,6 +52,7 @@ export interface SaveOutboundConversationMessageInput {
   whatsappMessageId: string | null;
   body: string | null;
   sentAt: string;
+  templateSnapshot?: TemplateMessageSnapshot;
 }
 
 export interface ConversationMessageRepository {

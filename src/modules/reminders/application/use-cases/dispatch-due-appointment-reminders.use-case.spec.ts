@@ -16,6 +16,7 @@ import { AppointmentReminderTemplateDeliveryService } from '../services/appointm
 import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from '../services/appointment-reminder-runtime-settings-resolver.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
 import { DispatchDueAppointmentRemindersUseCase } from './dispatch-due-appointment-reminders.use-case';
 
 type DispatchRepositoryMock = {
@@ -167,6 +168,7 @@ type DispatchDueAppointmentRemindersFixture = {
   windowService: WindowServiceMock;
   buttonTokenService: ButtonTokenServiceMock;
   phoneNormalizer: PhoneNormalizerServiceMock;
+  templateSnapshotService: TemplateMessageSnapshotService;
   templateDeliveryService: TemplateDeliveryServiceMock;
   verificationActionKeyService: AppointmentReminderVerificationActionKeyService;
   failurePolicy: AppointmentReminderDispatchFailurePolicyService;
@@ -375,6 +377,7 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
   const verificationActionKeyService =
     new AppointmentReminderVerificationActionKeyService();
   const failurePolicy = new AppointmentReminderDispatchFailurePolicyService();
+  const templateSnapshotService = new TemplateMessageSnapshotService();
 
   const templateDeliveryService: TemplateDeliveryServiceMock = {
     send: jest
@@ -417,6 +420,7 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     verificationActionKeyService,
     failurePolicy,
     phoneNormalizer as unknown as AppointmentReminderPhoneNormalizerService,
+    templateSnapshotService,
     templateDeliveryService as unknown as AppointmentReminderTemplateDeliveryService,
     auditService,
     runtimeResolver as unknown as AppointmentReminderRuntimeSettingsResolverService,
@@ -433,6 +437,7 @@ function createDispatchDueAppointmentRemindersFixture(): DispatchDueAppointmentR
     windowService,
     buttonTokenService,
     phoneNormalizer,
+    templateSnapshotService,
     templateDeliveryService,
     verificationActionKeyService,
     failurePolicy,
@@ -1042,6 +1047,25 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
         to: '573001234561',
       }),
     );
+    const reminderCallArgs = fixture.templateDeliveryService.send.mock.calls[0]?.[0];
+    expect(reminderCallArgs?.templateSnapshot?.visibleBody).toBe(
+      fixture.templateSnapshotService
+        .buildAppointmentReminderSnapshot({
+          templateName: 'recordatorio_cita_24h',
+          languageCode: 'es_CO',
+          bodyTextParameters: [
+            'ADRIANA RUIZ',
+            'MEDICINA GENERAL',
+            'PRESENCIAL',
+            '2026-05-26',
+            '15:00',
+            'SANTA MARTA',
+            'CALLE 1',
+            'MEDICO',
+          ],
+        })
+        .visibleBody,
+    );
     expect(result).toEqual({
       claimed: 1,
       sent: 1,
@@ -1121,6 +1145,23 @@ describe('DispatchDueAppointmentRemindersUseCase', () => {
       }),
     );
     const callArgs = fixture.templateDeliveryService.send.mock.calls[0]?.[0];
+    expect(callArgs?.templateSnapshot?.visibleBody).toBe(
+      fixture.templateSnapshotService
+        .buildSurveyPhoneVerificationSnapshot({
+          templateName: 'verificacion_telefono_paciente',
+          languageCode: 'es_CO',
+          bodyTextParameters: ['ADRIANA RUIZ'],
+          visibleButtons: [
+            { index: '0', title: 'Confirmar' },
+            { index: '1', title: 'No lo reconozco' },
+          ],
+          buttonPayloads: callArgs?.quickReplyButtons,
+        })
+        .visibleBody,
+    );
+    expect(callArgs?.templateSnapshot?.buttonPayloads).toEqual(
+      callArgs?.quickReplyButtons,
+    );
     expect(callArgs?.quickReplyButtons?.[0]?.payload).toMatch(/^arc:/);
     expect(callArgs?.quickReplyButtons?.[1]?.payload).toMatch(/^arr:/);
     expect(callArgs?.quickReplyButtons?.[0]?.payload.length).toBeLessThanOrEqual(128);

@@ -5,10 +5,18 @@ import type { AppointmentReminderOutboxRepository } from '../../domain/ports/app
 import { AppointmentReminderDispatchConfigService } from './appointment-reminder-dispatch-config.service';
 import { AppointmentReminderTemplateDeliveryService } from './appointment-reminder-template-delivery.service';
 import { SendWhatsappTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-template-message.use-case';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
 import { AppointmentReminderRuntimeSettingsResolverService } from './appointment-reminder-runtime-settings-resolver.service';
 
 describe('AppointmentReminderTemplateDeliveryService', () => {
   it('uses mock delivery mode when configured and persists outbound metadata', async () => {
+    const templateSnapshotService = new TemplateMessageSnapshotService();
+    const templateSnapshot =
+      templateSnapshotService.buildAppointmentReminderSnapshot({
+        templateName: 'recordatorio_cita_24h',
+        languageCode: 'es_CO',
+        bodyTextParameters: ['PACIENTE'],
+      });
     const saveOutbound = jest.fn().mockResolvedValue(undefined);
     const execute = jest.fn();
     const record = jest.fn().mockResolvedValue(undefined);
@@ -56,6 +64,7 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
       languageCode: 'es_CO',
       bodyTextParameters: ['PACIENTE'],
       trigger: 'appointment_reminder.dispatch_due',
+      templateSnapshot,
     });
 
     expect(execute).not.toHaveBeenCalled();
@@ -80,7 +89,7 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
       messageType: 'template',
       to: '573001234567',
       whatsappMessageId: 'mock:91:recordatorio_cita_24h',
-      body: 'template:recordatorio_cita_24h',
+      body: templateSnapshot.visibleBody,
     });
     expect(typeof savedMessage?.[0].sentAt).toBe('string');
     expect(record).toHaveBeenCalledWith(
@@ -98,6 +107,17 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
   });
 
   it('uses live delivery mode when the send cohort includes the patient', async () => {
+    const templateSnapshotService = new TemplateMessageSnapshotService();
+    const templateSnapshot =
+      templateSnapshotService.buildSurveyPhoneVerificationSnapshot({
+        templateName: 'verificacion_telefono_paciente',
+        languageCode: 'es_CO',
+        bodyTextParameters: ['PACIENTE'],
+        visibleButtons: [
+          { index: '0', title: 'Confirmar' },
+          { index: '1', title: 'No lo reconozco' },
+        ],
+      });
     const saveOutbound = jest.fn().mockResolvedValue(undefined);
     const execute = jest.fn().mockResolvedValue({ messageId: 'wamid-live-1' });
     const record = jest.fn().mockResolvedValue(undefined);
@@ -148,6 +168,7 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
         { index: '1', payload: 'reject:token' },
       ],
       trigger: 'appointment_reminder.phone_verification',
+      templateSnapshot,
     });
 
     expect(execute).toHaveBeenCalledWith(
@@ -168,7 +189,7 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
       messageType: 'template',
       to: '573001234568',
       whatsappMessageId: 'wamid-live-1',
-      body: 'template:verificacion_telefono_paciente',
+      body: templateSnapshot.visibleBody,
     });
     expect(typeof savedLiveMessage?.[0].sentAt).toBe('string');
     expect(markSent).toHaveBeenCalledWith(
@@ -184,6 +205,13 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
   });
 
   it('prefers runtime resolver settings over bootstrap config when available', async () => {
+    const templateSnapshotService = new TemplateMessageSnapshotService();
+    const templateSnapshot =
+      templateSnapshotService.buildAppointmentReminderSnapshot({
+        templateName: 'recordatorio_cita_24h',
+        languageCode: 'es_CO',
+        bodyTextParameters: ['PACIENTE'],
+      });
     const saveOutbound = jest.fn().mockResolvedValue(undefined);
     const execute = jest.fn().mockResolvedValue({ messageId: 'wamid-live-2' });
     const record = jest.fn().mockResolvedValue(undefined);
@@ -245,6 +273,7 @@ describe('AppointmentReminderTemplateDeliveryService', () => {
       languageCode: 'es_CO',
       bodyTextParameters: ['PACIENTE'],
       trigger: 'appointment_reminder.dispatch_due',
+      templateSnapshot,
     });
 
     expect(execute).toHaveBeenCalledTimes(1);

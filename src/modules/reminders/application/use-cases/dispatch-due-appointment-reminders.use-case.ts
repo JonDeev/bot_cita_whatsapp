@@ -22,6 +22,8 @@ import { AppointmentReminderTemplateConfigService } from '../services/appointmen
 import { AppointmentReminderTemplateDeliveryService } from '../services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderVerificationActionKeyService } from '../services/appointment-reminder-verification-action-key.service';
 import { AppointmentReminderWindowService } from '../services/appointment-reminder-window.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
+import type { OutboundWhatsappTemplateQuickReplyButton } from '../../../whatsapp/domain/value-objects/outbound-whatsapp-message';
 
 export interface DispatchDueAppointmentRemindersResult {
   claimed: number;
@@ -59,6 +61,7 @@ export class DispatchDueAppointmentRemindersUseCase {
     private readonly verificationActionKeyService: AppointmentReminderVerificationActionKeyService,
     private readonly failurePolicy: AppointmentReminderDispatchFailurePolicyService,
     private readonly phoneNormalizer: AppointmentReminderPhoneNormalizerService,
+    private readonly templateSnapshotService: TemplateMessageSnapshotService,
     private readonly templateDeliveryService: AppointmentReminderTemplateDeliveryService,
     private readonly auditService: AuditService,
     private readonly runtimeResolver?: AppointmentReminderRuntimeSettingsResolverService,
@@ -214,6 +217,12 @@ export class DispatchDueAppointmentRemindersUseCase {
         if (contactDecision.kind === 'SEND_REMINDER') {
           const bodyTextParameters =
             this.buildReminderBodyParameters(appointment);
+          const templateSnapshot =
+            this.templateSnapshotService.buildAppointmentReminderSnapshot({
+              templateName: dispatch.templateName,
+              languageCode: this.templateConfig.getTemplateLanguageCode(),
+              bodyTextParameters,
+            });
           const sendResult = await this.sendWithLeaseHeartbeat({
             dispatch,
             workerId,
@@ -230,6 +239,7 @@ export class DispatchDueAppointmentRemindersUseCase {
                 templateName: dispatch.templateName,
                 languageCode: this.templateConfig.getTemplateLanguageCode(),
                 bodyTextParameters,
+                templateSnapshot,
                 trigger: 'appointment_reminder.dispatch_due',
               }),
           });
@@ -294,10 +304,33 @@ export class DispatchDueAppointmentRemindersUseCase {
           this.windowService.resolveVerificationExpiresAtIso(
             dispatch.appointmentStartsAtIso,
           );
+        const verificationBodyTextParameters =
+          this.buildVerificationBodyParameters(appointment);
         const verificationConfirmActionKey =
           this.verificationActionKeyService.create();
         const verificationRejectActionKey =
           this.verificationActionKeyService.create();
+        const verificationQuickReplyButtons: OutboundWhatsappTemplateQuickReplyButton[] = [
+          {
+            index: '0',
+            payload: `${this.templateConfig.getConfirmButtonPayloadPrefix()}${verificationConfirmActionKey}`,
+          },
+          {
+            index: '1',
+            payload: `${this.templateConfig.getRejectButtonPayloadPrefix()}${verificationRejectActionKey}`,
+          },
+        ];
+        const verificationTemplateSnapshot =
+          this.templateSnapshotService.buildSurveyPhoneVerificationSnapshot({
+            templateName: dispatch.verificationTemplateName,
+            languageCode: this.templateConfig.getTemplateLanguageCode(),
+            bodyTextParameters: verificationBodyTextParameters,
+            visibleButtons: [
+              { index: '0', title: 'Confirmar' },
+              { index: '1', title: 'No lo reconozco' },
+            ],
+            buttonPayloads: verificationQuickReplyButtons,
+          });
 
         const sendResult = await this.sendWithLeaseHeartbeat({
           dispatch,
@@ -314,18 +347,9 @@ export class DispatchDueAppointmentRemindersUseCase {
               to: contactDecision.recipientPhoneE164,
               templateName: dispatch.verificationTemplateName,
               languageCode: this.templateConfig.getTemplateLanguageCode(),
-              bodyTextParameters:
-                this.buildVerificationBodyParameters(appointment),
-              quickReplyButtons: [
-                {
-                  index: '0',
-                  payload: `${this.templateConfig.getConfirmButtonPayloadPrefix()}${verificationConfirmActionKey}`,
-                },
-                {
-                  index: '1',
-                  payload: `${this.templateConfig.getRejectButtonPayloadPrefix()}${verificationRejectActionKey}`,
-                },
-              ],
+              bodyTextParameters: verificationBodyTextParameters,
+              templateSnapshot: verificationTemplateSnapshot,
+              quickReplyButtons: verificationQuickReplyButtons,
               trigger: 'appointment_reminder.phone_verification',
             }),
         });

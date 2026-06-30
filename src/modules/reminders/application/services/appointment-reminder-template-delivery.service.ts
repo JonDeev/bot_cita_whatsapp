@@ -2,7 +2,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@whatsapp-bot/prisma-client';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { CONVERSATION_MESSAGE_REPOSITORY } from '../../../conversations/domain/conversations.tokens';
-import type { ConversationMessageRepository } from '../../../conversations/domain/ports/conversation-message.repository';
+import type {
+  ConversationMessageRepository,
+  TemplateMessageSnapshot,
+} from '../../../conversations/domain/ports/conversation-message.repository';
 import { APPOINTMENT_REMINDER_OUTBOX_REPOSITORY } from '../../domain/reminders.tokens';
 import type { AppointmentReminderOutboxRepository } from '../../domain/ports/appointment-reminder-outbox.repository';
 import {
@@ -26,6 +29,7 @@ export interface AppointmentReminderTemplateDeliveryInput {
   trigger: string;
   bodyTextParameters?: string[];
   quickReplyButtons?: OutboundWhatsappTemplateQuickReplyButton[];
+  templateSnapshot: TemplateMessageSnapshot;
 }
 
 export interface AppointmentReminderTemplateDeliveryResult extends OutboundWhatsappSendResult {
@@ -107,6 +111,7 @@ export class AppointmentReminderTemplateDeliveryService {
       sentAtIso,
       trigger: input.trigger,
       deliveryMode,
+      templateSnapshot: input.templateSnapshot,
     });
 
     return result;
@@ -301,6 +306,7 @@ export class AppointmentReminderTemplateDeliveryService {
     sentAtIso: string;
     trigger: string;
     deliveryMode: 'live' | 'mock';
+    templateSnapshot: TemplateMessageSnapshot;
   }): Promise<void> {
     try {
       await this.conversationMessageRepository.saveOutbound({
@@ -308,8 +314,9 @@ export class AppointmentReminderTemplateDeliveryService {
         messageType: 'template',
         to: input.to,
         whatsappMessageId: input.messageId,
-        body: `template:${input.templateName}`,
+        body: input.templateSnapshot.visibleBody,
         sentAt: input.sentAtIso,
+        templateSnapshot: input.templateSnapshot,
       });
     } catch (error: unknown) {
       const errorMessage =

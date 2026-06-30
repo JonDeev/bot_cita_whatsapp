@@ -1,11 +1,32 @@
 import { Injectable } from '@nestjs/common';
-import { BotMessageDirection } from '@whatsapp-bot/prisma-client';
+import { BotMessageDirection, Prisma } from '@whatsapp-bot/prisma-client';
 import { PrismaBotService } from '../../../../../shared/infrastructure/prisma-bot/prisma-bot.service';
 import type {
   ConversationMessageRepository,
   SaveInboundConversationMessageInput,
   SaveOutboundConversationMessageInput,
+  TemplateMessageSnapshot,
 } from '../../../domain/ports/conversation-message.repository';
+
+interface TemplateSnapshotTransportPayload {
+  to: string;
+  messageType: string;
+  whatsappMessageId?: string;
+}
+
+type TemplateSnapshotPayload = Prisma.InputJsonObject & {
+  kind: 'template_snapshot';
+  templateName: string;
+  templateLanguageCode: string;
+  templateVariant: TemplateMessageSnapshot['templateVariant'];
+  bodyTextParameters: string[];
+  visibleButtons: Array<{ index: string; title: string }>;
+  buttonPayloads: Array<{ index: string; payload: string }>;
+  flowMetadata: TemplateMessageSnapshot['flowMetadata'] | null;
+  snapshotVersion: string;
+  renderedHash: string;
+  transport: TemplateSnapshotTransportPayload;
+};
 
 @Injectable()
 export class PrismaBotConversationMessageRepository implements ConversationMessageRepository {
@@ -59,12 +80,9 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
       input.to,
     );
     const occurredAt = new Date(input.sentAt);
-    const body = this.resolveOutboundBody(input);
-    const payload = {
-      to: input.to,
-      messageType: input.messageType,
-      body: input.body,
-    };
+    // Template snapshots own the visible copy; payload stays technical.
+    const body = input.templateSnapshot?.visibleBody ?? this.resolveOutboundBody(input);
+    const payload = this.buildOutboundPayload(input);
 
     if (input.whatsappMessageId) {
       await this.prismaBot.botMessage.upsert({
@@ -195,6 +213,10 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
   }
 
   private resolveOutboundBody(input: SaveOutboundConversationMessageInput): string | null {
+    if (input.templateSnapshot?.visibleBody) {
+      return input.templateSnapshot.visibleBody;
+    }
+
     const normalizedText = this.normalizeVisibleText(input.body);
     if (normalizedText) {
       return normalizedText;
@@ -205,6 +227,68 @@ export class PrismaBotConversationMessageRepository implements ConversationMessa
     }
 
     return null;
+  }
+
+  private buildOutboundPayload(
+    input: SaveOutboundConversationMessageInput,
+  ): Prisma.InputJsonObject {
+    if (!input.templateSnapshot) {
+      return {
+        to: input.to,
+        messageType: input.messageType,
+        body: input.body,
+      };
+    }
+
+    const templateSnapshot = input.templateSnapshot;
+    // Keep the observability snapshot structured and free of the visible body.
+    const flowMetadata = templateSnapshot.flowMetadata
+      ? {
+          buttonIndex: templateSnapshot.flowMetadata.buttonIndex,
+          ...(templateSnapshot.flowMetadata.ctaLabel
+            ? {
+                ctaLabel: templateSnapshot.flowMetadata.ctaLabel,
+              }
+            : {}),
+          ...(templateSnapshot.flowMetadata.dispatchId
+            ? {
+                dispatchId: templateSnapshot.flowMetadata.dispatchId,
+              }
+            : {}),
+          ...(templateSnapshot.flowMetadata.surveyDateIso
+            ? {
+                surveyDateIso: templateSnapshot.flowMetadata.surveyDateIso,
+              }
+            : {}),
+        }
+      : null;
+    const payload: TemplateSnapshotPayload = {
+      kind: 'template_snapshot',
+      templateName: templateSnapshot.templateName,
+      templateLanguageCode: templateSnapshot.templateLanguageCode,
+      templateVariant: templateSnapshot.templateVariant,
+      bodyTextParameters: [...templateSnapshot.bodyTextParameters],
+      visibleButtons: templateSnapshot.visibleButtons.map((button) => ({
+        index: button.index,
+        title: button.title,
+      })),
+      buttonPayloads: (templateSnapshot.buttonPayloads ?? []).map((button) => ({
+        index: button.index,
+        payload: button.payload,
+      })),
+      flowMetadata,
+      snapshotVersion: templateSnapshot.snapshotVersion,
+      renderedHash: templateSnapshot.renderedHash,
+      transport: {
+        to: input.to,
+        messageType: input.messageType,
+        ...(input.whatsappMessageId
+          ? { whatsappMessageId: input.whatsappMessageId }
+          : {}),
+      },
+    };
+
+    return payload;
   }
 
   private normalizeVisibleText(value: string | null | undefined): string | null {

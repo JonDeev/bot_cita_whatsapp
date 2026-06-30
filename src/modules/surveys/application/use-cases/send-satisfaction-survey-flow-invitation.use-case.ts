@@ -16,6 +16,7 @@ import type { ConversationPersistenceRepository } from '../../../conversations/d
 import { ConversationKeyFactory } from '../../../conversations/application/services/conversation-key.factory';
 import { SendWhatsappFlowTemplateMessageUseCase } from '../../../whatsapp/application/use-cases/outbound/send-whatsapp-flow-template-message.use-case';
 import { WhatsappConfigService } from '../../../whatsapp/application/services/whatsapp-config.service';
+import { TemplateMessageSnapshotService } from '../../../whatsapp/application/services/template-message-snapshot.service';
 import {
   SATISFACTION_SURVEY_DISPATCH_STATUSES,
   type SurveyDispatchRepository,
@@ -44,6 +45,7 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
     private readonly surveyFlowTemplateConfig: SurveyFlowTemplateConfigService,
     private readonly surveyFlowTokenFactory: SurveyFlowTokenFactory,
     private readonly runtimeSettingsResolver: SatisfactionSurveyRuntimeSettingsResolverService,
+    private readonly templateSnapshotService: TemplateMessageSnapshotService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -129,6 +131,20 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
       primaryAppointment?.specialtyName?.trim() || 'la especialidad asignada';
     const appointmentHour =
       primaryAppointment?.appointmentTimeHhmm || 'la hora asignada';
+    const bodyTextParameters = [
+      dispatch.patientName,
+      specialtyName,
+      appointmentHour,
+    ];
+    const templateSnapshot =
+      this.templateSnapshotService.buildSurveyFlowInvitationSnapshot({
+        templateName,
+        languageCode: templateLanguageCode,
+        bodyTextParameters,
+        buttonIndex,
+        dispatchId: String(dispatch.id),
+        surveyDateIso: dispatch.surveyDateIso,
+      });
 
     await this.auditService.record('survey.dispatch.flow_template.attempted', {
       dispatchId: dispatch.id,
@@ -144,11 +160,7 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
               to: recipientPhone,
               templateName,
               languageCode: templateLanguageCode,
-              bodyTextParameters: [
-                dispatch.patientName,
-                specialtyName,
-                appointmentHour,
-              ],
+              bodyTextParameters,
               buttonIndex,
               flowToken,
               flowActionData: {
@@ -178,8 +190,9 @@ export class SendSatisfactionSurveyFlowInvitationUseCase {
         messageType: 'template',
         to: recipientPhone,
         whatsappMessageId: result.messageId,
-        body: `template:${templateName}`,
+        body: templateSnapshot.visibleBody,
         sentAt: sentAtIso,
+        templateSnapshot,
       });
 
       await this.surveyDispatchRepository.markSent({

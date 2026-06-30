@@ -22,6 +22,7 @@ import { SendWhatsappFlowTemplateMessageUseCase } from './application/use-cases/
 import { SendWhatsappTemplateMessageUseCase } from './application/use-cases/outbound/send-whatsapp-template-message.use-case';
 import { SendWhatsappInteractiveListMessageUseCase } from './application/use-cases/outbound/send-whatsapp-interactive-list-message.use-case';
 import { SendWhatsappTextMessageUseCase } from './application/use-cases/outbound/send-whatsapp-text-message.use-case';
+import { TemplateMessageSnapshotService } from './application/services/template-message-snapshot.service';
 import { MetaWhatsappPayloadParser } from './infrastructure/parsers/meta-whatsapp-payload.parser';
 import { MetaSignatureVerifierService } from './infrastructure/security/meta-signature-verifier.service';
 import { RedisWebhookIdempotencyStoreAdapter } from './infrastructure/idempotency/redis-webhook-idempotency-store.adapter';
@@ -50,6 +51,7 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
     SendWhatsappInteractiveButtonsMessageUseCase,
     SendWhatsappInteractiveListMessageUseCase,
     SendWhatsappTextMessageUseCase,
+    TemplateMessageSnapshotService,
     WebhookIdempotencyKeyFactory,
     ConversationOrchestratorService,
     ConversationIdlePolicySchedulerConfigService,
@@ -78,6 +80,7 @@ import { WhatsappWebhookController } from './presentation/http/whatsapp-webhook.
   exports: [
     SendWhatsappFlowTemplateMessageUseCase,
     SendWhatsappTemplateMessageUseCase,
+    TemplateMessageSnapshotService,
     WhatsappConfigService,
   ],
 })

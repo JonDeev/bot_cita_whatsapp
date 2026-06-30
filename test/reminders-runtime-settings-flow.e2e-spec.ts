@@ -9,6 +9,7 @@ import { AppointmentReminderButtonTokenService } from '../src/modules/reminders/
 import { AppointmentReminderTemplateConfigService } from '../src/modules/reminders/application/services/appointment-reminder-template-config.service';
 import { AppointmentReminderTemplateDeliveryService } from '../src/modules/reminders/application/services/appointment-reminder-template-delivery.service';
 import { AppointmentReminderWindowService } from '../src/modules/reminders/application/services/appointment-reminder-window.service';
+import { TemplateMessageSnapshotService } from '../src/modules/whatsapp/application/services/template-message-snapshot.service';
 import { DispatchDueAppointmentRemindersUseCase } from '../src/modules/reminders/application/use-cases/dispatch-due-appointment-reminders.use-case';
 import { ReconcileAppointmentReminderDispatchHealthUseCase } from '../src/modules/reminders/application/use-cases/reconcile-appointment-reminder-dispatch-health.use-case';
 import { ToggleAppointmentReminderEmergencyPauseUseCase } from '../src/modules/reminders/application/use-cases/toggle-appointment-reminder-emergency-pause.use-case';
@@ -403,6 +404,7 @@ describe('Reminder runtime settings integration flow', () => {
       new AppointmentReminderWindowService(),
       new AppointmentReminderButtonTokenService(),
       new AppointmentReminderPhoneNormalizerService(),
+      new TemplateMessageSnapshotService(),
       templateDeliveryService,
       auditService,
       resolver,
