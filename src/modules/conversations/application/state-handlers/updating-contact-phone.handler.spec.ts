@@ -271,6 +271,57 @@ describe('UpdatingContactPhoneHandler', () => {
     );
   });
 
+  it('keeps BOTH mode moving to email update when the patient enters a different valid phone', async () => {
+    const contactUpdateCompletionService = {
+      buildResult: jest.fn(),
+    } as unknown as ContactUpdateCompletionService;
+    const updatePatientContactDetails = {
+      execute: jest.fn(),
+    } as unknown as UpdatePatientContactDetailsUseCase;
+    const markPhoneVerified = {
+      execute: jest.fn(),
+    } as unknown as MarkPatientPhoneVerifiedUseCase;
+
+    const handler = buildHandler(
+      markPhoneVerified,
+      updatePatientContactDetails,
+      contactUpdateCompletionService,
+    );
+
+    const result = await handler.handle(
+      {
+        ...baseSession,
+        context: {
+          ...baseSession.context,
+          contactVerification: {
+            ...baseSession.context.contactVerification,
+            selectedUpdateMode: 'BOTH',
+          },
+        },
+      },
+      {
+        kind: 'incoming_message_received',
+        messageId: 'wamid-3b',
+        from: '573001112233',
+        timestamp: '1711111114',
+        messageType: 'text',
+        textBody: '3014445566',
+        phoneNumberId: '123',
+      },
+    );
+
+    expect(result.nextState).toBe('UPDATING_CONTACT_EMAIL');
+    expect(updatePatientContactDetails.execute).not.toHaveBeenCalled();
+    expect(markPhoneVerified.execute).not.toHaveBeenCalled();
+    expect(contactUpdateCompletionService.buildResult).not.toHaveBeenCalled();
+    expect(result.nextContext?.contactVerification?.selectedUpdateMode).toBe(
+      'BOTH',
+    );
+    expect(result.nextContext?.contactVerification?.verifiedPhone).toBe(
+      '3014445566',
+    );
+  });
+
   it('resets to field selection when the handler receives EMAIL mode', async () => {
     const contactUpdateCompletionService = {
       buildResult: jest.fn(),

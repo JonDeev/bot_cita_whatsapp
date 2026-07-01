@@ -4,8 +4,25 @@ import { PatientContactConfirmationMessageFactory } from '../services/patient-co
 import { PatientContactUpdateOptionsListFactory } from '../services/patient-contact-update-options-list.factory';
 import { PatientContactUpdateSuccessMessageFactory } from '../services/patient-contact-update-success-message.factory';
 import { ConfirmingPatientContactHandler } from './confirming-patient-contact.handler';
+import { PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS } from '../services/patient-contact-update-field-option-id';
 
 describe('ConfirmingPatientContactHandler', () => {
+  function extractRowIds(message: unknown): string[] {
+    if (
+      !message ||
+      typeof message !== 'object' ||
+      !('sections' in message) ||
+      !Array.isArray((message as { sections?: unknown[] }).sections)
+    ) {
+      return [];
+    }
+
+    return ((message as { sections: Array<{ rows?: Array<{ id: string }> }> })
+      .sections ?? [])
+      .flatMap((section) => section.rows ?? [])
+      .map((row) => row.id);
+  }
+
   const baseSession = {
     conversationKey: 'whatsapp:123:573001112233',
     channel: 'whatsapp',
@@ -95,6 +112,13 @@ describe('ConfirmingPatientContactHandler', () => {
     expect(result.outboundMessages[1]).toMatchObject({
       type: 'interactive_list',
     });
+    expect(extractRowIds(result.outboundMessages[1])).toEqual([
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.PHONE,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BOTH,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BACK,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.MAIN_MENU,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.FINISH,
+    ]);
   });
 
   it('redirects to update options when revalidation reasons exist even if phone update is not required', async () => {

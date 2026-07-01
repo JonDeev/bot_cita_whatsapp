@@ -18,12 +18,8 @@ export class PatientContactUpdateOptionsListFactory {
               title: 'Telefono',
             },
             {
-              id: PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.EMAIL,
-              title: 'Correo',
-            },
-            {
               id: PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BOTH,
-              title: 'Ambos',
+              title: 'Telefono y correo',
             },
             {
               id: PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BACK,

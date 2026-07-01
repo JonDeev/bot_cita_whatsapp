@@ -1,6 +1,5 @@
 export const PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS = {
   PHONE: 'patient_contact_update_field:phone',
-  EMAIL: 'patient_contact_update_field:email',
   BOTH: 'patient_contact_update_field:both',
   BACK: 'nav_back',
   MAIN_MENU: 'nav_main_menu',

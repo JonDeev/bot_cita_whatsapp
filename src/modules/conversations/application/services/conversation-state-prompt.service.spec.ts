@@ -10,10 +10,27 @@ import { AppointmentDateListFactory } from './appointment-date-list.factory';
 import { AppointmentTimeListFactory } from './appointment-time-list.factory';
 import { MainMenuListFactory } from './main-menu-list.factory';
 import { PatientContactConfirmationMessageFactory } from './patient-contact-confirmation-message.factory';
+import { PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS } from './patient-contact-update-field-option-id';
 import { PatientContactUpdateOptionsListFactory } from './patient-contact-update-options-list.factory';
 import { SpecialtyListFactory } from './specialty-list.factory';
 
 describe('ConversationStatePromptService', () => {
+  function extractRowIds(message: unknown): string[] {
+    if (
+      !message ||
+      typeof message !== 'object' ||
+      !('sections' in message) ||
+      !Array.isArray((message as { sections?: unknown[] }).sections)
+    ) {
+      return [];
+    }
+
+    return ((message as { sections: Array<{ rows?: Array<{ id: string }> }> })
+      .sections ?? [])
+      .flatMap((section) => section.rows ?? [])
+      .map((row) => row.id);
+  }
+
   function buildService(): ConversationStatePromptService {
     return new ConversationStatePromptService(
       new MainMenuListFactory(),
@@ -109,6 +126,38 @@ describe('ConversationStatePromptService', () => {
     expect(result.outboundMessages[0]).toMatchObject({
       type: 'interactive_buttons',
     });
+  });
+
+  it('builds contact update options without the standalone email entry', () => {
+    const service = buildService();
+
+    const result = service.buildForState(
+      {
+        conversationKey: 'whatsapp:123:573001112233',
+        channel: 'whatsapp',
+        participantPhone: '573001112233',
+        phoneNumberId: '123',
+        state: CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+        status: 'BOT_ACTIVE',
+        createdAt: '2026-05-04T10:00:00.000Z',
+        updatedAt: '2026-05-04T10:00:00.000Z',
+      },
+      CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+    );
+
+    expect(result.nextState).toBe(
+      CONVERSATION_STATES.SELECTING_CONTACT_UPDATE_FIELD,
+    );
+    expect(result.outboundMessages[0]).toMatchObject({
+      type: 'interactive_list',
+    });
+    expect(extractRowIds(result.outboundMessages[0])).toEqual([
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.PHONE,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BOTH,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BACK,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.MAIN_MENU,
+      PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.FINISH,
+    ]);
   });
 
   it('falls back to the document prompt when birth date step has no document', () => {

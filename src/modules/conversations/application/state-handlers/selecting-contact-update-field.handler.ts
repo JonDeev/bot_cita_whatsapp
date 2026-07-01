@@ -34,113 +34,58 @@ export class SelectingContactUpdateFieldHandler implements ConversationStateHand
       event.messageType === 'interactive' &&
       event.interactiveReplyId === PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.PHONE
     ) {
-      await this.auditService.record('patient.contact_update.option_selected', {
-        conversationKey: session.conversationKey,
-        patientId: session.context?.patientValidation?.patientId ?? null,
-        flowIntent: session.context?.flowIntent ?? null,
-        updateMode: 'PHONE',
-      });
-
-      return {
-        nextState: CONVERSATION_STATES.UPDATING_CONTACT_PHONE,
-        nextContext: {
-          ...session.context,
-          appointmentNotificationsConsentPhone: undefined,
-          contactVerification: session.context?.contactVerification
-            ? {
-                ...session.context.contactVerification,
-                selectedUpdateMode: 'PHONE',
-                pendingPhone: undefined,
-                verifiedPhone: undefined,
-                invalidPhoneAttempts: 0,
-                invalidEmailAttempts: 0,
-              }
-            : undefined,
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: 'Escribe tu nuevo numero celular en formato 3001234567.',
-          },
-        ],
-      };
-    }
-
-    if (
-      event.messageType === 'interactive' &&
-      event.interactiveReplyId === PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.EMAIL
-    ) {
-      await this.auditService.record('patient.contact_update.option_selected', {
-        conversationKey: session.conversationKey,
-        patientId: session.context?.patientValidation?.patientId ?? null,
-        flowIntent: session.context?.flowIntent ?? null,
-        updateMode: 'EMAIL',
-      });
-
-      return {
-        nextState: CONVERSATION_STATES.UPDATING_CONTACT_EMAIL,
-        nextContext: {
-          ...session.context,
-          appointmentNotificationsConsentPhone: undefined,
-          contactVerification: session.context?.contactVerification
-            ? {
-                ...session.context.contactVerification,
-                selectedUpdateMode: 'EMAIL',
-                pendingPhone: undefined,
-                verifiedPhone: undefined,
-                invalidPhoneAttempts: 0,
-                invalidEmailAttempts: 0,
-              }
-            : undefined,
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: 'Escribe tu nuevo correo electronico.',
-          },
-        ],
-      };
+      return this.buildPhoneUpdateSelectionResult(session, 'PHONE');
     }
 
     if (
       event.messageType === 'interactive' &&
       event.interactiveReplyId === PATIENT_CONTACT_UPDATE_FIELD_OPTION_IDS.BOTH
     ) {
-      await this.auditService.record('patient.contact_update.option_selected', {
-        conversationKey: session.conversationKey,
-        patientId: session.context?.patientValidation?.patientId ?? null,
-        flowIntent: session.context?.flowIntent ?? null,
-        updateMode: 'BOTH',
-      });
-
-      return {
-        nextState: CONVERSATION_STATES.UPDATING_CONTACT_PHONE,
-        nextContext: {
-          ...session.context,
-          appointmentNotificationsConsentPhone: undefined,
-          contactVerification: session.context?.contactVerification
-            ? {
-                ...session.context.contactVerification,
-                selectedUpdateMode: 'BOTH',
-                pendingPhone: undefined,
-                verifiedPhone: undefined,
-                invalidPhoneAttempts: 0,
-                invalidEmailAttempts: 0,
-              }
-            : undefined,
-        },
-        outboundMessages: [
-          {
-            type: 'text',
-            body: 'Primero escribe tu nuevo numero celular en formato 3001234567.',
-          },
-        ],
-      };
+      return this.buildPhoneUpdateSelectionResult(session, 'BOTH');
     }
 
     return {
       nextState: this.state,
       outboundMessages: [this.patientContactUpdateOptionsListFactory.build()],
+    };
+  }
+
+  private async buildPhoneUpdateSelectionResult(
+    session: ConversationSession,
+    updateMode: 'PHONE' | 'BOTH',
+  ): Promise<ConversationStateHandlerResult> {
+    await this.auditService.record('patient.contact_update.option_selected', {
+      conversationKey: session.conversationKey,
+      patientId: session.context?.patientValidation?.patientId ?? null,
+      flowIntent: session.context?.flowIntent ?? null,
+      updateMode,
+    });
+
+    return {
+      nextState: CONVERSATION_STATES.UPDATING_CONTACT_PHONE,
+      nextContext: {
+        ...session.context,
+        appointmentNotificationsConsentPhone: undefined,
+        contactVerification: session.context?.contactVerification
+          ? {
+              ...session.context.contactVerification,
+              selectedUpdateMode: updateMode,
+              pendingPhone: undefined,
+              verifiedPhone: undefined,
+              invalidPhoneAttempts: 0,
+              invalidEmailAttempts: 0,
+            }
+          : undefined,
+      },
+      outboundMessages: [
+        {
+          type: 'text',
+          body:
+            updateMode === 'BOTH'
+              ? 'Primero escribe tu nuevo numero celular en formato 3001234567.'
+              : 'Escribe tu nuevo numero celular en formato 3001234567.',
+        },
+      ],
     };
   }
 }
