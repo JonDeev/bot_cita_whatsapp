@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-01
+
+### Improvements
+
+- The contact update flow no longer shows `Correo` as a standalone option.
+- Patients can still update both phone and email through the `Ambos` path, which keeps the existing combined flow intact.
+- Legacy replies to the old email option now fall back to the current contact update list instead of opening the removed standalone path.
+
+### Notes
+
+- This change closes a bypass where a patient with an invalid phone could continue after updating only email.
+- The `Ambos` experience and the rest of the conversation flow were not changed.
+
 ## 2026-06-30
 
 ### Improvements
